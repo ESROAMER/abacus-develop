@@ -12,7 +12,8 @@ public:
 	enum class Ccp_Type{		//  parameter:
 		Ccp,                 // 
 		Hf,					//
-		Hse};					//  	"hse_omega"
+		Hse					//  	"hse_omega"
+		Lc};				//  	"hse_omega"
 
 	template<typename T> static T cal_orbs_ccp(
 		const T &orbs,
@@ -42,6 +43,11 @@ private:
                                           const double omega);
 
 	static std::vector<double> cal_psi_hse( 
+		const std::vector<double> & psif,
+		const std::vector<double> & k_radial,
+		const double omega);
+
+	static std::vector<double> cal_psi_lc( 
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
 		const double omega);

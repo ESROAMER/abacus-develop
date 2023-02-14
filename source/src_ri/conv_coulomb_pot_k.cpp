@@ -37,6 +37,18 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hse(
 }
 
 
+std::vector<double> Conv_Coulomb_Pot_K::cal_psi_lc( 
+	const std::vector<double> & psif,
+	const std::vector<double> & k_radial,
+	const double omega)
+{
+	std::vector<double> psik2_ccp(psif.size());
+	for( size_t ik=0; ik<psif.size(); ++ik )
+		psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega)) - std::cos(k_radial[ik] * Rc));
+	return psik2_ccp;
+}
+
+
 
 template<>
 Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
@@ -54,6 +66,8 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
         	psik2_ccp = cal_psi_hf(orbs.get_psif(), orbs.get_k_radial());      break;
 		case Ccp_Type::Hse:
 			psik2_ccp = cal_psi_hse( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega") );		break;
+		case Ccp_Type::Lc:
+			psik2_ccp = cal_psi_lc( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega") );		break;
 		default:
 			throw( ModuleBase::GlobalFunc::TO_STRING(__FILE__)+" line "+ModuleBase::GlobalFunc::TO_STRING(__LINE__) );		break;
 	}
