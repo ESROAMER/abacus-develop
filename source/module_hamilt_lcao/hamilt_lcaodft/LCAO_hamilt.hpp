@@ -26,7 +26,7 @@ void LCAO_Hamilt::calculate_HR_exx_sparse(const int &current_spin, const double 
 	ModuleBase::TITLE("LCAO_Hamilt","calculate_HR_exx_sparse");
 	ModuleBase::timer::tick("LCAO_Hamilt","calculate_HR_exx_sparse");
 
-	const Tdata frac = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
+	const Tdata frac = exx_info.info_global.ccp_type == "Cam" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 
 	const std::vector<int> is_list = (GlobalV::NSPIN!=4) ? std::vector<int>{current_spin} : std::vector<int>{0,1,2,3};
 	for(const int is : is_list)

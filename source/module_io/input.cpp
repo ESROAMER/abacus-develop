@@ -361,7 +361,8 @@ void Input::Default(void)
     // exx										//Peize Lin add 2018-06-20
     //----------------------------------------------------------
     exx_hybrid_alpha = "default";
-    exx_hybrid_beta = "default";
+    exx_cam_alpha = "default";
+    exx_cam_beta = "default";
     exx_hse_omega = 0.11;
 
     exx_separate_loop = true;
@@ -1743,9 +1744,13 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_hybrid_alpha);
         }
-        else if (strcmp("exx_hybrid_beta", word) == 0)
+        else if (strcmp("exx_cam_alpha", word) == 0)
         {
-            read_value(ifs, exx_hybrid_beta);
+            read_value(ifs, exx_cam_alpha);
+        }
+        else if (strcmp("exx_cam_beta", word) == 0)
+        {
+            read_value(ifs, exx_cam_beta);
         }
         else if (strcmp("exx_hybrid_beta", word) == 0)
         {
@@ -2345,18 +2350,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_hybrid_alpha = "1";
         else if (dft_functional == "pbe0" || dft_functional == "hse" || dft_functional == "scan0")
             exx_hybrid_alpha = "0.25";
-        else if (dft_functional == "lcpbe")
-            exx_hybrid_alpha = "0.0";
     }
-    if (exx_hybrid_beta == "default")
-    {
-        if (dft_functional == "hf" || INPUT.rpa || dft_functional == "pbe0" || dft_functional == "scan0") // global functional
-            exx_hybrid_beta = "0";
-        else if (dft_functional == "hse" )
-            exx_hybrid_beta = "-0.25";
-        else if (dft_functional == "lcpbe")
-            exx_hybrid_beta = "0.75";
-    }
+    // TODO: add default parameters (exx_cam_alpha and exx_cam_beta, exx_hse_omega) for LC and CAM functionals 
     if (exx_real_number == "default")
     {
         if (gamma_only)
@@ -2910,7 +2905,8 @@ void Input::Bcast()
 
     // Peize Lin add 2018-06-20
     Parallel_Common::bcast_string(exx_hybrid_alpha);
-    Parallel_Common::bcast_string(exx_hybrid_beta);
+    Parallel_Common::bcast_string(exx_cam_alpha);
+    Parallel_Common::bcast_string(exx_cam_beta);
     Parallel_Common::bcast_double(exx_hse_omega);
     Parallel_Common::bcast_bool(exx_separate_loop);
     Parallel_Common::bcast_int(exx_hybrid_step);
@@ -3328,10 +3324,15 @@ void Input::Check(void)
         {
             ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_hybrid_alpha <= 1");
         }
-        const double exx_hybrid_beta_value = std::stod(exx_hybrid_beta);
-        if (exx_hybrid_beta_value < 0 || exx_hybrid_beta_value > 1)
+        const double exx_cam_alpha_value = std::stod(exx_cam_alpha);
+        if (exx_cam_alpha_value < 0 || exx_cam_alpha_value > 1)
         {
-            ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_hybrid_beta <= 1");
+            ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_cam_alpha <= 1");
+        }
+        const double exx_cam_beta_value = std::stod(exx_cam_beta);
+        if (exx_cam_beta_value < 0 || exx_cam_beta_value > 1)
+        {
+            ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_cam_beta <= 1");
         }
         if (exx_hybrid_step <= 0)
         {

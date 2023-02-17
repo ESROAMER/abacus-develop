@@ -204,7 +204,7 @@ void Force_Stress_LCAO::getForceStress(
 	ModuleBase::matrix stress_exx;
 	if( GlobalC::exx_info.info_global.cal_exx )
 	{
-		const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
+		const double coeff = exx_info.info_global.ccp_type == "Cam" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 		if(isforce)
 		{
 			if(GlobalC::exx_info.info_ri.real_number)

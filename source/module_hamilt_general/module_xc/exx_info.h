@@ -12,7 +12,8 @@ struct Exx_Info
 
 		Conv_Coulomb_Pot_K::Ccp_Type ccp_type;
 		double hybrid_alpha = 0.25;
-		double hybrid_beta = -0.25;
+		double cam_alpha = 0.25;
+		double cam_beta = -0.25;
 		double hse_omega = 0.11;
 		
 		bool separate_loop = true;
@@ -26,15 +27,15 @@ struct Exx_Info
 	{
 		const Conv_Coulomb_Pot_K::Ccp_Type &ccp_type;
 		const double &hse_omega;
-		const double &hybrid_alpha;
-		const double &hybrid_beta;
+		const double &cam_alpha;
+		const double &cam_beta;
 		double lambda;
 
 		Exx_Info_Lip( const Exx_Info::Exx_Info_Global &info_global )
 			:ccp_type(info_global.ccp_type),
 			 hse_omega(info_global.hse_omega),
-			 hybrid_alpha(info_global.hybrid_alpha),
-			 hybrid_beta(info_global.hybrid_beta){}
+			 cam_alpha(info_global.cam_alpha),
+			 cam_beta(info_global.cam_beta){}
 	};
 	Exx_Info_Lip info_lip;	
 
@@ -44,8 +45,8 @@ struct Exx_Info
 	{
 		const Conv_Coulomb_Pot_K::Ccp_Type &ccp_type;
 		const double &hse_omega;
-		const double &hybrid_alpha;
-		const double &hybrid_beta;
+		const double &cam_alpha;
+		const double &cam_beta;
 		
 		bool real_number = false;
 		
@@ -67,8 +68,8 @@ struct Exx_Info
 		Exx_Info_RI( const Exx_Info::Exx_Info_Global &info_global )
 			:ccp_type(info_global.ccp_type),
 			 hse_omega(info_global.hse_omega),
-			 hybrid_alpha(info_global.hybrid_alpha),
-			 hybrid_beta(info_global.hybrid_beta){}
+			 cam_alpha(info_global.cam_alpha),
+			 cam_beta(info_global.cam_beta){}
 	};
 	Exx_Info_RI info_ri;
 

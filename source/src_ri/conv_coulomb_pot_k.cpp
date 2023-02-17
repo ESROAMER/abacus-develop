@@ -68,7 +68,7 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
         	psik2_ccp = cal_psi_hf(orbs.get_psif(), orbs.get_k_radial());      break;
 		case Ccp_Type::Hse:
 			psik2_ccp = cal_psi_hse( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega") );		break;
-		case Ccp_Type::Rsh:
+		case Ccp_Type::Cam:
 			psik2_ccp = cal_psi_rsh( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"), parameter.at('hybrid_alpha'), parameter.at('hybrid_beta'));		break;
 		default:
 			throw( ModuleBase::GlobalFunc::TO_STRING(__FILE__)+" line "+ModuleBase::GlobalFunc::TO_STRING(__LINE__) );		break;

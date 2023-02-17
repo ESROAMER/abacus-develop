@@ -653,8 +653,8 @@ gettimeofday( &t_start, NULL);
 			ccp_parameter = {};		break;
 		case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
 			ccp_parameter = {{"hse_omega",info.hse_omega}};		break;
-		case Conv_Coulomb_Pot_K::Ccp_Type::Rsh:
-			ccp_parameter = {{"hse_omega", this->info.hse_omega}, {"hybrid_alpha", this->info.hybrid_alpha}, {"hybrid_beta", this->info.hybrid_beta}};		break;
+		case Conv_Coulomb_Pot_K::Ccp_Type::Cam:
+			ccp_parameter = {{"hse_omega", this->info.hse_omega}, {"cam_alpha", this->info.cam_alpha}, {"cam_beta", this->info.cam_beta}};		break;
 		default:
 			throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
 	}

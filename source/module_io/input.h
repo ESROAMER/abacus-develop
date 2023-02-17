@@ -350,7 +350,8 @@ class Input
     // Peize Lin add 2018-06-20
     //==========================================================
     std::string exx_hybrid_alpha;
-    std::string exx_hybrid_beta;
+    std::string exx_cam_alpha;
+    std::string exx_cam_beta;
     double exx_hse_omega;
 
     bool exx_separate_loop; // 0 or 1

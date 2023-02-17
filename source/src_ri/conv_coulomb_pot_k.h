@@ -13,7 +13,7 @@ public:
 		Ccp,                 // 
 		Hf,					//
 		Hse,					//  	"hse_omega"
-		Rsh};				//  	"hse_omega", "hybrid_alpha", "hybrid_beta"
+		Cam};				//  	"hse_omega", "cam_alpha", "cam_beta"
 
 	template<typename T> static T cal_orbs_ccp(
 		const T &orbs,

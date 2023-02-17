@@ -10,12 +10,14 @@ std::vector<int> XC_Functional::func_id(1);
 int XC_Functional::func_type = 0;
 bool XC_Functional::use_libxc = true;
 double XC_Functional::hybrid_alpha = 0.25;
-double XC_Functional::hybrid_beta = -0.25;
+double XC_Functional::cam_alpha = 0.25;
+double XC_Functional::cam_beta = -0.25;
 
-void XC_Functional::get_hybrid_mixing(const double alpha_in, const double beta_in)
+void XC_Functional::get_hybrid_mixing(const double alpha_in, const double cam_alpha_in, const double cam_beta_in)
 {
     hybrid_alpha = alpha_in;
-    hybrid_beta = beta_in;
+    cam_alpha = cam_alpha_in;
+    cam_beta = beta_in;
 }
 
 int XC_Functional::get_func_type()
@@ -259,6 +261,20 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
 			add_func( XC_HYB_GGA_XC_HSE06 );	
 			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha, 
 				GlobalC::exx_info.info_global.hse_omega, 
+				GlobalC::exx_info.info_global.hse_omega };
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LC_PBEOP ) // LC version of PBE
+		{
+			add_func( XC_HYB_GGA_XC_LC_PBEOP );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.hse_omega };
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LRC_WPBE ) // HSE06 hybrid functional
+		{
+			add_func( XC_HYB_GGA_LRC_WPBE );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha, 
+				GlobalC::exx_info.info_global.cam_beta, 
 				GlobalC::exx_info.info_global.hse_omega };
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}

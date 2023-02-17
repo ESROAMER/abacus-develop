@@ -435,10 +435,10 @@ void Input_Conv::Convert(void)
     {
         GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
-    else if (INPUT.dft_functional == "lcpbe" || INPUT.dft_functional == "rsh")
+    else if (INPUT.dft_functional == "lcpbe" || INPUT.dft_functional == "cam")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Rsh;
+        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
     }
     else
     {
@@ -450,8 +450,9 @@ void Input_Conv::Convert(void)
         //EXX case, convert all EXX related variables 
         //GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(INPUT.exx_hybrid_alpha);
-        GlobalC::exx_info.info_global.hybrid_beta = std::stod(INPUT.exx_hybrid_beta);
-        XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha), std::stod(INPUT.exx_hybrid_beta));
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
+        GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
+        XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha), std::stod(INPUT.exx_cam_alpha), std::stod(INPUT.exx_cam_beta));
         GlobalC::exx_info.info_global.hse_omega = INPUT.exx_hse_omega;
         GlobalC::exx_info.info_global.separate_loop = INPUT.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = INPUT.exx_hybrid_step;
