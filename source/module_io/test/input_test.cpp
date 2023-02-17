@@ -210,6 +210,7 @@ TEST_F(InputTest, Default)
         EXPECT_EQ(INPUT.vdw_cutoff_period[1],3);
         EXPECT_EQ(INPUT.vdw_cutoff_period[2],3);
         EXPECT_EQ(INPUT.exx_hybrid_alpha,"default");
+		EXPECT_EQ(INPUT.exx_hybrid_beta,"default");
         EXPECT_EQ(INPUT.exx_real_number,"default");
         EXPECT_DOUBLE_EQ(INPUT.exx_hse_omega,0.11);
         EXPECT_TRUE(INPUT.exx_separate_loop);
@@ -536,6 +537,7 @@ TEST_F(InputTest, Read)
         EXPECT_EQ(INPUT.vdw_cutoff_period[1],3);
         EXPECT_EQ(INPUT.vdw_cutoff_period[2],3);
         EXPECT_EQ(INPUT.exx_hybrid_alpha,"default");
+		EXPECT_EQ(INPUT.exx_hybrid_beta,"default");
         EXPECT_EQ(INPUT.exx_real_number,"default");
         EXPECT_DOUBLE_EQ(INPUT.exx_hse_omega,0.11);
         EXPECT_TRUE(INPUT.exx_separate_loop);
@@ -688,6 +690,7 @@ TEST_F(InputTest, Default_2)
 	EXPECT_NE(INPUT.method_sto,2);
 	EXPECT_NE(INPUT.of_wt_rho0,0.0);
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"default");
+	EXPECT_EQ(INPUT.exx_hybrid_beta,"beta");
 	EXPECT_EQ(INPUT.dft_functional,"hse");
 	EXPECT_EQ(INPUT.exx_real_number,"default");
 	EXPECT_TRUE(INPUT.gamma_only);
@@ -709,6 +712,7 @@ TEST_F(InputTest, Default_2)
 	EXPECT_TRUE(INPUT.of_hold_rho0);
         EXPECT_EQ(INPUT.of_full_pw_dim,0);
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"0.25");
+	EXPECT_EQ(INPUT.exx_hybrid_alpha,"-0.25");
 	EXPECT_EQ(INPUT.exx_real_number,"1");
         EXPECT_EQ(INPUT.exx_ccp_rmesh_times,"1.5");
 	EXPECT_EQ(INPUT.diago_proc,1);
@@ -729,6 +733,7 @@ TEST_F(InputTest, Default_2)
 	INPUT.vdw_a2 = "default";
 	INPUT.vdw_cutoff_radius = "default";
 	INPUT.exx_hybrid_alpha = "default";
+	INPUT.exx_hybrid_beta = "default";
 	INPUT.dft_functional = "hf";
 	INPUT.exx_real_number = "default";
 	INPUT.gamma_only = 0;
@@ -748,6 +753,7 @@ TEST_F(InputTest, Default_2)
 	EXPECT_EQ(INPUT.vdw_a2,"1.0");
 	EXPECT_EQ(INPUT.vdw_cutoff_radius,"95");
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"1");
+	EXPECT_EQ(INPUT.exx_hybrid_beta,"0");
 	EXPECT_EQ(INPUT.exx_real_number,"0");
         EXPECT_EQ(INPUT.exx_ccp_rmesh_times,"10");
 	EXPECT_EQ(INPUT.diago_proc,1);

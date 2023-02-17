@@ -343,6 +343,7 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
 
     ofs << "\n#Parameters (14.exx)" << std::endl;
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_alpha", exx_hybrid_alpha, "");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_beta", exx_hybrid_beta, "");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hse_omega", exx_hse_omega, "");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_separate_loop", exx_separate_loop, "0 or 1");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_step", exx_hybrid_step, "");

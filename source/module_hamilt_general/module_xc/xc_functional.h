@@ -80,7 +80,7 @@ class XC_Functional
 
 	static int get_func_type();
 	static void set_xc_type(const std::string xc_func_in);
-	static void get_hybrid_alpha(const double alpha_in);
+	static void get_hybrid_mixing(const double alpha_in, const double beta_in);
 #ifdef USE_LIBXC
 	static void set_xc_type_libxc(const std::string xc_func_in);
 	static std::vector<xc_func_type> init_func(const int xc_polarized);
@@ -95,6 +95,7 @@ class XC_Functional
 
 	//exx_hybrid_alpha for mixing exx in hybrid functional:
 	static double hybrid_alpha;
+	static double hybrid_beta;
 
 //-------------------
 //  xc_functional_wrapper_xc.cpp
