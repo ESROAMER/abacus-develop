@@ -13,7 +13,7 @@ public:
 		Ccp,                 // 
 		Hf,					//
 		Hse					//  	"hse_omega"
-		Lc};				//  	"hse_omega"
+		Rsh};				//  	"hse_omega", "hybrid_alpha", "hybrid_beta"
 
 	template<typename T> static T cal_orbs_ccp(
 		const T &orbs,
@@ -47,10 +47,12 @@ private:
 		const std::vector<double> & k_radial,
 		const double omega);
 
-	static std::vector<double> cal_psi_lc( 
+	static std::vector<double> cal_psi_rsh( 
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
-		const double omega);
+		const double omega,
+		const double alpha,
+		const double beta);
 };
 
 #endif
