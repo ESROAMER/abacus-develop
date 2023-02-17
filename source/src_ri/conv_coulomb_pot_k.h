@@ -12,7 +12,7 @@ public:
 	enum class Ccp_Type{		//  parameter:
 		Ccp,                 // 
 		Hf,					//
-		Hse					//  	"hse_omega"
+		Hse,					//  	"hse_omega"
 		Rsh};				//  	"hse_omega", "hybrid_alpha", "hybrid_beta"
 
 	template<typename T> static T cal_orbs_ccp(

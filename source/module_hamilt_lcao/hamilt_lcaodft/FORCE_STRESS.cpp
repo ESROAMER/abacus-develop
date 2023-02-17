@@ -204,17 +204,18 @@ void Force_Stress_LCAO::getForceStress(
 	ModuleBase::matrix stress_exx;
 	if( GlobalC::exx_info.info_global.cal_exx )
 	{
+		const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 		if(isforce)
 		{
 			if(GlobalC::exx_info.info_ri.real_number)
 			{
 				GlobalC::exx_lri_double.cal_exx_force();
-				force_exx = GlobalC::exx_info.info_global.hybrid_alpha * GlobalC::exx_lri_double.force_exx;
+				force_exx = coeff * GlobalC::exx_lri_double.force_exx;
 			}
 			else
 			{
 				GlobalC::exx_lri_complex.cal_exx_force();
-				force_exx = GlobalC::exx_info.info_global.hybrid_alpha * GlobalC::exx_lri_complex.force_exx;
+				force_exx = coeff * GlobalC::exx_lri_complex.force_exx;
 			}
 		}
 		if(isstress)
@@ -222,12 +223,12 @@ void Force_Stress_LCAO::getForceStress(
 			if(GlobalC::exx_info.info_ri.real_number)
 			{
 				GlobalC::exx_lri_double.cal_exx_stress();
-				stress_exx = GlobalC::exx_info.info_global.hybrid_alpha * GlobalC::exx_lri_double.stress_exx;
+				stress_exx = coeff * GlobalC::exx_lri_double.stress_exx;
 			}
 			else
 			{
 				GlobalC::exx_lri_complex.cal_exx_stress();
-				stress_exx = GlobalC::exx_info.info_global.hybrid_alpha * GlobalC::exx_lri_complex.stress_exx;
+				stress_exx = coeff * GlobalC::exx_lri_complex.stress_exx;
 			}
 		}
 	}

@@ -715,12 +715,13 @@ void LCAO_Hamilt::calculate_HR_exx_sparse(const int &current_spin, const double 
 		for(int ik=ik_begin; ik<ik_end; ++ik)
 		{
 			ModuleBase::matrix HexxR_tmp;
+            const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 			if(GlobalV::GAMMA_ONLY_LOCAL)
-				HexxR_tmp = GlobalC::exx_info.info_global.hybrid_alpha
+				HexxR_tmp = coeff
 					* GlobalC::exx_lcao.Hexx_para.HK_Gamma_m2D[ik]
 					* (GlobalC::kv.wk[ik] * frac);
 			else
-				HexxR_tmp = GlobalC::exx_info.info_global.hybrid_alpha
+				HexxR_tmp = coeff
 					* (GlobalC::exx_lcao.Hexx_para.HK_K_m2D[ik]
 					* std::exp( ModuleBase::TWO_PI*ModuleBase::IMAG_UNIT * (GlobalC::kv.kvec_c[ik] * (R*GlobalC::ucell.latvec)) )).real()
 					* (GlobalC::kv.wk[ik] * frac);

@@ -593,7 +593,8 @@ void energy::set_exx()
 	};
 	if( GlobalC::exx_info.info_global.cal_exx )
 	{
-		this->exx = GlobalC::exx_info.info_global.hybrid_alpha * exx_energy();
+		const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
+		this->exx = coeff * exx_energy();
 	}
 
 	return;

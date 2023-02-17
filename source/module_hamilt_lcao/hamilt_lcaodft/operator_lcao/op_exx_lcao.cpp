@@ -26,17 +26,18 @@ void OperatorEXX<OperatorLCAO<double>>::contributeHk(int ik)
     // Peize Lin add 2016-12-03
     if(XC_Functional::get_func_type()==4 || XC_Functional::get_func_type()==5)
     {
+		const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 		if(GlobalC::exx_info.info_ri.real_number)
 			RI_2D_Comm::add_Hexx(
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				GlobalC::exx_lri_double.Hexxs,
 				*this->LM->ParaV,
 				*this->LM);
 		else
 			RI_2D_Comm::add_Hexx(
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				GlobalC::exx_lri_complex.Hexxs,
 				*this->LM->ParaV,
 				*this->LM);
@@ -51,17 +52,18 @@ void OperatorEXX<OperatorLCAO<std::complex<double>>>::contributeHk(int ik)
     // Peize Lin add 2016-12-03
     if(XC_Functional::get_func_type()==4 || XC_Functional::get_func_type()==5)
     {
+		const double coeff = exx_info.info_global.ccp_type == "Rsh" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
 		if(GlobalC::exx_info.info_ri.real_number)
 			RI_2D_Comm::add_Hexx(
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				GlobalC::exx_lri_double.Hexxs,
 				*this->LM->ParaV,
 				*this->LM);
 		else
 			RI_2D_Comm::add_Hexx(
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				GlobalC::exx_lri_complex.Hexxs,
 				*this->LM->ParaV,
 				*this->LM);
