@@ -273,9 +273,10 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
         else if( id == XC_HYB_GGA_XC_LRC_WPBE ) // HSE06 hybrid functional
 		{
 			add_func( XC_HYB_GGA_LRC_WPBE );	
-			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha, 
-				GlobalC::exx_info.info_global.cam_beta, 
-				GlobalC::exx_info.info_global.hse_omega };
+            // TODO: parameters do not adapt to Conv_Coulomb_Pot_K::cal_psi_rsh
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
 #endif
