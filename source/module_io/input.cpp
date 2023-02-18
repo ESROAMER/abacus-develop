@@ -2351,7 +2351,6 @@ void Input::Default_2(void) // jiyy add 2019-08-04
         else if (dft_functional == "pbe0" || dft_functional == "hse" || dft_functional == "scan0")
             exx_hybrid_alpha = "0.25";
     }
-    // TODO: add default parameters (exx_cam_alpha and exx_cam_beta, exx_hse_omega) for LC and CAM functionals 
     if (exx_real_number == "default")
     {
         if (gamma_only)

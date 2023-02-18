@@ -41,12 +41,12 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_rsh(
 	const std::vector<double> & psif,
 	const std::vector<double> & k_radial,
 	const double omega,
-	const double alpha,
-	const double beta,)
+	const double cam_alpha,
+	const double cam_beta)
 {
 	std::vector<double> psik2_ccp(psif.size());
 	for( size_t ik=0; ik<psif.size(); ++ik )
-		psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (alpha + beta * std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega)));
+		psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha + cam_beta * (1-std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega))));
 	return psik2_ccp;
 }
 

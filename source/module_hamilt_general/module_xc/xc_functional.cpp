@@ -264,19 +264,59 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
 				GlobalC::exx_info.info_global.hse_omega };
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
+
+        // Long-range corrected functionals:
         else if( id == XC_HYB_GGA_XC_LC_PBEOP ) // LC version of PBE
 		{
-			add_func( XC_HYB_GGA_XC_LC_PBEOP );	
-			double parameter_hse[3] = { GlobalC::exx_info.info_global.hse_omega };
+            // This is a range-separated hybrid functional with range-separation constant  0.330,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_LC_PBEOP );
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.33
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
-        else if( id == XC_HYB_GGA_XC_LRC_WPBE ) // HSE06 hybrid functional
+        else if( id == XC_HYB_GGA_XC_LC_WPBE ) // Long-range corrected PBE (LC-wPBE) by Vydrov and Scuseria
 		{
+            // This is a range-separated hybrid functional with range-separation constant  0.400,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_LC_WPBE );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.4
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LRC_WPBE ) // Long-range corrected PBE (LRC-wPBE) by by Rohrdanz, Martins and Herbert
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.300,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
 			add_func( XC_HYB_GGA_LRC_WPBE );	
-            // TODO: parameters do not adapt to Conv_Coulomb_Pot_K::cal_psi_rsh
-			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange
-				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange
-				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.3
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LRC_WPBEH ) // Long-range corrected short-range hybrid PBE (LRC-wPBEh) by Rohrdanz, Martins and Herbert
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.200,
+            // and 20.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_LRC_WPBEH );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -0.8
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.2
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_CAM_PBEH ) // CAM hybrid screened exchange PBE version
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.700,
+            // and 100.0% short-range and 20.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_CAM_PBEH);	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 0.2
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: 0.8
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.7
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
 #endif

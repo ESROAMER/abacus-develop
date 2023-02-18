@@ -47,12 +47,14 @@ private:
 		const std::vector<double> & k_radial,
 		const double omega);
 
+	// cam_alpha: Fraction of Hartree-Fock exchange
+    // cam_beta: Fraction of short-range exact exchange
 	static std::vector<double> cal_psi_rsh( 
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
 		const double omega,
-		const double alpha,
-		const double beta);
+		const double cam_alpha,
+		const double cam_beta);
 };
 
 #endif
