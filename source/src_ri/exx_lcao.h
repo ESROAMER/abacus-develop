@@ -102,6 +102,8 @@ public:
 	{
 		const Conv_Coulomb_Pot_K::Ccp_Type &ccp_type;
 		const double &hse_omega;
+		const double &cam_alpha;
+		const double &cam_beta;
 
 		double pca_threshold = 0;
 		std::vector<std::string> files_abfs;

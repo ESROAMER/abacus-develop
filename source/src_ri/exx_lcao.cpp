@@ -197,7 +197,9 @@ Exx_Lcao::Exx_Lcao( const Exx_Info::Exx_Info_Global &info_global )
 
 Exx_Lcao::Exx_Info_Lcao::Exx_Info_Lcao( const Exx_Info::Exx_Info_Global &info_global )
 	:ccp_type(info_global.ccp_type),
-	 hse_omega(info_global.hse_omega){} 
+	 hse_omega(info_global.hse_omega,
+	 cam_alpha(info_global.cam_alpha,
+	 cam_beta(info_global.cam_beta){} 
 
 void Exx_Lcao::init()
 {

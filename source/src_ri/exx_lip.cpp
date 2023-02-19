@@ -454,6 +454,10 @@ void Exx_Lip::qkg2_exp(int ik, int iq)
 			else
 				recip_qkg2[ig] = sqrt( (1-exp(-qkg2/(4*info.hse_omega*info.hse_omega))) /qkg2);
 		}
+		else if( Conv_Coulomb_Pot_K::Ccp_Type::Cam==info.ccp_type )
+		{
+			ModuleBase::WARNING_QUIT("INPUT", "lcao_in_pw is not supported for long-range corrected and CAM- hybrid functionals");
+		}
 	}
 }
 
