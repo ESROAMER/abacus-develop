@@ -363,7 +363,7 @@ void Input::Default(void)
     exx_hybrid_alpha = "default";
     exx_cam_alpha = "default";
     exx_cam_beta = "default";
-    exx_hse_omega = 0.11;
+    exx_hse_omega = "default";
 
     exx_separate_loop = true;
     exx_hybrid_step = 100;
@@ -2351,6 +2351,39 @@ void Input::Default_2(void) // jiyy add 2019-08-04
         else if (dft_functional == "pbe0" || dft_functional == "hse" || dft_functional == "scan0")
             exx_hybrid_alpha = "0.25";
     }
+    if (exx_cam_alpha == "default")
+    {
+        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
+            exx_cam_alpha = "1";
+        else if (dft_functional == "cam_pbeh")
+            exx_cam_alpha = "0.2";
+    }
+    if (exx_cam_beta == "default")
+    {
+        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe")
+            exx_cam_beta = "-1";
+        else if (dft_functional == "lrc_wpbeh")
+            exx_cam_beta = "-0.8";
+        else if (dft_functional == "cam_pbeh")
+            exx_cam_beta = "0.8";
+    }
+    if (exx_hse_omega == "default")
+    {
+        if (dft_functional == "hse")
+            exx_hse_omega = "0.11";
+        else if (dft_functional == "lc_pbe")
+            exx_hse_omega = "0.33";
+        else if (dft_functional == "lc_wpbe")
+            exx_hse_omega = "0.4";
+        else if (dft_functional == "lrc_wpbe")
+            exx_hse_omega = "0.3";
+        else if (dft_functional == "lrc_wpbeh")
+            exx_hse_omega = "0.2";
+        else if (dft_functional == "cam_pbeh")
+            exx_hse_omega = "0.7";
+    }
     if (exx_real_number == "default")
     {
         if (gamma_only)
@@ -2906,7 +2939,7 @@ void Input::Bcast()
     Parallel_Common::bcast_string(exx_hybrid_alpha);
     Parallel_Common::bcast_string(exx_cam_alpha);
     Parallel_Common::bcast_string(exx_cam_beta);
-    Parallel_Common::bcast_double(exx_hse_omega);
+    Parallel_Common::bcast_string(exx_hse_omega);
     Parallel_Common::bcast_bool(exx_separate_loop);
     Parallel_Common::bcast_int(exx_hybrid_step);
     Parallel_Common::bcast_double(exx_lambda);
@@ -3322,16 +3355,6 @@ void Input::Check(void)
         if (exx_hybrid_alpha_value < 0 || exx_hybrid_alpha_value > 1)
         {
             ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_hybrid_alpha <= 1");
-        }
-        const double exx_cam_alpha_value = std::stod(exx_cam_alpha);
-        if (exx_cam_alpha_value < 0 || exx_cam_alpha_value > 1)
-        {
-            ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_cam_alpha <= 1");
-        }
-        const double exx_cam_beta_value = std::stod(exx_cam_beta);
-        if (exx_cam_beta_value < 0 || exx_cam_beta_value > 1)
-        {
-            ModuleBase::WARNING_QUIT("INPUT", "must 0 <= exx_cam_beta <= 1");
         }
         if (exx_hybrid_step <= 0)
         {

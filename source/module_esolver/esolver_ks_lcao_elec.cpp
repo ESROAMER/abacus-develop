@@ -311,7 +311,10 @@ namespace ModuleESolver
 #ifdef __MPI
 		if ( GlobalC::exx_info.info_global.cal_exx )
 		{
-            if (GlobalC::ucell.atoms[0].ncpp.xc_func == "HSE" || GlobalC::ucell.atoms[0].ncpp.xc_func == "PBE0")
+            if (GlobalC::ucell.atoms[0].ncpp.xc_func == "HSE" || GlobalC::ucell.atoms[0].ncpp.xc_func == "PBE0" ||
+                GlobalC::ucell.atoms[0].ncpp.xc_func == "LC_PBE" || GlobalC::ucell.atoms[0].ncpp.xc_func == "LC_WPBE" ||
+                GlobalC::ucell.atoms[0].ncpp.xc_func == "LRC_WPBEH" || GlobalC::ucell.atoms[0].ncpp.xc_func == "CAM_PBEH"
+            )
             {
                 XC_Functional::set_xc_type("pbe");
             }

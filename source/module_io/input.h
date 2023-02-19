@@ -352,7 +352,7 @@ class Input
     std::string exx_hybrid_alpha;
     std::string exx_cam_alpha;
     std::string exx_cam_beta;
-    double exx_hse_omega;
+    std::string exx_hse_omega;
 
     bool exx_separate_loop; // 0 or 1
     int exx_hybrid_step;

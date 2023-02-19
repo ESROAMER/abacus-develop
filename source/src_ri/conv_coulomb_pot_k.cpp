@@ -37,7 +37,7 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hse(
 }
 
 
-std::vector<double> Conv_Coulomb_Pot_K::cal_psi_rsh( 
+std::vector<double> Conv_Coulomb_Pot_K::cal_psi_cam( 
 	const std::vector<double> & psif,
 	const std::vector<double> & k_radial,
 	const double omega,
@@ -69,7 +69,7 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
 		case Ccp_Type::Hse:
 			psik2_ccp = cal_psi_hse( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega") );		break;
 		case Ccp_Type::Cam:
-			psik2_ccp = cal_psi_rsh( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"), parameter.at('hybrid_alpha'), parameter.at('hybrid_beta'));		break;
+			psik2_ccp = cal_psi_cam( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"), parameter.at('hybrid_alpha'), parameter.at('hybrid_beta'));		break;
 		default:
 			throw( ModuleBase::GlobalFunc::TO_STRING(__FILE__)+" line "+ModuleBase::GlobalFunc::TO_STRING(__LINE__) );		break;
 	}

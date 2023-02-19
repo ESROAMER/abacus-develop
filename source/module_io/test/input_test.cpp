@@ -213,7 +213,7 @@ TEST_F(InputTest, Default)
 		EXPECT_EQ(INPUT.exx_cam_alpha,"default");
 		EXPECT_EQ(INPUT.exx_cam_beta,"default");
         EXPECT_EQ(INPUT.exx_real_number,"default");
-        EXPECT_DOUBLE_EQ(INPUT.exx_hse_omega,0.11);
+        EXPECT_EQ(INPUT.exx_hse_omega,"default");
         EXPECT_TRUE(INPUT.exx_separate_loop);
         EXPECT_EQ(INPUT.exx_hybrid_step,100);
         EXPECT_DOUBLE_EQ(INPUT.exx_lambda,0.3);
@@ -541,7 +541,7 @@ TEST_F(InputTest, Read)
 		EXPECT_EQ(INPUT.exx_cam_alpha,"default");
 		EXPECT_EQ(INPUT.exx_cam_beta,"default");
         EXPECT_EQ(INPUT.exx_real_number,"default");
-        EXPECT_DOUBLE_EQ(INPUT.exx_hse_omega,0.11);
+        EXPECT_EQ(INPUT.exx_hse_omega,"default");
         EXPECT_TRUE(INPUT.exx_separate_loop);
         EXPECT_EQ(INPUT.exx_hybrid_step,100);
         EXPECT_DOUBLE_EQ(INPUT.exx_lambda,0.3);
@@ -715,8 +715,8 @@ TEST_F(InputTest, Default_2)
 	EXPECT_TRUE(INPUT.of_hold_rho0);
         EXPECT_EQ(INPUT.of_full_pw_dim,0);
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"0.25");
-	EXPECT_EQ(INPUT.exx_cam_alpha,"-0.25");
-	EXPECT_EQ(INPUT.exx_cam_beta,"-0.25");
+	EXPECT_EQ(INPUT.exx_cam_alpha,"0.0");
+	EXPECT_EQ(INPUT.exx_cam_beta,"0.25");
 	EXPECT_EQ(INPUT.exx_real_number,"1");
         EXPECT_EQ(INPUT.exx_ccp_rmesh_times,"1.5");
 	EXPECT_EQ(INPUT.diago_proc,1);
@@ -758,8 +758,8 @@ TEST_F(InputTest, Default_2)
 	EXPECT_EQ(INPUT.vdw_a2,"1.0");
 	EXPECT_EQ(INPUT.vdw_cutoff_radius,"95");
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"1");
-	EXPECT_EQ(INPUT.exx_cam_alpha,"0");
-	EXPECT_EQ(INPUT.exx_cam_beta,"0");
+	EXPECT_EQ(INPUT.exx_cam_alpha,"0.25");
+	EXPECT_EQ(INPUT.exx_cam_beta,"0.0");
 	EXPECT_EQ(INPUT.exx_real_number,"0");
         EXPECT_EQ(INPUT.exx_ccp_rmesh_times,"10");
 	EXPECT_EQ(INPUT.diago_proc,1);

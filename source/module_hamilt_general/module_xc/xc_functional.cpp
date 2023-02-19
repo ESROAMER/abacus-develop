@@ -10,8 +10,8 @@ std::vector<int> XC_Functional::func_id(1);
 int XC_Functional::func_type = 0;
 bool XC_Functional::use_libxc = true;
 double XC_Functional::hybrid_alpha = 0.25;
-double XC_Functional::cam_alpha = 0.25;
-double XC_Functional::cam_beta = -0.25;
+double XC_Functional::cam_alpha = 0.0;
+double XC_Functional::cam_beta = 0.25;
 
 void XC_Functional::get_hybrid_mixing(const double alpha_in, const double cam_alpha_in, const double cam_beta_in)
 {
@@ -143,6 +143,36 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
         func_type = 4;
         use_libxc = true;
     }
+    else if( xc_func == "LC_PBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LC_PBEOP);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LC_WPBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LC_WPBE);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LRC_WPBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LRC_WPBE);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LRC_WPBEH")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LRC_WPBEH);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "CAM_PBEH")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_CAM_PBEH);
+        func_type = 4;
+        use_libxc = true;
+    }
 #endif
     else
     {
@@ -181,9 +211,11 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
 #endif
 
 #ifndef USE_LIBXC
-    if(xc_func == "SCAN" || xc_func == "HSE" || xc_func == "SCAN0")
+    if(xc_func == "SCAN" || xc_func == "HSE" || xc_func == "SCAN0" ||
+        xc_func == "LC_PBE" || xc_func == "LC_WPBE" || xc_func == "LRC_WPBE" ||
+        xc_func == "LRC_PBEH" || xc_func == "CAM_PBEH")
     {
-        ModuleBase::WARNING_QUIT("set_xc_type","to use SCAN, SCAN0, or HSE, LIBXC is required");
+        ModuleBase::WARNING_QUIT("set_xc_type","to use SCAN, SCAN0, HSE, long-range corrected (LC_PBE, LC_WPBE...) or CAM_PBEH LIBXC is required");
     }
     use_libxc = false;
 #endif

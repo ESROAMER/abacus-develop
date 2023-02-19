@@ -378,7 +378,10 @@ void Input_Conv::Convert(void)
         if (GlobalV::MY_RANK == 0)
             system(command0.c_str());
         if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
-            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0")
+            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
+            || INPUT.dft_functional == "cam_pbeh"
+            )
         {
             GlobalC::restart.info_save.save_charge = true;
             GlobalC::restart.info_save.save_H = true;
@@ -435,7 +438,9 @@ void Input_Conv::Convert(void)
     {
         GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
-    else if (INPUT.dft_functional == "lcpbe" || INPUT.dft_functional == "cam")
+    else if (INPUT.dft_functional == "lc_pbe" || INPUT.dft_functional == "lc_wpbe"
+            INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh" 
+            INPUT.dft_functional == "cam_pbeh" )
     {
         GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;

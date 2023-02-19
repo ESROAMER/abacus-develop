@@ -49,7 +49,7 @@ private:
 
 	// cam_alpha: Fraction of Hartree-Fock exchange
     // cam_beta: Fraction of short-range exact exchange
-	static std::vector<double> cal_psi_rsh( 
+	static std::vector<double> cal_psi_cam( 
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
 		const double omega,
