@@ -17,7 +17,7 @@ void XC_Functional::get_hybrid_mixing(const double alpha_in, const double cam_al
 {
     hybrid_alpha = alpha_in;
     cam_alpha = cam_alpha_in;
-    cam_beta = beta_in;
+    cam_beta = cam_beta_in;
 }
 
 int XC_Functional::get_func_type()
@@ -312,7 +312,7 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
             // This is a range-separated hybrid functional with range-separation constant  0.400,
             // and  0.0% short-range and 100.0% long-range exact exchange,
             // using the error function kernel.
-			add_func( XC_HYB_GGA_LC_WPBE );	
+			add_func( XC_HYB_GGA_XC_LC_WPBE );	
 			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
 				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
 				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.4
@@ -323,7 +323,7 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
             // This is a range-separated hybrid functional with range-separation constant  0.300,
             // and  0.0% short-range and 100.0% long-range exact exchange,
             // using the error function kernel.
-			add_func( XC_HYB_GGA_LRC_WPBE );	
+			add_func( XC_HYB_GGA_XC_LRC_WPBE );	
 			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
 				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
 				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.3
@@ -334,7 +334,7 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
             // This is a range-separated hybrid functional with range-separation constant  0.200,
             // and 20.0% short-range and 100.0% long-range exact exchange,
             // using the error function kernel.
-			add_func( XC_HYB_GGA_LRC_WPBEH );	
+			add_func( XC_HYB_GGA_XC_LRC_WPBEH );	
 			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
 				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -0.8
 				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.2

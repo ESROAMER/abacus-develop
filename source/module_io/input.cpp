@@ -1752,10 +1752,6 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_cam_beta);
         }
-        else if (strcmp("exx_hybrid_beta", word) == 0)
-        {
-            read_value(ifs, exx_hybrid_beta);
-        }
         else if (strcmp("exx_hse_omega", word) == 0)
         {
             read_value(ifs, exx_hse_omega);

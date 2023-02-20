@@ -715,7 +715,7 @@ void LCAO_Hamilt::calculate_HR_exx_sparse(const int &current_spin, const double 
 		for(int ik=ik_begin; ik<ik_end; ++ik)
 		{
 			ModuleBase::matrix HexxR_tmp;
-            const double coeff = exx_info.info_global.ccp_type == "Cam" ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha
+            const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
 			if(GlobalV::GAMMA_ONLY_LOCAL)
 				HexxR_tmp = coeff
 					* GlobalC::exx_lcao.Hexx_para.HK_Gamma_m2D[ik]
