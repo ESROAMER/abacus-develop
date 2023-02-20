@@ -2346,6 +2346,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_hybrid_alpha = "1";
         else if (dft_functional == "pbe0" || dft_functional == "hse" || dft_functional == "scan0")
             exx_hybrid_alpha = "0.25";
+        else 
+            exx_hybrid_alpha = "0.0";
     }
     if (exx_cam_alpha == "default")
     {
@@ -2354,6 +2356,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_cam_alpha = "1";
         else if (dft_functional == "cam_pbeh")
             exx_cam_alpha = "0.2";
+        else 
+            exx_cam_alpha = "0.0";
     }
     if (exx_cam_beta == "default")
     {
@@ -2364,6 +2368,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_cam_beta = "-0.8";
         else if (dft_functional == "cam_pbeh")
             exx_cam_beta = "0.8";
+        else 
+            exx_cam_beta = "0.0";
     }
     if (exx_hse_omega == "default")
     {
