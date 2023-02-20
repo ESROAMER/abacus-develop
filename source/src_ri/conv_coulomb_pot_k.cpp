@@ -44,9 +44,12 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_cam(
 	const double cam_alpha,
 	const double cam_beta)
 {
+	double Rc = pow(0.75 * GlobalC::kv.nks * GlobalC::ucell.omega / (ModuleBase::PI), 0.3333334);
 	std::vector<double> psik2_ccp(psif.size());
 	for( size_t ik=0; ik<psif.size(); ++ik )
-		psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha + cam_beta * (1-std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega))));
+		double coulomb_part = 1 - std::cos(k_radial[ik] * Rc);
+		double fock_part = 1 - std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega));
+		psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha * coulomb_part + cam_beta * fock_part);
 	return psik2_ccp;
 }
 
