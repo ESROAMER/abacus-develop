@@ -10,11 +10,11 @@ AddTest(
 )
 AddTest(
   TARGET base_tool_quit
-  SOURCES tool_quit_test.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES tool_quit_test.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_tool_check
-  SOURCES tool_check_test.cpp ../tool_check.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES tool_check_test.cpp ../tool_check.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_memory
@@ -32,7 +32,7 @@ AddTest(
 AddTest(
   TARGET base_matrix3
   LIBS ${math_libs}
-  SOURCES matrix3_test.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES matrix3_test.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_intarray
@@ -45,11 +45,11 @@ AddTest(
 AddTest(
  TARGET base_matrix
   LIBS ${math_libs}
-  SOURCES matrix_test.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES matrix_test.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_complexarray
-  SOURCES complexarray_test.cpp ../complexarray.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES complexarray_test.cpp ../complexarray.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_complexmatrix
@@ -68,8 +68,8 @@ AddTest(
   TARGET base_ylmreal
   LIBS ${math_libs} device
   SOURCES math_ylmreal_test.cpp ../math_ylmreal.cpp ../complexmatrix.cpp ../global_variable.cpp ../ylm.cpp ../realarray.cpp ../timer.cpp ../matrix.cpp ../vector3.h
-          ../../src_parallel/parallel_reduce.cpp ../../src_parallel/parallel_kpoints.cpp ../../src_parallel/parallel_global.cpp ../../src_parallel/parallel_common.cpp
-          ../memory.cpp
+          ../parallel_reduce.cpp ../parallel_global.cpp ../parallel_common.cpp
+          ../memory.cpp ../libm/branred.cpp ../libm/sincos.cpp
 )
 AddTest(
   TARGET base_math_sphbes
@@ -78,12 +78,12 @@ AddTest(
 AddTest(
   TARGET base_mathzone
   LIBS ${math_libs}
-  SOURCES mathzone_test.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES mathzone_test.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_mathzone_add1
   LIBS ${math_libs}
-  SOURCES mathzone_add1_test.cpp ../mathzone_add1.cpp ../math_sphbes.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp ../timer.cpp
+  SOURCES mathzone_add1_test.cpp ../mathzone_add1.cpp ../math_sphbes.cpp ../matrix3.cpp ../matrix.cpp ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp ../timer.cpp
 )
 AddTest(
   TARGET base_math_polyint
@@ -112,29 +112,54 @@ AddTest(
   SOURCES container_operator_test.cpp ../container_operator.h
 )
 
-#add_definitions(-D__MIX_PRECISION)
 AddTest(
   TARGET base_math_chebyshev
   LIBS ${math_libs}
-  SOURCES math_chebyshev_test.cpp ../math_chebyshev.cpp ../global_function.cpp ../tool_quit.cpp ../global_variable.cpp ../timer.cpp ../global_file.cpp ../memory.cpp
+  SOURCES math_chebyshev_test.cpp ../math_chebyshev.cpp ../tool_quit.cpp ../global_variable.cpp ../timer.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp
 )
 
 AddTest(
   TARGET base_opt_CG
-  SOURCES opt_CG_test.cpp opt_test_tools.cpp ../opt_CG.cpp ../opt_DCsrch.cpp ../global_variable.cpp ../../src_parallel/parallel_reduce.cpp
+  SOURCES opt_CG_test.cpp opt_test_tools.cpp ../opt_CG.cpp ../opt_DCsrch.cpp ../global_variable.cpp ../parallel_reduce.cpp
 )
 
 AddTest(
   TARGET base_opt_TN
-  SOURCES opt_TN_test.cpp opt_test_tools.cpp ../opt_CG.cpp ../opt_DCsrch.cpp ../global_variable.cpp ../../src_parallel/parallel_reduce.cpp
+  SOURCES opt_TN_test.cpp opt_test_tools.cpp ../opt_CG.cpp ../opt_DCsrch.cpp ../global_variable.cpp ../parallel_reduce.cpp
 )
 
 AddTest(
   TARGET base_ylm
-  SOURCES ylm_test.cpp  ../ylm.cpp  ../timer.cpp  ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../memory.cpp
+  SOURCES ylm_test.cpp  ../ylm.cpp  ../timer.cpp  ../tool_quit.cpp ../global_variable.cpp ../global_file.cpp ../global_function.cpp ../memory.cpp
 )
 
 AddTest(
   TARGET base_abfs-vector3_order
   SOURCES abfs-vector3_order_test.cpp ../abfs-vector3_order.cpp
+)
+
+AddTest(
+  TARGET base_global_file
+  SOURCES global_file_test.cpp ../global_file.cpp ../global_function.cpp ../tool_quit.cpp ../global_variable.cpp ../memory.cpp ../timer.cpp
+)
+
+AddTest(
+  TARGET base_tool_title
+  SOURCES tool_title_test.cpp ../tool_title.cpp  ../global_variable.cpp ../global_function.cpp ../timer.cpp ../tool_quit.cpp  ../global_file.cpp ../memory.cpp
+)
+
+AddTest(
+  TARGET base_element_basis_index
+  SOURCES element_basis_index_test.cpp ../element_basis_index.cpp
+)
+
+AddTest(
+  TARGET base_tool_threading
+  SOURCES tool_threading_test.cpp ../tool_threading.h
+)
+
+AddTest(
+  TARGET spherical_bessel_transformer
+  SOURCES spherical_bessel_transformer_test.cpp ../spherical_bessel_transformer.cpp
+  LIBS ${math_libs}
 )

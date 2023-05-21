@@ -8,7 +8,7 @@
 
 #include "LRI_CV.h"
 // #include "module_xc/exx_info.h"
-// #include "module_orbital/ORB_atomic_lm.h"
+// #include "module_basis/module_ao/ORB_atomic_lm.h"
 #include "module_base/matrix.h"
 // #include "module_ri/Exx_LRI.h"
 // #include <RI/physics/Exx.h>
@@ -20,6 +20,7 @@
 
 class Local_Orbital_Charge;
 class Parallel_Orbitals;
+class K_Vectors;
 
 template <typename Tdata> class RPA_LRI
 {
@@ -36,12 +37,14 @@ template <typename Tdata> class RPA_LRI
     {
     }
     ~RPA_LRI(){};
-    void init(const MPI_Comm &mpi_comm_in);
+    void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in);
     void cal_rpa_cv();
-    void cal_postSCF_exx(const MPI_Comm &mpi_comm_in, const Local_Orbital_Charge &loc, const Parallel_Orbitals &pv);
-    void out_for_RPA(const Parallel_Orbitals &parav,
+    void cal_postSCF_exx(const MPI_Comm& mpi_comm_in,
+                    const K_Vectors& kv,
+                    const Mix_DMk_2D &mix_DMk_2D,
+                    const Parallel_Orbitals& pv);
+    void out_for_RPA(const Parallel_Orbitals& parav,
                      const psi::Psi<std::complex<double>> &psi,
-                     Local_Orbital_Charge &loc,
                      const elecstate::ElecState *pelec);
     void out_eigen_vector(const Parallel_Orbitals &parav, const psi::Psi<std::complex<double>> &psi);
     void out_struc();
@@ -59,6 +62,7 @@ template <typename Tdata> class RPA_LRI
 
   private:
     const Exx_Info::Exx_Info_RI &info;
+    const K_Vectors *p_kv=nullptr;
     MPI_Comm mpi_comm;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;

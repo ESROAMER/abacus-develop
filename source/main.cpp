@@ -3,11 +3,14 @@
 // DATE : 2008-11-10
 //==========================================================
 #include "driver.h"
-#include "src_parallel/parallel_global.h"
+#include "module_base/parallel_global.h"
 #include <ctime>
+#include "module_io/parse_args.h"
 
 int main(int argc, char **argv)
 {
+    ModuleIO::parse_args(argc,argv);
+    
     Parallel_Global::read_mpi_parameters(argc,argv);
 	// main program for doing electronic structure calculations
 	//----------------------------------------------------------

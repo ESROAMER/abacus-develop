@@ -5,48 +5,46 @@
 #include "module_base/timer.h"
 #include "module_base/tool_title.h"
 #include <algorithm>
-
-//temporary
-#include "module_hamilt_pw/hamilt_pwdft/global.h"
 namespace hsolver
 {
-    void HSolverPW_SDFT::solve(hamilt::Hamilt<double>* pHamilt,
-                           psi::Psi<std::complex<double>>& psi, 
-                           elecstate::ElecState* pes, 
+void HSolverPW_SDFT::solve(hamilt::Hamilt<double>* pHamilt,
+                           psi::Psi<std::complex<double>>& psi,
+                           elecstate::ElecState* pes,
+                           ModulePW::PW_Basis_K* wfc_basis,
                            Stochastic_WF& stowf,
-						   const int istep,
+                           const int istep,
                            const int iter,
-                           const std::string method_in, 
+                           const std::string method_in,
                            const bool skip_charge)
+{
+    ModuleBase::TITLE(this->classname, "solve");
+    ModuleBase::timer::tick(this->classname, "solve");
+    const int npwx = psi.get_nbasis();
+    const int nbands = psi.get_nbands();
+    const int nks = psi.get_nk();
+
+    // prepare for the precondition of diagonalization
+    this->precondition.resize(psi.get_nbasis());
+
+    // select the method of diagonalization
+    this->method = method_in;
+    this->initDiagh();
+
+    // part of KSDFT to get KS orbitals
+    for (int ik = 0; ik < nks; ++ik)
     {
-        ModuleBase::TITLE(this->classname, "solve");
-        ModuleBase::timer::tick(this->classname, "solve");
-        const int npwx = psi.get_nbasis();
-        const int nbands = psi.get_nbands();
-        const int nks = psi.get_nk();
+        pHamilt->updateHk(ik);
+        if (nbands > 0 && GlobalV::MY_STOGROUP == 0)
+        {
+            this->updatePsiK(pHamilt, psi, ik);
+            // template add precondition calculating here
+            update_precondition(precondition, ik, this->wfc_basis->npwk[ik]);
+            /// solve eigenvector and eigenvalue for H(k)
+            double* p_eigenvalues = &(pes->ekb(ik, 0));
+            this->hamiltSolvePsiK(pHamilt, psi, p_eigenvalues);
+        }
 
-        // prepare for the precondition of diagonalization
-        this->precondition.resize(psi.get_nbasis());
-
-        // select the method of diagonalization
-        this->method = method_in;
-        this->initDiagh();
-
-        // part of KSDFT to get KS orbitals
-	    for (int ik = 0; ik < nks; ++ik)
-	    {
-			pHamilt->updateHk(ik);
-		    if(nbands > 0 && GlobalV::MY_STOGROUP == 0)
-		    {
-				this->updatePsiK(pHamilt, psi, ik);
-                // template add precondition calculating here
-                update_precondition(precondition, ik, this->wfc_basis->npwk[ik]);
-		    	/// solve eigenvector and eigenvalue for H(k)
-                double* p_eigenvalues = &(pes->ekb(ik, 0));
-                this->hamiltSolvePsiK(pHamilt, psi, p_eigenvalues);
-		    }
-            
-		    stoiter.stohchi.current_ik = ik;
+        stoiter.stohchi.current_ik = ik;
 		
 #ifdef __MPI
 			if(nbands > 0)
@@ -58,13 +56,6 @@ namespace hsolver
 			stoiter.orthog(ik,psi,stowf);
 			stoiter.checkemm(ik,istep, iter, stowf);	//check and reset emax & emin
 		}
-		// DiagoCG would keep 9*nbasis memory in cache during loop-k
-        // it should be deleted before calculating charge
-		if(this->method == "cg")
-        {
-            delete pdiagh;
-            pdiagh = nullptr;
-        }
 
 		this->endDiagh();
 
@@ -89,44 +80,20 @@ namespace hsolver
 		{
 			pes->psiToRho(psi);
 #ifdef __MPI
-			MPI_Bcast(&pes->eband,1, MPI_DOUBLE, 0,PARAPW_WORLD);
+            MPI_Bcast(&pes->f_en.eband, 1, MPI_DOUBLE, 0, PARAPW_WORLD);
 #endif
 		}
 		else
 		{
 			for(int is=0; is < GlobalV::NSPIN; is++)
 			{
-				ModuleBase::GlobalFunc::ZEROS(pes->charge->rho[is], GlobalC::rhopw->nrxx);
+				ModuleBase::GlobalFunc::ZEROS(pes->charge->rho[is], pes->charge->nrxx);
 			}
 		}
 		// calculate stochastic rho
-		stoiter.sum_stoband(stowf,pes,pHamilt);
+		stoiter.sum_stoband(stowf,pes,pHamilt,wfc_basis);
 
-
-		//(6) calculate the delta_harris energy 
-		// according to new charge density.
-		// mohan add 2009-01-23
-		//en.calculate_harris();
-
-		if(GlobalV::MY_STOGROUP==0)
-		{
-			Symmetry_rho srho;
-			for(int is=0; is < GlobalV::NSPIN; is++)
-			{
-				srho.begin(is, *(pes->charge), GlobalC::rhopw, GlobalC::Pgrid, GlobalC::symm);
-			}
-		}
-		else
-		{
-#ifdef __MPI
-			if(ModuleSymmetry::Symmetry::symm_flag == 1)	MPI_Barrier(MPI_COMM_WORLD);
-#endif
-		}
-
-		if(GlobalV::MY_STOGROUP == 0)
-		{
-        	GlobalC::en.deband = GlobalC::en.delta_e(pes);
-		}
+        //will do rho symmetry and energy calculation in esolver
         ModuleBase::timer::tick(this->classname, "solve");
         return;
     }

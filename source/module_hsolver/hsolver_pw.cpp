@@ -7,16 +7,17 @@
 #include "module_base/timer.h"
 #include "module_hamilt_pw/hamilt_pwdft/hamilt_pw.h"
 #include "module_elecstate/elecstate_pw.h"
-#include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_hamilt_pw/hamilt_pwdft/wavefunc.h"
 #include <algorithm>
 
 namespace hsolver {
 
-template<typename FPTYPE, typename Device>
-HSolverPW<FPTYPE, Device>::HSolverPW(ModulePW::PW_Basis_K* wfc_basis_in)
+template <typename FPTYPE, typename Device>
+HSolverPW<FPTYPE, Device>::HSolverPW(ModulePW::PW_Basis_K* wfc_basis_in, wavefunc* pwf_in)
 {
-    this->wfc_basis = wfc_basis_in;
     this->classname = "HSolverPW";
+    this->wfc_basis = wfc_basis_in;
+    this->pwf = pwf_in;
     this->diag_ethr = GlobalV::PW_DIAG_THR;
     /*this->init(pbas_in);*/
 }
@@ -74,8 +75,12 @@ void HSolverPW<FPTYPE, Device>::initDiagh()
     }
 }
 
-template<typename FPTYPE, typename Device>
-void HSolverPW<FPTYPE, Device>::solve(hamilt::Hamilt<FPTYPE, Device>* pHamilt, psi::Psi<std::complex<FPTYPE>, Device>& psi, elecstate::ElecState* pes, const std::string method_in, const bool skip_charge)
+template <typename FPTYPE, typename Device>
+void HSolverPW<FPTYPE, Device>::solve(hamilt::Hamilt<FPTYPE, Device>* pHamilt,
+                                      psi::Psi<std::complex<FPTYPE>, Device>& psi,
+                                      elecstate::ElecState* pes,
+                                      const std::string method_in,
+                                      const bool skip_charge)
 {
     ModuleBase::TITLE("HSolverPW", "solve");
     ModuleBase::timer::tick("HSolverPW", "solve");
@@ -107,7 +112,7 @@ void HSolverPW<FPTYPE, Device>::solve(hamilt::Hamilt<FPTYPE, Device>* pHamilt, p
         }
         /// calculate the contribution of Psi for charge density rho
     }
-    castmem_2d_2h_op()(cpu_ctx, cpu_ctx, &pes->ekb(0, 0), eigenvalues.data(), pes->ekb.nr * pes->ekb.nc);
+    castmem_2d_2h_op()(cpu_ctx, cpu_ctx, pes->ekb.c, eigenvalues.data(), pes->ekb.nr * pes->ekb.nc);
 
     this->endDiagh();
 
@@ -153,8 +158,10 @@ void HSolverPW<FPTYPE, Device>::endDiagh()
     }
 }
 
-template<typename FPTYPE, typename Device>
-void HSolverPW<FPTYPE, Device>::updatePsiK(hamilt::Hamilt<FPTYPE, Device>* pHamilt, psi::Psi<std::complex<FPTYPE>, Device>& psi, const int ik)
+template <typename FPTYPE, typename Device>
+void HSolverPW<FPTYPE, Device>::updatePsiK(hamilt::Hamilt<FPTYPE, Device>* pHamilt,
+                                           psi::Psi<std::complex<FPTYPE>, Device>& psi,
+                                           const int ik)
 {
     psi.fix_k(ik);
     if(!this->initialed_psi)
@@ -163,7 +170,7 @@ void HSolverPW<FPTYPE, Device>::updatePsiK(hamilt::Hamilt<FPTYPE, Device>* pHami
         {
             // generate PAOs first, then diagonalize to get
             // inital wavefunctions.
-            GlobalC::wf.diago_PAO_in_pw_k2(this->ctx, ik, psi, pHamilt);
+            hamilt::diago_PAO_in_pw_k2(this->ctx, ik, psi, this->wfc_basis, this->pwf, pHamilt);
         }
         else
         {
@@ -228,7 +235,7 @@ FPTYPE HSolverPW<FPTYPE, Device>::set_diagethr(const int istep, const int iter, 
     //It is too complex now and should be modified.
     if (iter == 1)
     {
-        if (abs(this->diag_ethr - 1.0e-2) < 1.0e-10)
+        if (abs(this->diag_ethr - 1.0e-2) < 1.0e-6)
         {
             if (GlobalV::init_chg == "file")
             {
@@ -261,6 +268,12 @@ FPTYPE HSolverPW<FPTYPE, Device>::set_diagethr(const int istep, const int iter, 
             this->diag_ethr = 1.e-2;
         }
         this->diag_ethr = std::min(this->diag_ethr, static_cast<FPTYPE>(0.1) * drho / std::max(static_cast<FPTYPE>(1.0), static_cast<FPTYPE>(GlobalV::nelec)));
+    }
+    // It is essential for single precision implementation to keep the diag_ethr value
+    // less or equal to the single-precision limit of convergence(0.5e-4).
+    // modified by denghuilu at 2023-05-15
+    if (GlobalV::precision_flag == "single") {
+        this->diag_ethr = std::max(this->diag_ethr, static_cast<FPTYPE>(0.5e-4));
     }
     return this->diag_ethr;
 }

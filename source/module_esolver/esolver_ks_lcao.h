@@ -6,7 +6,10 @@
 #include "module_hamilt_lcao/hamilt_lcaodft/local_orbital_charge.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/local_orbital_wfc.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_hamilt.h"
-#include "module_orbital/ORB_control.h"
+#include "module_basis/module_ao/ORB_control.h"
+#ifdef __EXX
+#include "module_ri/Mix_DMk_2D.h"
+#endif
 
 namespace ModuleESolver
 {
@@ -18,8 +21,9 @@ namespace ModuleESolver
         ~ESolver_KS_LCAO();
 
         void Init(Input& inp, UnitCell& cell) override;
+        void init_after_vc(Input& inp, UnitCell& cell) override;
 
-        void cal_Energy(double& etot) override;
+        double cal_Energy() override;
         void cal_Force(ModuleBase::matrix& force) override;
         void cal_Stress(ModuleBase::matrix& stress) override;
         void postprocess() override;
@@ -43,7 +47,9 @@ namespace ModuleESolver
         Local_Orbital_Charge LOC;
         LCAO_Hamilt UHM;
         LCAO_Matrix LM;
-
+#ifdef __EXX
+		Mix_DMk_2D mix_DMk_2D;
+#endif
 
         // Temporarily store the stress to unify the interface with PW,
         // because it's hard to seperate force and stress calculation in LCAO.

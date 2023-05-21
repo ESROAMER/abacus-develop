@@ -102,7 +102,10 @@ HamiltLCAO<T>::HamiltLCAO(
         {
             pot_register_in.push_back("gatefield");
         }
-        pot_register_in.push_back("tddft");
+        if (GlobalV::ESOLVER_TYPE == "tddft")
+        {
+            pot_register_in.push_back("tddft");
+        }
         //only Potential is not empty, Veff and Meta are available
         if(pot_register_in.size()>0)
         {
@@ -199,7 +202,10 @@ HamiltLCAO<T>::HamiltLCAO(
         {
             pot_register_in.push_back("gatefield");
         }
-        pot_register_in.push_back("tddft");
+        if (GlobalV::ESOLVER_TYPE == "tddft")
+        {
+            pot_register_in.push_back("tddft");
+        }
         //only Potential is not empty, Veff and Meta are available
         if(pot_register_in.size()>0)
         {
@@ -240,7 +246,14 @@ HamiltLCAO<T>::HamiltLCAO(
         &(LM_in->SlocR),
         &(LM_in->Sloc2)
     );
-    this->ops->add(overlap);
+    if(this->ops == nullptr)
+    {
+        this->ops = overlap;
+    }
+    else
+    {
+        this->ops->add(overlap);
+    }
 
     // kinetic term (<psi|T|psi>),
     // in general case, target HR is LCAO_Matrix::Hloc_fixedR, while target HK is LCAO_Matrix::Hloc2

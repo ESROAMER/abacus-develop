@@ -43,8 +43,15 @@ add_library(
     tool_title.cpp
     ylm.cpp
     abfs-vector3_order.cpp
+    parallel_common.cpp
+    parallel_global.cpp
+    parallel_reduce.cpp
     ${LIBM_SRC}
 )
+
+if(ENABLE_CONTAINER)
+  add_subdirectory(module_container)
+endif()
 
 if(ENABLE_COVERAGE)
   add_coverage(base)
@@ -52,6 +59,7 @@ endif()
 
 if(BUILD_TESTING)
   add_subdirectory(test)
+  add_subdirectory(test_parallel)
   add_subdirectory(kernels/test)
   if (USE_ABACUS_LIBM)
     add_subdirectory(libm/test)

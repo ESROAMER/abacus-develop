@@ -17,7 +17,6 @@ add_library(
     relax_old/lattice_change_basic.cpp
     relax_old/lattice_change_cg.cpp
     relax_old/lattice_change_methods.cpp
-    relax_old/variable_cell.cpp
 )
 
 if(ENABLE_COVERAGE)
@@ -26,4 +25,8 @@ endif()
 
 if(BUILD_TESTING)
   add_subdirectory(relax_new/test)
+endif()
+
+if(BUILD_TESTING)
+  add_subdirectory(relax_old/test)
 endif()

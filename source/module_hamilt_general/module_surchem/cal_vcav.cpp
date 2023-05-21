@@ -2,7 +2,7 @@
 #include "module_hamilt_general/module_xc/xc_functional.h"
 #include "surchem.h"
 
-void lapl_rho(const std::complex<double> *rhog, double *lapn, ModulePW::PW_Basis *rho_basis)
+void lapl_rho(const std::complex<double>* rhog, double* lapn, const ModulePW::PW_Basis* rho_basis)
 {
     std::complex<double> *gdrtmpg = new std::complex<double>[rho_basis->npw];
     ModuleBase::GlobalFunc::ZEROS(lapn, rho_basis->nrxx);
@@ -31,7 +31,7 @@ void lapl_rho(const std::complex<double> *rhog, double *lapn, ModulePW::PW_Basis
 
 // calculates first derivative of the shape function in realspace
 // exp(-(log(n/n_c))^2 /(2 sigma^2)) /(sigma * sqrt(2*pi) )/n
-void shape_gradn(const complex<double> *PS_TOTN, ModulePW::PW_Basis* rho_basis, double *eprime)
+void shape_gradn(const complex<double>* PS_TOTN, const ModulePW::PW_Basis* rho_basis, double* eprime)
 {
 
     double *PS_TOTN_real = new double[rho_basis->nrxx];
@@ -51,7 +51,10 @@ void shape_gradn(const complex<double> *PS_TOTN, ModulePW::PW_Basis* rho_basis, 
     delete[] PS_TOTN_real;
 }
 
-void surchem::createcavity(const UnitCell &ucell, ModulePW::PW_Basis* rho_basis, const complex<double> *PS_TOTN, double *vwork)
+void surchem::createcavity(const UnitCell& ucell,
+                           const ModulePW::PW_Basis* rho_basis,
+                           const complex<double>* PS_TOTN,
+                           double* vwork)
 {
     ModuleBase::Vector3<double> *nablan = new ModuleBase::Vector3<double>[rho_basis->nrxx];
     ModuleBase::GlobalFunc::ZEROS(nablan, rho_basis->nrxx);
@@ -64,7 +67,7 @@ void surchem::createcavity(const UnitCell &ucell, ModulePW::PW_Basis* rho_basis,
     ModuleBase::GlobalFunc::ZEROS(lapn, rho_basis->nrxx);
 
     // nabla n
-    XC_Functional::grad_rho(PS_TOTN, nablan, rho_basis);
+    XC_Functional::grad_rho(PS_TOTN, nablan, rho_basis, GlobalC::ucell.tpiba);
 
     //  |\nabla n |^2 = nablan_2
     for (int ir = 0; ir < rho_basis->nrxx; ir++)
@@ -123,7 +126,7 @@ void surchem::createcavity(const UnitCell &ucell, ModulePW::PW_Basis* rho_basis,
     
     // \nabla(1 / |\nabla n|), ggn in real space
     ModuleBase::Vector3<double> *ggn = new ModuleBase::Vector3<double>[rho_basis->nrxx];
-    XC_Functional::grad_rho(inv_gn, ggn, rho_basis);
+    XC_Functional::grad_rho(inv_gn, ggn, rho_basis, GlobalC::ucell.tpiba);
 
     //-------------------------------------------------------------
     // add -(\nabla n . \nabla(1/ |\nabla n|)) to Vcav in real space
@@ -149,7 +152,10 @@ void surchem::createcavity(const UnitCell &ucell, ModulePW::PW_Basis* rho_basis,
     delete[] ggn;
 }
 
-ModuleBase::matrix surchem::cal_vcav(const UnitCell &ucell, ModulePW::PW_Basis* rho_basis, complex<double> *PS_TOTN, int nspin)
+ModuleBase::matrix surchem::cal_vcav(const UnitCell& ucell,
+                                     const ModulePW::PW_Basis* rho_basis,
+                                     complex<double>* PS_TOTN,
+                                     int nspin)
 {
     ModuleBase::TITLE("surchem", "cal_vcav");
     ModuleBase::timer::tick("surchem", "cal_vcav");

@@ -7,7 +7,7 @@
 #include "module_elecstate/elecstate_pw_sdft.h"
 #include "module_hsolver/diago_iter_assist.h"
 #include "module_io/rho_io.h"
-#include "module_io/write_occ.h"
+#include "module_io/write_istate_info.h"
 
 //-------------------Temporary------------------
 #include "module_base/global_variable.h"
@@ -39,22 +39,21 @@ void ESolver_SDFT_PW::Init(Input &inp, UnitCell &ucell)
     ESolver_KS::Init(inp,ucell);
 
     
-    this->pelec = new elecstate::ElecStatePW_SDFT( GlobalC::wfcpw, &(chr), (K_Vectors*)(&(GlobalC::kv)));
+    this->pelec = new elecstate::ElecStatePW_SDFT( GlobalC::wfcpw, &(chr), (K_Vectors*)(&(GlobalC::kv)), this->pw_rho, GlobalC::bigpw);
 
     // Inititlize the charge density.
-    this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
+    this->pelec->charge->allocate(GlobalV::NSPIN);
+    this->pelec->omega = GlobalC::ucell.omega;
 
     // Initializee the potential.
     if(this->pelec->pot == nullptr)
     {
-        this->pelec->pot = new elecstate::Potential(
-            GlobalC::rhopw,
-            &GlobalC::ucell,
-            &(GlobalC::ppcell.vloc),
-            &(GlobalC::sf.strucFac),
-            &(GlobalC::en.etxc),
-            &(GlobalC::en.vtxc)
-        );
+        this->pelec->pot = new elecstate::Potential(GlobalC::rhopw,
+                                                    &GlobalC::ucell,
+                                                    &(GlobalC::ppcell.vloc),
+                                                    &(GlobalC::sf.strucFac),
+                                                    &(this->pelec->f_en.etxc),
+                                                    &(this->pelec->f_en.vtxc));
         GlobalTemp::veff = &(this->pelec->pot->get_effective_v());
     }
 
@@ -62,15 +61,17 @@ void ESolver_SDFT_PW::Init(Input &inp, UnitCell &ucell)
     //Fix pelec->wg by ocp_kb
     if(GlobalV::ocp)
     {
-        this->pelec->fixed_weights(GlobalV::ocp_kb.data());
+        this->pelec->fixed_weights(GlobalV::ocp_kb);
     }
 
     this->Init_GlobalC(inp,ucell);//temporary
 
-	stowf.init(GlobalC::kv.nks);
-	if(INPUT.nbands_sto != 0)	Init_Sto_Orbitals(this->stowf, inp.seed_sto);
-	else						Init_Com_Orbitals(this->stowf, GlobalC::kv);
-	for (int ik =0 ; ik < GlobalC::kv.nks; ++ik)
+    stowf.init(&GlobalC::kv, GlobalC::wfcpw->npwk_max);
+    if (INPUT.nbands_sto != 0)
+        Init_Sto_Orbitals(this->stowf, inp.seed_sto, GlobalC::kv.nks);
+    else
+        Init_Com_Orbitals(this->stowf, GlobalC::wf.npwx);
+    for (int ik = 0; ik < GlobalC::kv.nks; ++ik)
     {
         this->stowf.shchi[ik].create(this->stowf.nchip[ik],GlobalC::wf.npwx,false);
         if(GlobalV::NBANDS > 0)
@@ -79,21 +80,19 @@ void ESolver_SDFT_PW::Init(Input &inp, UnitCell &ucell)
         }
     }
 
-    this->phsol = new hsolver::HSolverPW_SDFT(GlobalC::wfcpw, this->stowf, inp.method_sto);
-   
-
+    this->phsol = new hsolver::HSolverPW_SDFT(&GlobalC::kv, GlobalC::wfcpw, &GlobalC::wf, this->stowf, inp.method_sto);
 }
 
 void ESolver_SDFT_PW::beforescf(const int istep)
 {
     ESolver_KS_PW::beforescf(istep);
-	if(istep > 0 && INPUT.nbands_sto != 0 && INPUT.initsto_freq > 0 && istep%INPUT.initsto_freq == 0) Update_Sto_Orbitals(this->stowf, INPUT.seed_sto);
+	if(istep > 0 && INPUT.nbands_sto != 0 && INPUT.initsto_freq > 0 && istep%INPUT.initsto_freq == 0) Update_Sto_Orbitals(this->stowf, INPUT.seed_sto, GlobalC::kv.nks);
 }
 
 void ESolver_SDFT_PW::eachiterfinish(int iter)
 {
 	//this->pelec->print_eigenvalue(GlobalV::ofs_running);
-    GlobalC::en.calculate_etot();
+    this->pelec->cal_energies(2);
 }
 void ESolver_SDFT_PW::afterscf(const int istep)
 {
@@ -102,15 +101,32 @@ void ESolver_SDFT_PW::afterscf(const int istep)
 	    for(int is=0; is<GlobalV::NSPIN; is++)
         {
             std::stringstream ssc;
-            std::stringstream ss1;
-            ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG";
-            ModuleIO::write_rho(pelec->charge->rho_save[is], is, 0, ssc.str() );//mohan add 2007-10-17
+            ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG.cube";
+            const double ef_tmp = this->pelec->eferm.get_efval(is);
+            ModuleIO::write_rho(
+#ifdef __MPI
+                GlobalC::bigpw->bz,
+                GlobalC::bigpw->nbz,
+                GlobalC::rhopw->nplane,
+                GlobalC::rhopw->startz_current,
+#endif
+                pelec->charge->rho_save[is],
+                is,
+                GlobalV::NSPIN,
+                0,
+                ssc.str(),
+                GlobalC::rhopw->nx,
+                GlobalC::rhopw->ny,
+                GlobalC::rhopw->nz,
+                ef_tmp,
+                &(GlobalC::ucell));
         }
     }
     if(this->conv_elec)
     {
         GlobalV::ofs_running << "\n charge density convergence is achieved" << std::endl;
-        GlobalV::ofs_running << " final etot is " << GlobalC::en.etot * ModuleBase::Ry_to_eV << " eV" << std::endl;
+        GlobalV::ofs_running << " final etot is " << this->pelec->f_en.etot * ModuleBase::Ry_to_eV << " eV"
+                             << std::endl;
     }
     else
     {
@@ -120,12 +136,9 @@ void ESolver_SDFT_PW::afterscf(const int istep)
 
 void ESolver_SDFT_PW::hamilt2density(int istep, int iter, double ethr)
 {
-	// reset energy 
-    this->pelec->eband  = 0.0;
-    this->pelec->demet  = 0.0;
-    this->pelec->ef     = 0.0;
-    GlobalC::en.ef_up  = 0.0;
-    GlobalC::en.ef_dw  = 0.0;
+    // reset energy
+    this->pelec->f_en.eband = 0.0;
+    this->pelec->f_en.demet = 0.0;
     // choose if psi should be diag in subspace
     // be careful that istep start from 0 and iter start from 1
     if(istep==0&&iter==1) 
@@ -138,48 +151,73 @@ void ESolver_SDFT_PW::hamilt2density(int istep, int iter, double ethr)
 	}
     hsolver::DiagoIterAssist<double>::PW_DIAG_THR = ethr; 
     hsolver::DiagoIterAssist<double>::PW_DIAG_NMAX = GlobalV::PW_DIAG_NMAX;
-    this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec,this->stowf, istep, iter, GlobalV::KS_SOLVER);   
-    // transform energy for print
-    GlobalC::en.eband = this->pelec->eband;
-    GlobalC::en.demet = this->pelec->demet;
-    GlobalC::en.ef = this->pelec->ef; 
+    this->phsol->solve(this->p_hamilt,
+                       this->psi[0],
+                       this->pelec,
+                       GlobalC::wfcpw,
+                       this->stowf,
+                       istep,
+                       iter,
+                       GlobalV::KS_SOLVER);
+    if(GlobalV::MY_STOGROUP==0)
+    {
+        Symmetry_rho srho;
+        for(int is=0; is < GlobalV::NSPIN; is++)
+        {
+            srho.begin(is, *(this->pelec->charge), GlobalC::rhopw, GlobalC::Pgrid, GlobalC::symm);
+        }
+        this->pelec->f_en.deband = this->pelec->cal_delta_eband();
+    }
+    else
+    {
+#ifdef __MPI
+			if(ModuleSymmetry::Symmetry::symm_flag == 1)	MPI_Barrier(MPI_COMM_WORLD);
+#endif
+    }
 }
 
-void ESolver_SDFT_PW::cal_Energy(double& etot)
+double ESolver_SDFT_PW::cal_Energy()
 {
-    etot = GlobalC::en.etot;
+    return this->pelec->f_en.etot;
 }
 
 void ESolver_SDFT_PW::cal_Force(ModuleBase::matrix &force)
 {
-	Sto_Forces ff;
-    ff.init(force, this->pelec->wg, this->psi, this->stowf, pelec->charge);
+	Sto_Forces ff(GlobalC::ucell.nat);
+    ff.cal_stoforce(force,
+                    *this->pelec,
+                    GlobalC::rhopw,
+                    &GlobalC::symm,
+                    &GlobalC::sf,
+                    &GlobalC::kv,
+                    GlobalC::wfcpw,
+                    this->psi,
+                    this->stowf);
 }
 void ESolver_SDFT_PW::cal_Stress(ModuleBase::matrix &stress)
 {
 	Sto_Stress_PW ss;
-    ss.cal_stress(stress, this->pelec->wg, this->psi, this->stowf, pelec->charge);
+    ss.cal_stress(stress,
+                  *this->pelec,
+                  GlobalC::rhopw,
+                  &GlobalC::symm,
+                  &GlobalC::sf,
+                  &GlobalC::kv,
+                  GlobalC::wfcpw,
+                  this->psi,
+                  this->stowf,
+                  pelec->charge);
 }
 void ESolver_SDFT_PW::postprocess()
 {
 
     GlobalV::ofs_running << "\n\n --------------------------------------------" << std::endl;
     GlobalV::ofs_running << std::setprecision(16);
-    GlobalV::ofs_running << " !FINAL_ETOT_IS " << GlobalC::en.etot * ModuleBase::Ry_to_eV << " eV" << std::endl;
+    GlobalV::ofs_running << " !FINAL_ETOT_IS " << this->pelec->f_en.etot * ModuleBase::Ry_to_eV << " eV" << std::endl;
     GlobalV::ofs_running << " --------------------------------------------\n\n" << std::endl;
-    ModuleIO::print_occ(this->pelec);
+    ModuleIO::write_istate_info(this->pelec->ekb,this->pelec->wg,GlobalC::kv,&(GlobalC::Pkpoints));
 
-    if(this->maxniter == 0)
-    {
-        int iter = 1;
-        int istep = 0;
-        hsolver::DiagoIterAssist<double>::PW_DIAG_NMAX = GlobalV::PW_DIAG_NMAX;
-        hsolver::DiagoIterAssist<double>::PW_DIAG_THR = std::max(std::min(1e-5, 0.1 * GlobalV::SCF_THR / std::max(1.0, GlobalV::nelec)),1e-12);
-        hsolver::DiagoIterAssist<double>::need_subspace = false;
-        this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec,this->stowf,istep, iter, GlobalV::KS_SOLVER, true);
-        ((hsolver::HSolverPW_SDFT*)phsol)->stoiter.cleanchiallorder();//release lots of memories
-        GlobalC::en.ef = this->pelec->ef; //Temporary: Please use this->pelec->ef. GlobalC::en.ef is not recommended.
-    }
+    ((hsolver::HSolverPW_SDFT*)phsol)->stoiter.cleanchiallorder();//release lots of memories
     int nche_test = 0;
     if(INPUT.cal_cond)  nche_test = std::max(nche_test, INPUT.cond_nche);
     if(INPUT.out_dos)  nche_test = std::max(nche_test, INPUT.dos_nche);
@@ -187,7 +225,7 @@ void ESolver_SDFT_PW::postprocess()
     
     if(INPUT.cal_cond)
 	{
-        this->sKG(INPUT.cond_nche,INPUT.cond_fwhm,INPUT.cond_wcut,INPUT.cond_dw,INPUT.cond_wenlarge);
+        this->sKG(INPUT.cond_nche,INPUT.cond_fwhm,INPUT.cond_wcut,INPUT.cond_dw,INPUT.cond_dt, INPUT.cond_dtbatch);
     }
     if(INPUT.out_dos)
 	{
@@ -210,4 +248,35 @@ void ESolver_SDFT_PW::postprocess()
     }
 }
 
+void ESolver_SDFT_PW::othercalculation(const int istep)
+{
+    ModuleBase::TITLE("ESolver_SDFT_PW", "othercalculation");
+    ModuleBase::timer::tick("ESolver_SDFT_PW", "othercalculation");
+
+    if (GlobalV::CALCULATION == "nscf")
+    {
+        this->nscf();
+    }
+    else
+    {
+        ModuleBase::WARNING_QUIT("ESolver_SDFT_PW::othercalculation", "CALCULATION type not supported");
+    }
+    ModuleBase::timer::tick("ESolver_SDFT_PW", "othercalculation");
+    return;
 }
+
+void ESolver_SDFT_PW::nscf()
+{
+    ModuleBase::TITLE("ESolver_SDFT_PW", "nscf");
+    ModuleBase::timer::tick("ESolver_SDFT_PW", "nscf");
+    const int istep = 0;
+    const int iter = 1;
+    const double diag_thr = std::max(std::min(1e-5, 0.1 * GlobalV::SCF_THR / std::max(1.0, GlobalV::nelec)), 1e-12);
+    std::cout << " DIGA_THR          : " << diag_thr << std::endl;
+    this->beforescf(istep);
+    this->hamilt2density(istep, iter, diag_thr);
+    this->pelec->cal_energies(2);
+    ModuleBase::timer::tick("ESolver_SDFT_PW", "nscf");
+    return;
+}
+} // namespace ModuleESolver

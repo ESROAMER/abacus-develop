@@ -6,7 +6,7 @@ namespace ModuleESolver
     {
         // pw_rho = new ModuleBase::PW_Basis();
         
-        pw_rho = new ModulePW::PW_Basis_Big(); 
+        pw_rho = new ModulePW::PW_Basis_Big(GlobalV::device_flag, GlobalV::precision_flag);
         GlobalC::rhopw = this->pw_rho; //Temporary
         //temporary, it will be removed
         GlobalC::bigpw = static_cast<ModulePW::PW_Basis_Big*>(pw_rho);
@@ -14,20 +14,30 @@ namespace ModuleESolver
     }
     ESolver_FP::~ESolver_FP()
     {
+        if (this->psi != nullptr)
+        {
+            delete psi;
+        }
+        if (this->psid != nullptr)
+        {
+            delete psid;
+        }
         delete pw_rho;
         delete this->pelec;
     }
     void ESolver_FP::Init(Input& inp, UnitCell& cell)
     {
+        cell.read_pseudo(GlobalV::ofs_running);
+
 #ifdef __MPI
             this->pw_rho->initmpi(GlobalV::NPROC_IN_POOL, GlobalV::RANK_IN_POOL, POOL_WORLD);
 #endif
         if (this->classname == "ESolver_OF") this->pw_rho->setfullpw(inp.of_full_pw, inp.of_full_pw_dim);
         // Initalize the plane wave basis set
         if (inp.nx * inp.ny * inp.nz == 0)
-            this->pw_rho->initgrids(cell.lat0, cell.latvec, inp.ecutrho);
+            this->pw_rho->initgrids(inp.ref_cell_factor * cell.lat0, cell.latvec, inp.ecutrho);
 	    else
-            this->pw_rho->initgrids(cell.lat0, cell.latvec, inp.nx, inp.ny, inp.nz);
+            this->pw_rho->initgrids(inp.ref_cell_factor * cell.lat0, cell.latvec, inp.nx, inp.ny, inp.nz);
         
         this->pw_rho->initparameters(false, inp.ecutrho);
         this->pw_rho->setuptransform();
@@ -35,6 +45,50 @@ namespace ModuleESolver
         this->pw_rho->collect_uniqgg();
         this->print_rhofft(inp, GlobalV::ofs_running);
         
+    }
+
+    void ESolver_FP::init_after_vc(Input& inp, UnitCell& cell)
+    {
+        ModuleBase::TITLE("ESolver_FP", "init_after_vc");
+
+        if (GlobalV::md_prec_level == 0)
+        {
+            //only G-vector and K-vector are changed due to the change of lattice vector
+            //FFT grids do not change!!
+            pw_rho->initgrids(cell.lat0, cell.latvec, pw_rho->nx, pw_rho->ny, pw_rho->nz);
+            pw_rho->collect_local_pw(); 
+            pw_rho->collect_uniqgg();
+
+            GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, GlobalC::rhopw);
+            ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running,"LOCAL POTENTIAL");
+        }
+        else if (GlobalV::md_prec_level == 1)
+        {
+            GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, GlobalC::rhopw);
+            ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running,"LOCAL POTENTIAL");
+        }
+        else if (GlobalV::md_prec_level == 2)
+        {
+            if (inp.nx * inp.ny * inp.nz == 0)
+                this->pw_rho->initgrids(cell.lat0, cell.latvec, inp.ecutrho);
+            else
+                this->pw_rho->initgrids(cell.lat0, cell.latvec, inp.nx, inp.ny, inp.nz);
+
+            this->pw_rho->initparameters(false, inp.ecutrho);
+            this->pw_rho->setuptransform();
+            this->pw_rho->collect_local_pw(); 
+            this->pw_rho->collect_uniqgg();
+        }
+        this->pelec->omega = GlobalC::ucell.omega;
+
+        if(ModuleSymmetry::Symmetry::symm_flag == 1)
+        {
+            GlobalC::symm.analy_sys(cell, GlobalV::ofs_running);
+            ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "SYMMETRY");
+        }
+
+        GlobalC::kv.set_after_vc(GlobalC::symm, GlobalV::global_kpoint_card, GlobalV::NSPIN, cell.G, cell.latvec);
+        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT K-POINTS");
     }
 
     void ESolver_FP::print_rhofft(Input&inp, ofstream &ofs)

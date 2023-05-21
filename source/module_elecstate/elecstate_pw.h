@@ -2,7 +2,7 @@
 #define ELECSTATEPW_H
 
 #include "elecstate.h"
-#include "module_pw/pw_basis_k.h"
+#include "module_basis/module_pw/pw_basis_k.h"
 #include "module_elecstate/kernels/elecstate_op.h"
 #include "module_hamilt_pw/hamilt_pwdft/kernels/meta_op.h"
 
@@ -16,7 +16,9 @@ class ElecStatePW : public ElecState
     ElecStatePW(
       ModulePW::PW_Basis_K *wfc_basis_in, 
       Charge* chg_in, 
-      K_Vectors *pkv_in
+      K_Vectors *pkv_in,
+      ModulePW::PW_Basis* rhopw_in,
+      ModulePW::PW_Basis_Big* bigpw_in
     );
     // void init(Charge* chg_in):charge(chg_in){} override;
 

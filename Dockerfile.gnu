@@ -11,7 +11,7 @@ RUN git clone https://github.com/llohse/libnpy.git && \
     cp libnpy/include/npy.hpp /usr/local/include && \
     rm -r libnpy
 
-RUN wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.9.1%2Bcpu.zip \
+RUN wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.0.0%2Bcpu.zip \
         --no-check-certificate --quiet -O libtorch.zip && \
     unzip -q libtorch.zip -d /opt  && rm libtorch.zip
 
@@ -21,7 +21,7 @@ ADD https://api.github.com/repos/deepmodeling/abacus-develop/git/refs/heads/deve
 
 RUN git clone https://github.com/deepmodeling/abacus-develop.git --depth 1 && \
     cd abacus-develop && \
-    cmake -B build -DENABLE_DEEPKS=ON -DENABLE_LIBXC=ON && \
+    cmake -B build -DENABLE_DEEPKS=ON -DENABLE_LIBXC=ON -DENABLE_LIBRI=ON && \
     cmake --build build -j`nproc` && \
     cmake --install build && \
     cd .. && rm -rf abacus-develop

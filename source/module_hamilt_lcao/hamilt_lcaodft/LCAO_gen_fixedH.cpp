@@ -55,7 +55,7 @@ void LCAO_gen_fixedH::calculate_S_no(double* SlocR)
 
 
 //liaochen modify interface 2010-3-22
-void LCAO_gen_fixedH::build_ST_new(const char& dtype, const bool& calc_deri, const UnitCell &ucell, double* HSloc)
+void LCAO_gen_fixedH::build_ST_new(const char& dtype, const bool& calc_deri, const UnitCell &ucell, double* HSloc, bool cal_syns, double dmax)
 {
     ModuleBase::TITLE("LCAO_gen_fixedH","build_ST_new");
 
@@ -82,11 +82,20 @@ void LCAO_gen_fixedH::build_ST_new(const char& dtype, const bool& calc_deri, con
 		const int I1 = GlobalC::ucell.iat2ia[iat1];
         {
 			tau1 = atom1->tau[I1];
+
             //GlobalC::GridD.Find_atom(tau1);
 			AdjacentAtomInfo adjs;
             GlobalC::GridD.Find_atom(ucell, tau1, T1, I1, &adjs);
 			// Record_adj.for_2d() may not called in some case
 			int nnr = pv->nlocstart ? pv->nlocstart[iat1] : 0;
+
+			if (cal_syns)
+            {
+                for (int k = 0; k < 3; k++)
+                {
+                    tau1[k] = tau1[k] - atom1->vel[I1][k] * INPUT.mdp.md_dt / GlobalC::ucell.lat0 ;
+                }
+            }
 
             for (int ad = 0; ad < adjs.adj_num+1; ++ad)
             {
@@ -138,11 +147,13 @@ void LCAO_gen_fixedH::build_ST_new(const char& dtype, const bool& calc_deri, con
 							{
 								// PLEASE use UOT as an input parameter of this subroutine
 								// mohan add 2021-03-30
+			
 								GlobalC::UOT.snap_psipsi( GlobalC::ORB, olm, 0, dtype, tau1, 
 										T1, L1, m1, N1, adjs.adjacent_tau[ad], 
 										T2, L2, m2, N2, GlobalV::NSPIN,
-										olm2//for soc
-										);
+										olm2,//for soc
+										cal_syns,
+										dmax);
 
 								if(GlobalV::GAMMA_ONLY_LOCAL)
 								{
@@ -299,8 +310,8 @@ typedef std::tuple<int,int,int,int> key_tuple;
 #include "record_adj.h" //mohan add 2012-07-06
 void LCAO_gen_fixedH::build_Nonlocal_mu_new(double* NLloc, const bool &calc_deri)
 {
-    ModuleBase::TITLE("LCAO_gen_fixedH","build_Nonlocal_mu_new");
-    ModuleBase::timer::tick("LCAO_gen_fixedH", "build_Nonlocal_mu_new");
+    ModuleBase::TITLE("LCAO_gen_fixedH","b_NL_mu_new");
+    ModuleBase::timer::tick("LCAO_gen_fixedH", "b_NL_mu_new");
     const Parallel_Orbitals* pv = this->LM->ParaV;
 
 	// < phi1 | beta > < beta | phi2 >
@@ -758,14 +769,14 @@ void LCAO_gen_fixedH::build_Nonlocal_mu_new(double* NLloc, const bool &calc_deri
 		}
 	}
 
-	ModuleBase::timer::tick ("LCAO_gen_fixedH","build_Nonlocal_mu_new");
+	ModuleBase::timer::tick ("LCAO_gen_fixedH","b_NL_mu_new");
 	return;
 }
 
 void LCAO_gen_fixedH::build_Nonlocal_beta_new(double* HSloc) //update by liuyu 2021-04-07
 {
-    ModuleBase::TITLE("LCAO_gen_fixedH","build_Nonlocal_beta_new");
-    ModuleBase::timer::tick ("LCAO_gen_fixedH","build_Nonlocal_beta_new");
+    ModuleBase::TITLE("LCAO_gen_fixedH","b_NL_beta_new");
+    ModuleBase::timer::tick ("LCAO_gen_fixedH","b_NL_beta_new");
 
 	const Parallel_Orbitals* pv = this->LM->ParaV;
 
@@ -977,6 +988,6 @@ void LCAO_gen_fixedH::build_Nonlocal_beta_new(double* HSloc) //update by liuyu 2
     mkl_set_num_threads(mkl_threads);
 #endif
 	
-    ModuleBase::timer::tick ("LCAO_gen_fixedH","build_Nonlocal_beta_new");
+    ModuleBase::timer::tick ("LCAO_gen_fixedH","b_NL_beta_new");
 	return;
 }

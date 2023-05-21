@@ -2,191 +2,79 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_elecstate/potentials/efield.h"
 #include "module_base/timer.h"
+#include "module_base/element_name.h"
+#include "module_io/cube_io.h"
 namespace elecstate
 {
-/*Broken, please fix it
-// translate from write_rho in charge.cpp.
 void Potential::write_potential(
+#ifdef __MPI
+    const int& bz,
+    const int& nbz,
+    const int& nplane,
+    const int& startz_current,
+#endif
 	const int &is, 
 	const int &iter, 
 	const std::string &fn, 
+    const int& nx,
+    const int& ny,
+    const int& nz,
 	const ModuleBase::matrix &v, 
 	const int &precision, 
 	const int &hartree)const
 {
     ModuleBase::TITLE("potential","write_potential");
+	if (GlobalV::out_pot!=1) 
+	{
+		return;
+	}
+    ModuleBase::timer::tick("Potential","write_potential");
 
-    std::ofstream ofs;
-
-    if(GlobalV::MY_RANK==0)
+    double* temp_v = nullptr;
+    if (is == 0)
     {
-        ofs.open( fn.c_str() );
-
-        ofs << this->ucell_->latName << std::endl;//1
-        ofs << " " << this->ucell_->lat0 * 0.529177 << std::endl;
-        ofs << " " << this->ucell_->latvec.e11 << " " << this->ucell_->latvec.e12 << " " << this->ucell_->latvec.e13 << std::endl;
-        ofs << " " << this->ucell_->latvec.e21 << " " << this->ucell_->latvec.e22 << " " << this->ucell_->latvec.e23 << std::endl;
-        ofs << " " << this->ucell_->latvec.e31 << " " << this->ucell_->latvec.e32 << " " << this->ucell_->latvec.e33 << std::endl;
-
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            ofs << " " << this->ucell_->atoms[it].label;
-        }
-        ofs << std::endl;
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            ofs << " " << this->ucell_->atoms[it].na;
-        }
-        ofs << std::endl;
-        ofs << "Direct" << std::endl;
-
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            for(int ia=0; ia<this->ucell_->atoms[it].na; ia++)
-            {
-                ofs << " " << this->ucell_->atoms[it].taud[ia].x
-                    << " " << this->ucell_->atoms[it].taud[ia].y
-                    << " " << this->ucell_->atoms[it].taud[ia].z << std::endl;
-            }
-        }
-        ofs << this->rho_basis_->nx << " " << this->rho_basis_->ny << " " << this->rho_basis_->nz;
-        ofs << std::setprecision(precision);
-        ofs << scientific; 
-        if(!ofs)
-        {
-            ModuleBase::WARNING("potential::write_potential","Can't create VHartree File!");
-        }
-    }	
-
-#ifndef __MPI
-    int count=0;
-    for(int k=0; k<this->rho_basis_->nz; k++)
-    {
-        ofs << "\n" << k << " iz";
-        double value = 0.0;
-        double ave = 0.0;
-        for(int j=0; j<this->rho_basis_->ny; j++)
-        {
-            for(int i=0; i<this->rho_basis_->nx; i++)
-            {
-                if(count%8==0) ofs << "\n";
-                value = v(is, i*this->rho_basis_->ny*this->rho_basis_->nz + j*this->rho_basis_->nz + k);
-                ofs << " " << value;
-                ave += value;
-                ++count;
-            }
-        }
-        ofs << "\n" << ave/this->rho_basis_->nx/this->rho_basis_->ny << " average";
+        temp_v = v.c;
     }
-#else
-    MPI_Barrier(MPI_COMM_WORLD);
-    // only do in the first pool.
-    if(GlobalV::MY_POOL==0)
+    else if (is == 1)
     {
-        // num_z: how many planes on processor 'ip'
-        int *num_z = new int[GlobalV::NPROC_IN_POOL];
-        ModuleBase::GlobalFunc::ZEROS(num_z, GlobalV::NPROC_IN_POOL);
-        for (int iz=0;iz<this->rho_basis_->nz;iz++)
-        {
-            int ip = iz % GlobalV::NPROC_IN_POOL;
-            num_z[ip]++;
-        }
-
-        // start_z: start position of z in
-        // processor ip.
-        int *start_z = new int[GlobalV::NPROC_IN_POOL];
-        ModuleBase::GlobalFunc::ZEROS(start_z, GlobalV::NPROC_IN_POOL);
-        for (int ip=1;ip<GlobalV::NPROC_IN_POOL;ip++)
-        {
-            start_z[ip] = start_z[ip-1]+num_z[ip-1];
-        }
-
-        // which_ip: found iz belongs to which ip.
-        int *which_ip = new int[this->rho_basis_->nz];
-        ModuleBase::GlobalFunc::ZEROS(which_ip, this->rho_basis_->nz);
-        for(int iz=0; iz<this->rho_basis_->nz; iz++)
-        {
-            for(int ip=0; ip<GlobalV::NPROC_IN_POOL; ip++)
-            {
-                if(iz>=start_z[GlobalV::NPROC_IN_POOL-1])
-                {
-                    which_ip[iz] = GlobalV::NPROC_IN_POOL-1;
-                    break;
-                }
-                else if(iz>=start_z[ip] && iz<start_z[ip+1])
-                {
-                    which_ip[iz] = ip;
-                    break;
-                }
-            }
-            //GlobalV::ofs_running << "\n iz=" << iz << " ip=" << which_ip[iz];
-        }
-        int count=0;
-        int nxy = this->rho_basis_->nx * this->rho_basis_->ny;
-        double* zpiece = new double[nxy];
-        // save the rho one z by one z.
-        for(int iz=0; iz<this->rho_basis_->nz; iz++)
-        {
-            //GlobalV::ofs_running << "\n" << iz << " iz"; //LiuXh modify 20200624
-            // tag must be different for different iz.
-            ModuleBase::GlobalFunc::ZEROS(zpiece, nxy);
-            int tag = iz;
-            MPI_Status ierror;
-
-            // case 1: the first part of rho in processor 0.
-            if(which_ip[iz] == 0 && GlobalV::RANK_IN_POOL ==0)
-            {
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    zpiece[ir] = v(is, ir*this->rho_basis_->nplane+iz-this->rho_basis_->startz_current );
-                    //GlobalV::ofs_running << "\n get zpiece[" << ir << "]=" << zpiece[ir] << " ir*this->rho_basis_->nplane+iz=" << ir*this->rho_basis_->nplane+iz;
-                }
-            }
-            // case 2: > first part rho: send the rho to
-            // processor 0.
-            else if(which_ip[iz] == GlobalV::RANK_IN_POOL )
-            {
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    zpiece[ir] = v(is, ir*this->rho_basis_->nplane+iz-this->rho_basis_->startz_current);
-                }
-                MPI_Send(zpiece, nxy, MPI_DOUBLE, 0, tag, POOL_WORLD);
-            }
-
-            // case 2: > first part rho: processor 0 receive the rho
-            // from other processors
-            else if(GlobalV::RANK_IN_POOL==0)
-            {
-                MPI_Recv(zpiece, nxy, MPI_DOUBLE, which_ip[iz], tag, POOL_WORLD, &ierror);
-                //GlobalV::ofs_running << "\n Receieve First number = " << zpiece[0];
-            }
-
-            // write data
-            if(GlobalV::MY_RANK==0)
-            {
-                //ofs << "\niz=" << iz;
-                double ave = 0.0;
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    if(count%8==0) ofs << "\n";
-                    ofs << " " << zpiece[ir];
-                    ave += zpiece[ir];
-                    ++count;
-                }
-                ofs << "\n" << ave/nxy << " average"; 
-            }
-        }
-        delete[] zpiece;
+        temp_v = &(v.c[nx * ny * nz]);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+
+    double ef_tmp = 0.;
+    int out_fermi = 0;
+    ModuleIO::write_cube(
+#ifdef __MPI
+                bz,
+                nbz,
+                nplane,
+                startz_current,
 #endif
-    if(GlobalV::MY_RANK==0) ofs.close();
-    ModuleBase::timer::tick("potential","write_potential");
+                temp_v,
+                is,
+                GlobalV::NSPIN,
+                iter,
+                fn,
+                nx,
+                ny,
+                nz,
+                ef_tmp,
+                &(GlobalC::ucell),
+                precision,
+                out_fermi);
+
+    ModuleBase::timer::tick("Potential","write_potential");
     return;
 }
-*/
 
-void Potential::write_elecstat_pot(const std::string &fn, const std::string &fn_ave, ModulePW::PW_Basis* rho_basis, const Charge* const chr)
+
+void Potential::write_elecstat_pot(
+#ifdef __MPI
+    const int& bz,
+    const int& nbz,
+#endif
+    const std::string &fn, 
+    ModulePW::PW_Basis* rho_basis, 
+    const Charge* const chr)
 {
     ModuleBase::TITLE("Potential","write_elecstat_pot");
     ModuleBase::timer::tick("Potential","write_elecstat_pot");
@@ -261,224 +149,29 @@ void Potential::write_elecstat_pot(const std::string &fn, const std::string &fn_
     //-------------------------------------------
     // output the electrostatic potential into a file.
     //-------------------------------------------
-    std::ofstream ofs;
-    std::ofstream ofs_ave;
-
-    if(GlobalV::MY_RANK==0)
-    {
-        ofs.open( fn.c_str() );
-        ofs_ave.open( fn_ave.c_str() );
-
-        ofs << this->ucell_->latName << std::endl;//1
-        ofs << " " << this->ucell_->lat0 * 0.529177 << std::endl;
-        ofs << " " << this->ucell_->latvec.e11 << " " << this->ucell_->latvec.e12 << " " << this->ucell_->latvec.e13 << std::endl;
-        ofs << " " << this->ucell_->latvec.e21 << " " << this->ucell_->latvec.e22 << " " << this->ucell_->latvec.e23 << std::endl;
-        ofs << " " << this->ucell_->latvec.e31 << " " << this->ucell_->latvec.e32 << " " << this->ucell_->latvec.e33 << std::endl;
-
-        ofs_ave << this->ucell_->latName << std::endl;//1
-        ofs_ave << " " << this->ucell_->lat0 * 0.529177 << std::endl;
-        ofs_ave << " " << this->ucell_->latvec.e11 << " " << this->ucell_->latvec.e12 << " " << this->ucell_->latvec.e13 << std::endl;
-        ofs_ave << " " << this->ucell_->latvec.e21 << " " << this->ucell_->latvec.e22 << " " << this->ucell_->latvec.e23 << std::endl;
-        ofs_ave << " " << this->ucell_->latvec.e31 << " " << this->ucell_->latvec.e32 << " " << this->ucell_->latvec.e33 << std::endl;
-
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            ofs << " " << this->ucell_->atoms[it].label;
-            ofs_ave << " " << this->ucell_->atoms[it].label;
-        }
-        ofs << std::endl;
-        ofs_ave << std::endl;
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            ofs << " " << this->ucell_->atoms[it].na;
-            ofs_ave << " " << this->ucell_->atoms[it].na;
-        }
-        ofs << std::endl;
-        ofs << "Direct" << std::endl;
-
-        ofs_ave << std::endl;
-        ofs_ave << "Direct" << std::endl;
-
-        for(int it=0; it<this->ucell_->ntype; it++)
-        {
-            for(int ia=0; ia<this->ucell_->atoms[it].na; ia++)
-            {
-                ofs << " " << this->ucell_->atoms[it].taud[ia].x
-                    << " " << this->ucell_->atoms[it].taud[ia].y
-                    << " " << this->ucell_->atoms[it].taud[ia].z << std::endl;
-
-                ofs_ave << " " << this->ucell_->atoms[it].taud[ia].x
-                    << " " << this->ucell_->atoms[it].taud[ia].y
-                    << " " << this->ucell_->atoms[it].taud[ia].z << std::endl;
-            }
-        }
-
-        ofs << rho_basis->nx << " " << rho_basis->ny << " " << rho_basis->nz;
-        ofs_ave << rho_basis->nx << " " << rho_basis->ny << " " << rho_basis->nz;
-
-        int precision = 9;
-        ofs << std::setprecision(precision);
-        ofs << scientific; 
-        ofs_ave << std::setprecision(precision);
-        ofs_ave << scientific; 
-        if(!ofs)
-        {
-            ModuleBase::WARNING("potential::write_potential","Can't create VHartree File!");
-        }
-    }	
-
-#ifndef __MPI
-    int count=0;
-    for(int k=0; k<rho_basis->nz; k++)
-    {
-        ofs << "\n" << k << " iz";
-        double value = 0.0;
-        double ave = 0.0;
-        for(int j=0; j<rho_basis->ny; j++)
-        {
-            for(int i=0; i<rho_basis->nx; i++)
-            {
-                //if(count%8==0) ofs << "\n";
-                if(count%5==0) ofs << "\n";
-                value = v_elecstat[i*rho_basis->ny*rho_basis->nz + j*rho_basis->nz + k];
-                ofs << " " << value;
-                ave += value;
-                ++count;
-            }
-        }
-        //ofs << "\n" << ave/this->rho_basis_->nx/this->rho_basis_->ny << " average";
-        if(k==0) ofs_ave << "iz" << "\taverage";
-        ofs_ave << "\n" << k << "\t" << ave/rho_basis->nx/rho_basis->ny;
-    }
-#else
-    MPI_Barrier(MPI_COMM_WORLD);
-    // only do in the first pool.
-    if(GlobalV::MY_POOL==0)
-    {
-        // num_z: how many planes on processor 'ip'
-        int *num_z = new int[GlobalV::NPROC_IN_POOL];
-        ModuleBase::GlobalFunc::ZEROS(num_z, GlobalV::NPROC_IN_POOL);
-        //for (int iz=0;iz<this->rho_basis_->nz;iz++)
-        //{
-        //    int ip = iz % GlobalV::NPROC_IN_POOL;
-        //    num_z[ip]++;
-        //}
-        for (int iz=0;iz<GlobalC::bigpw->nbz;iz++)
-        {
-            int ip = iz % GlobalV::NPROC_IN_POOL;
-            num_z[ip] += GlobalC::bigpw->bz;
-        }
-
-        // start_z: start position of z in
-        // processor ip.
-        int *start_z = new int[GlobalV::NPROC_IN_POOL];
-        ModuleBase::GlobalFunc::ZEROS(start_z, GlobalV::NPROC_IN_POOL);
-        for (int ip=1;ip<GlobalV::NPROC_IN_POOL;ip++)
-        {
-            start_z[ip] = start_z[ip-1]+num_z[ip-1];
-        }
-
-        // which_ip: found iz belongs to which ip.
-        int *which_ip = new int[rho_basis->nz];
-        ModuleBase::GlobalFunc::ZEROS(which_ip, rho_basis->nz);
-        for(int iz=0; iz<rho_basis->nz; iz++)
-        {
-            for(int ip=0; ip<GlobalV::NPROC_IN_POOL; ip++)
-            {
-                if(iz>=start_z[GlobalV::NPROC_IN_POOL-1])
-                {
-                    which_ip[iz] = GlobalV::NPROC_IN_POOL-1;
-                    break;
-                }
-                else if(iz>=start_z[ip] && iz<start_z[ip+1])
-                {
-                    which_ip[iz] = ip;
-                    break;
-                }
-            }
-            //GlobalV::ofs_running << "\n iz=" << iz << " ip=" << which_ip[iz];
-        }
-        int count=0;
-        int nxy = rho_basis->nxy;
-        double* zpiece = new double[nxy];
-        // save the rho one z by one z.
-        for(int iz=0; iz<rho_basis->nz; iz++)
-        {
-            //GlobalV::ofs_running << "\n" << iz << " iz";
-            // tag must be different for different iz.
-            ModuleBase::GlobalFunc::ZEROS(zpiece, nxy);
-            int tag = iz;
-            MPI_Status ierror;
-
-            // case 1: the first part of rho in processor 0.
-            if(which_ip[iz] == 0 && GlobalV::RANK_IN_POOL ==0)
-            {
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    zpiece[ir] = v_elecstat[ir*this->rho_basis_->nplane+iz-this->rho_basis_->startz_current ];
-                    //GlobalV::ofs_running << "\n get zpiece[" << ir << "]=" << zpiece[ir] << " ir*this->rho_basis_->nplane+iz=" << ir*this->rho_basis_->nplane+iz;
-                }
-            }
-            // case 2: > first part rho: send the rho to
-            // processor 0.
-            else if(which_ip[iz] == GlobalV::RANK_IN_POOL )
-            {
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    zpiece[ir] = v_elecstat[ir*this->rho_basis_->nplane+iz-this->rho_basis_->startz_current];
-                }
-                MPI_Send(zpiece, nxy, MPI_DOUBLE, 0, tag, POOL_WORLD);
-            }
-
-            // case 2: > first part rho: processor 0 receive the rho
-            // from other processors
-            else if(GlobalV::RANK_IN_POOL==0)
-            {
-                MPI_Recv(zpiece, nxy, MPI_DOUBLE, which_ip[iz], tag, POOL_WORLD, &ierror);
-                //GlobalV::ofs_running << "\n Receieve First number = " << zpiece[0];
-            }
-
-            // write data
-            if(GlobalV::MY_RANK==0)
-            {
-                //ofs << "\niz=" << iz;
-                double ave = 0.0;
-                /*
-                for(int ir=0; ir<nxy; ir++)
-                {
-                    //if(count%8==0) ofs << "\n";
-                    if(count%5==0) ofs << "\n";
-                    //ofs << " " << zpiece[ir];
-                    ofs << std::setw(17) << zpiece[ir];
-                    ave += zpiece[ir];
-                    ++count;
-                }
-                //ofs << "\n" << ave/nxy << " average"; 
-                */
-                for(int iy=0; iy<rho_basis->ny; iy++)
-                {
-                    for(int ix=0; ix<rho_basis->nx; ix++)
-                    {
-                        //if(count%8==0) ofs << "\n";
-                        if(count%5==0) ofs << "\n";
-                        //ofs << " " << zpiece[ir];
-                        ofs << std::setw(17) << zpiece[ix*rho_basis->ny+iy];
-                        ave += zpiece[ix*rho_basis->ny+iy];
-                        ++count;
-                    }
-                }
-                if(iz==0) ofs_ave << "\niz" << "\taverage";
-                ofs_ave << "\n" << iz << "\t" << ave/rho_basis->nx/rho_basis->ny;
-            }
-        }
-        delete[] num_z;
-        delete[] start_z;
-        delete[] which_ip;
-        delete[] zpiece;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
+    int precision = 9;
+    int is = -1;
+    double ef_tmp = 0.;
+    int out_fermi = 0;
+    ModuleIO::write_cube(
+#ifdef __MPI
+                bz,
+                nbz,
+                rho_basis->nplane,
+                rho_basis->startz_current,
 #endif
-    if(GlobalV::MY_RANK==0) ofs.close();
+                v_elecstat,
+                is,
+                GlobalV::NSPIN,
+                0,
+                fn,
+                rho_basis->nx,
+                rho_basis->ny,
+                rho_basis->nz,
+                ef_tmp,
+                &(GlobalC::ucell),
+                precision,
+                out_fermi);
 
     delete[] v_elecstat;
     delete[] vh_g;
