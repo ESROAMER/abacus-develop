@@ -213,6 +213,39 @@ void Force_Stress_LCAO::getForceStress(
     if (!GlobalV::GAMMA_ONLY_LOCAL)
         this->flk.finish_k();
 #ifdef __EXX
+	//Force and Stress contribution from exx
+	ModuleBase::matrix force_exx;
+	ModuleBase::matrix stress_exx;
+	if( GlobalC::exx_info.info_global.cal_exx )
+	{
+		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+		if(isforce)
+		{
+			if(GlobalC::exx_info.info_ri.real_number)
+			{
+				GlobalC::exx_lri_double.cal_exx_force();
+				force_exx = coeff * GlobalC::exx_lri_double.force_exx;
+			}
+			else
+			{
+				GlobalC::exx_lri_complex.cal_exx_force();
+				force_exx = coeff * GlobalC::exx_lri_complex.force_exx;
+			}
+		}
+		if(isstress)
+		{
+			if(GlobalC::exx_info.info_ri.real_number)
+			{
+				GlobalC::exx_lri_double.cal_exx_stress();
+				stress_exx = coeff * GlobalC::exx_lri_double.stress_exx;
+			}
+			else
+			{
+				GlobalC::exx_lri_complex.cal_exx_stress();
+				stress_exx = coeff * GlobalC::exx_lri_complex.stress_exx;
+			}
+		}
+	}
     // Force and Stress contribution from exx
     ModuleBase::matrix force_exx;
     ModuleBase::matrix stress_exx;
