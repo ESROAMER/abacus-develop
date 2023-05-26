@@ -3,9 +3,8 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_base/matrix3.h"
 #include "../relax_old/ions_move_basic.h"
-
 #include "module_base/tool_title.h"
-#include "src_parallel/parallel_common.h"
+#include "module_base/parallel_common.h"
 
 void Relax::init_relax(const int nat_in)
 {
@@ -19,6 +18,8 @@ void Relax::init_relax(const int nat_in)
     brent_done = false;
     step_size = 1.0;
     srp_srp = 100000;
+    etot = 0;
+    etot_p = 0;
 
     force_thr_eva = GlobalV::FORCE_THR * ModuleBase::Ry_to_eV / ModuleBase::BOHR_TO_A; //convert to eV/A
     fac_force  = GlobalV::relax_scale_force * 0.1;
@@ -48,7 +49,9 @@ void Relax::init_relax(const int nat_in)
 bool Relax::relax_step(const ModuleBase::matrix& force, const ModuleBase::matrix &stress, const double etot_in)
 {
     ModuleBase::TITLE("Relax","relax_step");
+
     etot = etot_in * ModuleBase::Ry_to_eV; //convert to eV
+    if( istep == 0 ) etot_p = etot;
 
     bool relax_done = this->setup_gradient(force, stress);
     if(relax_done) return relax_done;
@@ -68,6 +71,8 @@ bool Relax::relax_step(const ModuleBase::matrix& force, const ModuleBase::matrix
         this->move_cell_ions(false);
         dmovel = dmove;
     }
+
+    istep ++;
 
     return relax_done;
 }
@@ -120,7 +125,9 @@ bool Relax::setup_gradient(const ModuleBase::matrix& force, const ModuleBase::ma
     if(max_grad > force_thr_eva) force_converged = false;
 	if(GlobalV::OUT_LEVEL=="ie")
 	{
+        std::cout << " ETOT DIFF (eV)       : " << etot - etot_p << std::endl;
 		std::cout << " LARGEST GRAD (eV/A)  : " << max_grad << std::endl;
+        etot_p = etot;
 	}
 //=========================================
 //set gradient for cell degrees of freedom
@@ -540,6 +547,9 @@ void Relax::move_cell_ions(const bool is_new_dir)
 
 	GlobalC::ucell.update_pos_taud(move_ion);
 
+	// Print the structure file.
+	GlobalC::ucell.print_tau();
+
     // =================================================================
     // Step 4 : update G,GT and other stuff
     // =================================================================
@@ -590,88 +600,15 @@ void Relax::move_cell_ions(const bool is_new_dir)
     }
 
     // =================================================================
-    // Step 5 : print the new structure
-    // =================================================================
-    std::stringstream ss;
-    ss << GlobalV::global_out_dir << "STRU_ION";
-    if (Lattice_Change_Basic::out_stru == 1)
-    {
-        ss << istep;
-        istep ++;
-        GlobalC::ucell.print_cell_cif("STRU_NOW.cif");
-    }
-    ss << "_D";    
-    GlobalC::ucell.print_stru_file(ss.str(), 2, 0);
-    GlobalC::ucell.print_tau();
-
-    // =================================================================
     // Step 6 : prepare something for next SCF
     // =================================================================
     //I have a strong feeling that this part should be
     //at the beginning of the next step (namely 'beforescf'),
     //but before we have a better organized Esolver
     //I do not want to change it
-
-    // This part is needless for lj and dp potential, so I do a temporary modification here.
-    // liuyu modify 2023-01-04
-    if(GlobalV::ESOLVER_TYPE == "lj" || GlobalV::ESOLVER_TYPE == "dp")
+    if(if_cell_moves)
     {
-        if(if_cell_moves)
-        {
-            GlobalC::ucell.setup_cell_after_vc(GlobalV::ofs_running);
-            ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "SETUP UNITCELL");
-        }
+        GlobalC::ucell.setup_cell_after_vc(GlobalV::ofs_running);
+        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "SETUP UNITCELL");
     }
-    else
-    {
-        if(if_cell_moves)
-        {
-            this->init_after_vc(); //variable cell
-        }
-        else
-        {
-            GlobalC::sf.setup_structure_factor(&GlobalC::ucell,GlobalC::rhopw);
-        }
-    }
-}
-
-void Relax::init_after_vc()
-{
-	ModuleBase::TITLE("Variable_Cell","init_after_vc");
-
-    GlobalC::ucell.setup_cell_after_vc(GlobalV::ofs_running);
-    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "SETUP UNITCELL");
-
-    if(ModuleSymmetry::Symmetry::symm_flag == 1)
-    {
-        GlobalC::symm.analy_sys(GlobalC::ucell, GlobalV::ofs_running);
-        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "SYMMETRY");
-    }
-
-    GlobalC::kv.set_after_vc(GlobalC::symm, GlobalV::global_kpoint_card, GlobalV::NSPIN, GlobalC::ucell.G, GlobalC::ucell.latvec);
-    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT K-POINTS");
-    
-    //only G-vector and K-vector are changed due to the change of lattice vector
-    //FFT grids do not change!!
-    GlobalC::rhopw->initgrids(GlobalC::ucell.lat0, GlobalC::ucell.latvec, GlobalC::rhopw->nx, GlobalC::rhopw->ny, GlobalC::rhopw->nz);
-    GlobalC::rhopw->collect_local_pw(); 
-    GlobalC::rhopw->collect_uniqgg();
-    GlobalC::sf.setup_structure_factor(&GlobalC::ucell,GlobalC::rhopw);
-
-    GlobalV::ofs_running << " Setup the Vl+Vh+Vxc according to new structure factor and new charge." << std::endl;
-    //=================================
-    // initalize local pseudopotential
-    //=================================
-    GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, GlobalC::rhopw);
-    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running,"LOCAL POTENTIAL");
-
-    //======================================
-    // Initalize non local pseudopotential
-    //======================================
-    if(GlobalV::BASIS_TYPE=="pw")
-    {
-        GlobalC::ppcell.init_vnl(GlobalC::ucell);
-        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running,"NON-LOCAL POTENTIAL");
-    }
-    return;
 }

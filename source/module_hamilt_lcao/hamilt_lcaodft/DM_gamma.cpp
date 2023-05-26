@@ -2,8 +2,8 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_base/blas_connector.h"
 #include "module_io/read_wfc_nao.h"
-#include "src_parallel/parallel_reduce.h"
-#include "src_parallel/parallel_common.h"
+#include "module_base/parallel_reduce.h"
+#include "module_base/parallel_common.h"
 #include "module_base/memory.h"
 #include "module_base/timer.h"
 
@@ -206,7 +206,11 @@ int Local_Orbital_Charge::setAlltoallvParameter(MPI_Comm comm_2D, int blacs_ctxt
 
 // allocate density kernel may change once the ion
 // positions change
-void Local_Orbital_Charge::allocate_gamma(const int& lgd, psi::Psi<double>* psid, elecstate::ElecState* pelec)
+void Local_Orbital_Charge::allocate_gamma(
+                const int& lgd, 
+                psi::Psi<double>* psid, 
+                elecstate::ElecState* pelec,
+                const int& nks)
 {
      ModuleBase::TITLE("Local_Orbital_Charge","allocate_gamma");
 
@@ -268,7 +272,7 @@ void Local_Orbital_Charge::allocate_gamma(const int& lgd, psi::Psi<double>* psid
 #endif
 
 	// Peize Lin test 2019-01-16
-    this->init_dm_2d();
+    this->init_dm_2d(nks);
 
     if(GlobalC::wf.init_wfc=="file")
     {
@@ -346,7 +350,9 @@ void Local_Orbital_Charge::cal_dk_gamma_from_2D_pub(void)
 void Local_Orbital_Charge::cal_dk_gamma_from_2D(void)
 {
     ModuleBase::timer::tick("LCAO_Charge","dm_2dTOgrid");
+#ifdef __DEBUG
     ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"cal_dk_gamma_from_2D, NSPIN", GlobalV::NSPIN);
+#endif
 
     for(int is=0; is<GlobalV::NSPIN; ++is)
     {
@@ -385,9 +391,11 @@ void Local_Orbital_Charge::cal_dk_gamma_from_2D(void)
             if(sender_buffer[i]!=0) ++nNONZERO;
         }
 
+#ifdef __DEBUG
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"number of non-zero elements in sender_buffer",nNONZERO);
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"sender_size",sender_size);
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"last sender_buffer",sender_buffer[sender_size-1]);
+#endif
 
         // transform data via MPI_Alltoallv
         #ifdef __MPI
@@ -414,10 +422,11 @@ void Local_Orbital_Charge::cal_dk_gamma_from_2D(void)
             if(receiver_buffer[i]!=0) ++nNONZERO;
         }
 
-
+#ifdef __DEBUG
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"number of non-zero elements in receiver_buffer",nNONZERO);
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"receiver_size",receiver_size);
         ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"last receiver_buffer",receiver_buffer[receiver_size-1]);
+#endif
         // GlobalV::ofs_running<<"DM[0][0:1][0:1] after receiver:"<<std::endl;
         // int idx0=GlobalC::GridT.trace_lo[0];
         // int idx1=GlobalC::GridT.trace_lo[1];

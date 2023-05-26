@@ -6,7 +6,7 @@
 namespace ModuleDFTU
 {
 
-void DFTU::cal_eff_pot_mat_complex(const int ik, std::complex<double>* eff_pot)
+void DFTU::cal_eff_pot_mat_complex(const int ik, std::complex<double>* eff_pot, const std::vector<int>& isk)
 {
     ModuleBase::TITLE("DFTU", "cal_eff_pot_mat");
     ModuleBase::timer::tick("DFTU", "cal_eff_pot_mat");
@@ -16,7 +16,7 @@ void DFTU::cal_eff_pot_mat_complex(const int ik, std::complex<double>* eff_pot)
         return;
     }
 
-    int spin = GlobalC::kv.isk[ik];
+    int spin = isk[ik];
 
     ModuleBase::GlobalFunc::ZEROS(eff_pot, this->LM->ParaV->nloc);
 
@@ -26,8 +26,8 @@ void DFTU::cal_eff_pot_mat_complex(const int ik, std::complex<double>* eff_pot)
     const char transN = 'N', transT = 'T';
     const int one_int = 1;
     const std::complex<double> one(1.0, 0.0);
-    const double half = 0.5;
-    const double zero = 0.0;
+    const std::complex<double> half = 0.5;
+    const std::complex<double> zero = 0.0;
 
     std::vector<std::complex<double>> VU(this->LM->ParaV->nloc);
     this->cal_VU_pot_mat_complex(spin, true, &VU[0]);
@@ -57,7 +57,7 @@ void DFTU::cal_eff_pot_mat_complex(const int ik, std::complex<double>* eff_pot)
     return;
 }
 
-void DFTU::cal_eff_pot_mat_real(const int ik, double* eff_pot)
+void DFTU::cal_eff_pot_mat_real(const int ik, double* eff_pot, const std::vector<int>& isk)
 {
     ModuleBase::TITLE("DFTU", "cal_eff_pot_mat");
     ModuleBase::timer::tick("DFTU", "cal_eff_pot_mat");
@@ -67,7 +67,7 @@ void DFTU::cal_eff_pot_mat_real(const int ik, double* eff_pot)
         return;
     }
 
-    int spin = GlobalC::kv.isk[ik];
+    int spin = isk[ik];
 
     ModuleBase::GlobalFunc::ZEROS(eff_pot, this->LM->ParaV->nloc);
 
@@ -140,7 +140,7 @@ void DFTU::cal_eff_pot_mat_R_complex_double(const int ispin, std::complex<double
 {
     const char transN = 'N', transT = 'T';
     const int one_int = 1;
-    const double zero = 0.0, one = 1.0, half = 0.5;
+    const std::complex<double> zero = 0.0, one = 1.0, half = 0.5;
 
     std::vector<std::complex<double>> VU(this->LM->ParaV->nloc);
     this->cal_VU_pot_mat_complex(ispin, 1, &VU[0]);

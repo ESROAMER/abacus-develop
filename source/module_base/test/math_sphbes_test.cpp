@@ -23,7 +23,7 @@
  * Tested function: 
  *      - Spherical_Bessel.
  *      - Spherical_Bessel_Roots
- * 
+ *      - overloading of Spherical_Bessel. This funnction sets sjp[i] to 1.0 when i < msh.
  */
 
 double mean(const double* vect, const int totN)
@@ -134,15 +134,24 @@ TEST_F(Sphbes,SphericalBessel)
 
 TEST_F(Sphbes,dSpherical_Bessel_dx)
 {
+    double djl0;
     for(int il = 0 ; il <= l7 ; ++il)
     {   
+        if(il == 1) djl0 = 1.0/3.0;
+        else        djl0 = 0.0;
         ModuleBase::Sphbes::dSpherical_Bessel_dx(msh,r,q,il,djl);
         ModuleBase::Sphbes::Spherical_Bessel(msh,r,q,il,jl);
+        EXPECT_NEAR(djl[0], djl0, 1e-8);
         for(int i = 1; i < msh - 1; ++i)
         {
             if(jl[i-1] < 1e-8) continue;
             double djl_diff = (jl[i+1] - jl[i-1])/(q*(r[i+1] - r[i-1]));
             EXPECT_NEAR(djl[i], djl_diff, 1e-4);
+        }
+        ModuleBase::Sphbes::dSpherical_Bessel_dx(msh,r,0,il,djl);
+        for(int i = 0 ; i < msh ; ++i)
+        {
+            EXPECT_NEAR(djl[i], djl0, 1e-8);
         }
     }
 }
@@ -199,4 +208,17 @@ int main(int argc, char **argv)
 	MPI_Finalize();
 #endif
 	return result;
+}
+
+TEST_F(Sphbes,SphericalBesselsjp)
+{
+    int iii;
+    double  *sjp = new double[msh];
+    ModuleBase::Sphbes::Spherical_Bessel(msh,r,q,l0,jl,sjp);
+    EXPECT_NEAR(mean(jl,msh)/0.2084468748396,1.0,doublethreshold);
+    for(int iii = 0 ; iii <msh ; ++iii)
+    {   
+        EXPECT_EQ(sjp[iii], 1.0);
+    }
+    delete [] sjp;
 }

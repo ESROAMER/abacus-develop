@@ -1,12 +1,12 @@
 #include "module_hamilt_general/module_xc/xc_functional.h"
 #include "surchem.h"
 
-void surchem::minimize_cg(const UnitCell &ucell,
-                          ModulePW::PW_Basis* rho_basis,
-                          double *d_eps,
-                          const complex<double> *tot_N,
-                          complex<double> *phi,
-                          int &ncgsol)
+void surchem::minimize_cg(const UnitCell& ucell,
+                          const ModulePW::PW_Basis* rho_basis,
+                          double* d_eps,
+                          const complex<double>* tot_N,
+                          complex<double>* phi,
+                          int& ncgsol)
 {
     // parameters of CG method
     double alpha = 0;
@@ -161,20 +161,20 @@ void surchem::minimize_cg(const UnitCell &ucell,
     delete[] phi_work;
 }
 
-void surchem::Leps2(const UnitCell &ucell,
-                    ModulePW::PW_Basis* rho_basis,
-                    complex<double> *phi,
-                    double *epsilon, // epsilon from shapefunc, dim=nrxx
-                    complex<double> *gradphi_x, // dim=ngmc
-                    complex<double> *gradphi_y,
-                    complex<double> *gradphi_z,
-                    complex<double> *phi_work,
-                    complex<double> *lp)
+void surchem::Leps2(const UnitCell& ucell,
+                    const ModulePW::PW_Basis* rho_basis,
+                    complex<double>* phi,
+                    double* epsilon,            // epsilon from shapefunc, dim=nrxx
+                    complex<double>* gradphi_x, // dim=ngmc
+                    complex<double>* gradphi_y,
+                    complex<double>* gradphi_z,
+                    complex<double>* phi_work,
+                    complex<double>* lp)
 {
     // cout<<"leps2!"<<endl;
     ModuleBase::Vector3<double> *grad_phi = new ModuleBase::Vector3<double>[rho_basis->nrxx];
 
-    XC_Functional::grad_rho(phi, grad_phi, rho_basis);
+    XC_Functional::grad_rho(phi, grad_phi, rho_basis, ucell.tpiba);
     // for (int i = 0; i < 10; i++) {
     //     grad_phi[i].print();
     // }
@@ -202,7 +202,7 @@ void surchem::Leps2(const UnitCell &ucell,
         grad_grad_phi[ir] = grad_phi[ir].x;
     }
     rho_basis->real2recip(grad_grad_phi, grad_grad_phi_G);
-    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis);
+    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis, ucell.tpiba);
     for (int ir = 0; ir < rho_basis->nrxx; ir++)
     {
         lp_real[ir] += tmp_vector3[ir].x;
@@ -217,7 +217,7 @@ void surchem::Leps2(const UnitCell &ucell,
         grad_grad_phi[ir] = grad_phi[ir].y;
     }
     rho_basis->real2recip(grad_grad_phi, grad_grad_phi_G);
-    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis);
+    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis, ucell.tpiba);
     for (int ir = 0; ir < rho_basis->nrxx; ir++)
     {
         lp_real[ir] += tmp_vector3[ir].y;
@@ -232,7 +232,7 @@ void surchem::Leps2(const UnitCell &ucell,
         grad_grad_phi[ir] = grad_phi[ir].z;
     }
     rho_basis->real2recip(grad_grad_phi, grad_grad_phi_G);
-    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis);
+    XC_Functional::grad_rho(grad_grad_phi_G, tmp_vector3, rho_basis, ucell.tpiba);
     for (int ir = 0; ir < rho_basis->nrxx; ir++)
     {
         lp_real[ir] += tmp_vector3[ir].z;

@@ -13,6 +13,7 @@
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
 #include "module_base/matrix.h"
+#include "module_cell/unitcell.h"
 #include "charge.h"
 class Charge_Mixing
 {
@@ -32,6 +33,9 @@ class Charge_Mixing
 		const bool &mixing_tau_in
     );//mohan add mixing_gg0_in 2014-09-27
 
+	void need_auto_set();
+	void auto_set(const double& bandgap_in, const UnitCell& ucell_);
+
 	double get_drho(Charge* chr, const double nelec);
 
     void mix_rho(const int &iter, Charge* chr);// mix rho
@@ -39,6 +43,9 @@ class Charge_Mixing
     //for Pulay method
     //if first electronic step, then reset charge mixing
 	void reset();
+
+	// init pwrho, sunliang add 2023-05-08
+	void set_rhopw(ModulePW::PW_Basis* rhopw_in);
 
     // extracting parameters
 	// normally these parameters will not be used
@@ -67,6 +74,8 @@ class Charge_Mixing
 	bool mixing_tau;
 
     bool new_e_iteration;
+
+	ModulePW::PW_Basis* rhopw = nullptr;
 
 //======================================
 // simple plain mixing method, in charge_mixing.cpp
@@ -131,6 +140,9 @@ class Charge_Mixing
 
 	std::complex<double>*** dF; // dF(i) = rhog(i) - rhog_save(i), (GlobalV::NSPIN, rstep, rhopw->npw)
 	std::complex<double>*** dn; // dn(i) = rhog(i+1) - rhog(i), (GlobalV::NSPIN, rstep, rhopw->npw)
+
+	private: 
+	bool autoset = false;
 };
 
 #endif

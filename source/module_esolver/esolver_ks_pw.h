@@ -18,7 +18,8 @@ namespace ModuleESolver
         ESolver_KS_PW();
         ~ESolver_KS_PW();
         void Init(Input& inp, UnitCell& cell) override;
-        void cal_Energy(double& etot) override;
+        void init_after_vc(Input& inp, UnitCell& cell) override;
+        double cal_Energy() override;
         void cal_Force(ModuleBase::matrix& force) override;
         void cal_Stress(ModuleBase::matrix& stress) override;
         virtual void hamilt2density(const int istep, const int iter, const FPTYPE ethr) override;
@@ -27,7 +28,7 @@ namespace ModuleESolver
         void postprocess() override;
         //calculate conductivities with Kubo-Greenwood formula
         void KG(const int nche_KG, const double fwhmin, const double wcut,
-             const double dw_in, const int times, ModuleBase::matrix& wg);
+             const double dw_in, const double dt_in, ModuleBase::matrix& wg);
         void jjcorr_ks(const int ik, const int nt, const double dt, ModuleBase::matrix& wg, hamilt::Velocity& velop, 
                        double* ct11, double* ct12, double* ct22);
 

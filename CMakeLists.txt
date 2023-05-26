@@ -14,19 +14,65 @@ option(ENABLE_LCAO "Enable LCAO calculation." ON)
 option(ENABLE_DEEPKS "Enable DeePKS functionality" OFF)
 option(ENABLE_LIBXC "Enable LibXC functionality" OFF)
 option(USE_CUDA "Enable support to CUDA for PW." OFF)
+option(ENABLE_FLOAT_FFTW "Enable support to single precision FFTW library." OFF)
 # option(USE_CUSOLVER_LCAO "Enable support to CUSOLVER for LCAO." OFF) # broken
 option(USE_ROCM "Enable support to ROCm." OFF)
-option(USE_OPENMP " Enable OpenMP in abacus." ON)
+option(USE_OPENMP "Enable OpenMP in ABACUS." ON)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(BUILD_TESTING "Build ABACUS unit tests" OFF)
 option(INFO "Enable gathering of math library information" OFF)
 option(ENABLE_COVERAGE "Enable coverage build." OFF)
 option(ENABLE_LIBRI "Enable EXX with LibRI." OFF)
+option(ENABLE_LIBCOMM "Enable communicate with LibComm." OFF)
+option(ENABLE_MPI "Enable compilation with or without MPI." ON)
 option(USE_ELPA "Enable ELPA" ON)
 option(USE_ABACUS_LIBM "Build libmath from source to speed up." ON)
 option(GIT_SUBMODULE "Check submodules during build" ON)
+option(DEBUG_INFO "Print message for developers to debug." OFF)
 # Do not enable it if generated code will run on different CPUs
 option(ENABLE_NATIVE_OPTIMIZATION "Enable compilation optimization for the native machine's CPU type" OFF)
+# Do not use the new container by default.
+option(ENABLE_CONTAINER "Enable the new multi-device container." OFF)
+option(COMMIT_INFO "Print commit information in log" ON)
+
+# get commit info
+if(COMMIT_INFO)
+  find_program(GIT_EXECUTABLE git)
+  if(NOT GIT_EXECUTABLE)
+    message(WARNING "Git is not found, and abacus will not output the git commit information in log. \n\
+You can install Git first and reinstall abacus.")
+  else()
+    message(STATUS "Found git: attempting to get commit info...")
+    execute_process(
+      COMMAND git log -1 --pretty=format:%h
+      OUTPUT_VARIABLE GIT_COMMIT_HASH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      RESULT_VARIABLE GIT_COMMIT_HASH_RESULT
+    )
+    execute_process(
+      COMMAND git log -1 --format=%cd --date=local
+      OUTPUT_VARIABLE GIT_COMMIT_DATE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      RESULT_VARIABLE GIT_COMMIT_DATE_RESULT
+    )
+    if(GIT_COMMIT_HASH_RESULT EQUAL 0 AND GIT_COMMIT_DATE_RESULT EQUAL 0)
+      set(COMMIT "${GIT_COMMIT_HASH} (${GIT_COMMIT_DATE})")
+      add_definitions("-DCOMMIT=\"${COMMIT}\"")
+      message(STATUS "Current commit hash: ${GIT_COMMIT_HASH}")
+      message(STATUS "Last commit date: ${GIT_COMMIT_DATE}")
+    else()
+      message(WARNING "Failed to get git commit info")
+    endif()
+  endif()
+endif()
+
+if (NOT ENABLE_MPI)
+  set (ENABLE_LCAO OFF)
+  set (ENABLE_DEEPKS OFF)
+  set (BUILD_TESTING OFF)
+endif()
 
 if(ENABLE_LCAO)
   set(ABACUS_BIN_NAME abacus)
@@ -65,7 +111,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5)
   message(WARNING "GCC4 is not fully supported.")
 endif()
-add_compile_options(-Wno-write-strings)
+add_compile_options(-Wno-write-strings
+  -Wno-tautological-constant-compare # Suppress warnings introduced by Torch using a LLVM compiler
+)
 set(FETCHCONTENT_QUIET FALSE) # Notify user when cloning git repo
 
 find_program(CCACHE ccache)
@@ -123,11 +171,17 @@ else()
   set(ENABLE_LIBRI OFF)
 endif()
 
-find_package(MPI REQUIRED)
-include_directories(${MPI_CXX_INCLUDE_PATH})
-target_link_libraries(${ABACUS_BIN_NAME} MPI::MPI_CXX)
-add_compile_definitions(__MPI)
-list(APPEND math_libs MPI::MPI_CXX)
+if(DEBUG_INFO)
+  add_compile_definitions(__DEBUG)
+endif()
+
+if (ENABLE_MPI)
+  find_package(MPI REQUIRED)
+  include_directories(${MPI_CXX_INCLUDE_PATH})
+  target_link_libraries(${ABACUS_BIN_NAME} MPI::MPI_CXX)
+  add_compile_definitions(__MPI)
+  list(APPEND math_libs MPI::MPI_CXX)
+endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(${ABACUS_BIN_NAME} Threads::Threads)
@@ -280,12 +334,14 @@ else()
   include_directories(${FFTW3_INCLUDE_DIRS})
   list(APPEND math_libs
     FFTW3::FFTW3
-    FFTW3::FFTW3_FLOAT
     LAPACK::LAPACK
     ScaLAPACK::ScaLAPACK
   )
   if(USE_OPENMP)
     list(APPEND math_libs FFTW3::FFTW3_OMP)
+  endif()
+  if (ENABLE_FLOAT_FFTW)
+    list(APPEND math_libs FFTW3::FFTW3_FLOAT)
   endif()
   if(CMAKE_CXX_COMPILER_ID MATCHES GNU)
     list(APPEND math_libs -lgfortran)
@@ -296,6 +352,10 @@ else()
   else()
     message(WARNING "Cannot find the correct library for Fortran.")
   endif()
+endif()
+
+if (ENABLE_FLOAT_FFTW)
+  add_definitions(-D__ENABLE_FLOAT_FFTW)
 endif()
 
 if(ENABLE_DEEPKS)
@@ -325,12 +385,17 @@ if(ENABLE_DEEPKS)
   add_compile_definitions(__DEEPKS)
 endif()
 
-if (ENABLE_LIBRI)
+if(DEFINED LIBRI_DIR)
+  set(ENABLE_LIBRI ON)
+endif()
+if(ENABLE_LIBRI)
   set(CMAKE_CXX_STANDARD 14)
   if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Intel"))
     message(WARNING "RI related features are only stable if compiled with Intel compiler.")
   endif()
-  if(GIT_SUBMODULE)
+  if(LIBRI_DIR)
+    include_directories(${LIBRI_DIR}/include)
+  elseif(GIT_SUBMODULE)
     find_package(Git QUIET)
     if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # Update submodules as needed
@@ -343,13 +408,8 @@ if (ENABLE_LIBRI)
       endif()
     endif()
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/LibRI/include)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/LibComm/include)
   else()
-    if ((NOT LIBRI_DIR) OR (NOT LIBCOMM_DIR))
-      message(FATAL_ERROR "Must provide LIBRI_DIR and LIBCOMM_DIR for RI related features.")
-    endif()
-    include_directories(${LIBRI_DIR}/include)
-    include_directories(${LIBCOMM_DIR}/include)
+    message(FATAL_ERROR "Must provide LIBRI_DIR for RI related features.")
   endif()
   add_compile_definitions(
     __EXX
@@ -360,6 +420,33 @@ if (ENABLE_LIBRI)
   )
 endif()
 
+if(ENABLE_LIBRI)
+  set(ENABLE_LIBCOMM ON)
+endif()
+if(DEFINED LIBCOMM_DIR)
+  set(ENABLE_LIBCOMM ON)
+endif()
+if(ENABLE_LIBCOMM)
+  if(LIBCOMM_DIR)
+    include_directories(${LIBCOMM_DIR}/include)
+  elseif(GIT_SUBMODULE)
+    find_package(Git QUIET)
+    if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    # Update submodules as needed
+      message(STATUS "Submodule update")
+      execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+              RESULT_VARIABLE GIT_SUBMOD_RESULT)
+      if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+        message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+      endif()
+    endif()
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/LibComm/include)
+  else()
+    message(FATAL_ERROR "Must provide LIBCOMM_DIR for communicate related features.")
+  endif()
+endif()
+
 list(APPEND math_libs m)
 target_link_libraries(${ABACUS_BIN_NAME} ${math_libs})
 
@@ -367,13 +454,18 @@ if(DEFINED Libxc_DIR)
   set(ENABLE_LIBXC ON)
 endif()
 if(ENABLE_LIBXC)
-  find_package(Libxc 5.1.7 REQUIRED HINTS ${Libxc_DIR}/share/cmake/Libxc ${Libxc_DIR}/lib/cmake/Libxc)
-  if(${Libxc_FOUND})
-    message(STATUS "Found Libxc: version " ${Libxc_VERSION})
-    target_link_libraries(${ABACUS_BIN_NAME} Libxc::xc)
-    include_directories(${Libxc_INCLUDE_DIRS})
-    add_compile_definitions(USE_LIBXC)
+  find_package(Libxc REQUIRED HINTS
+    ${Libxc_DIR}/share/cmake/Libxc
+    ${Libxc_DIR}/lib/cmake/Libxc
+    ${Libxc_DIR}/lib64/cmake/Libxc
+  )
+  message(STATUS "Found Libxc: version " ${Libxc_VERSION})
+  if(${Libxc_VERSION} VERSION_LESS 5.1.7)
+    message(FATAL_ERROR "LibXC >= 5.1.7 is required.")
   endif()
+  target_link_libraries(${ABACUS_BIN_NAME} Libxc::xc)
+  include_directories(${Libxc_INCLUDE_DIRS})
+  add_compile_definitions(USE_LIBXC)
 endif()
 
 if(DEFINED DeePMD_DIR)
@@ -392,22 +484,19 @@ if(DEFINED DeePMD_DIR)
       __DPMDC
     )
   else()
-  target_link_libraries(${ABACUS_BIN_NAME}
-    DeePMD::deepmd_cc
-    DeePMD::deepmd_op
-    DeePMD::deepmd_op_cuda
-    DeePMD::tensorflow_cc
-  )
+    target_link_libraries(${ABACUS_BIN_NAME}
+      DeePMD::deepmd_cc
+    )
   endif()
+
   if(NOT DEFINED TensorFlow_DIR)
     set(TensorFlow_DIR ${DeePMD_DIR})
   endif()
-endif()
-
-if(DEFINED TensorFlow_DIR)
-  include_directories(${TensorFlow_DIR}/include)
-  if(NOT DEFINED DeePMD_DIR)
-    message(FATAL_ERROR "Please define DeePMD_DIR!")
+  find_package(TensorFlow REQUIRED)
+  if (TensorFlow_FOUND)
+    target_link_libraries(${ABACUS_BIN_NAME}
+      TensorFlow::tensorflow_cc
+    )
   endif()
 endif()
 
@@ -475,9 +564,9 @@ target_link_libraries(${ABACUS_BIN_NAME}
     planewave
     surchem
     neighbor
-    io
+    io_basic
+    io_advanced
     relax
-    parallel
     driver
     xc_
     hsolver
@@ -512,8 +601,11 @@ endif()
 
 if (ENABLE_LIBRI)
   target_link_libraries(${ABACUS_BIN_NAME}
-          ri
-          libri)
+          ri)
+endif()
+
+if (ENABLE_CONTAINER)
+  target_link_libraries(${ABACUS_BIN_NAME} container kernels)
 endif()
 
 install(PROGRAMS ${ABACUS_BIN_PATH}

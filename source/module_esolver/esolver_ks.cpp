@@ -31,10 +31,11 @@ namespace ModuleESolver
 
         // pw_rho = new ModuleBase::PW_Basis();
         //temporary, it will be removed
-        pw_wfc = new ModulePW::PW_Basis_K_Big(); 
+        pw_wfc = new ModulePW::PW_Basis_K_Big(GlobalV::device_flag, GlobalV::precision_flag);
         GlobalC::wfcpw = this->pw_wfc; //Temporary
         ModulePW::PW_Basis_K_Big* tmp = static_cast<ModulePW::PW_Basis_K_Big*>(pw_wfc);
         tmp->setbxyz(INPUT.bx,INPUT.by,INPUT.bz);
+        GlobalC::CHR_MIX.set_rhopw(this->pw_rho);
     }
 
     template<typename FPTYPE, typename Device>
@@ -79,7 +80,7 @@ namespace ModuleESolver
     #ifdef __MPI
             this->pw_wfc->initmpi(GlobalV::NPROC_IN_POOL, GlobalV::RANK_IN_POOL, POOL_WORLD);
     #endif
-            this->pw_wfc->initgrids(ucell.lat0, ucell.latvec, GlobalC::rhopw->nx, GlobalC::rhopw->ny, GlobalC::rhopw->nz);
+            this->pw_wfc->initgrids(inp.ref_cell_factor * ucell.lat0, ucell.latvec, GlobalC::rhopw->nx, GlobalC::rhopw->ny, GlobalC::rhopw->nz);
             this->pw_wfc->initparameters(false, inp.ecutwfc, GlobalC::kv.nks, GlobalC::kv.kvec_d.data());
     #ifdef __MPI
             if(INPUT.pw_seed > 0)    MPI_Allreduce(MPI_IN_PLACE, &this->pw_wfc->ggecut, 1, MPI_DOUBLE, MPI_MAX , MPI_COMM_WORLD);
@@ -99,7 +100,26 @@ namespace ModuleESolver
         GlobalC::sf.setup_structure_factor(&GlobalC::ucell, GlobalC::rhopw);
 
         // Initialize charge extrapolation
-        CE.Init_CE();
+        CE.Init_CE(this->pw_rho->nrxx);
+    }
+
+    template<typename FPTYPE, typename Device>
+    void ESolver_KS<FPTYPE, Device>::init_after_vc(Input& inp, UnitCell& ucell)
+    {
+        ModuleBase::TITLE("ESolver_KS", "init_after_vc");
+
+        ESolver_FP::init_after_vc(inp, ucell);
+
+        if (GlobalV::md_prec_level == 2)
+        {
+            // initialize the real-space uniform grid for FFT and parallel
+            // distribution of plane waves
+            GlobalC::Pgrid.init(GlobalC::rhopw->nx, GlobalC::rhopw->ny, GlobalC::rhopw->nz, GlobalC::rhopw->nplane,
+                        GlobalC::rhopw->nrxx, GlobalC::bigpw->nbz, GlobalC::bigpw->bz); // mohan add 2010-07-22, update 2011-05-04
+
+            // Calculate Structure factor
+            GlobalC::sf.setup_structure_factor(&ucell, GlobalC::rhopw);
+        }
     }
 
     template<typename FPTYPE, typename Device>
@@ -219,9 +239,26 @@ namespace ModuleESolver
                     }
                     else
                     {
-                        //charge mixing
+                        //----------charge mixing---------------
+                        //before first calling mix_rho(), bandgap and cell structure can be analyzed to get better default parameters
+                        if(iter == 1)
+                        {
+                            double bandgap_for_autoset = 0.0;
+                            if (!GlobalV::TWO_EFERMI)
+                            {
+                                this->pelec->cal_bandgap();
+                                bandgap_for_autoset = this->pelec->bandgap;
+                            }
+                            else
+                            {
+                                this->pelec->cal_bandgap_updw();
+                                bandgap_for_autoset = std::min(this->pelec->bandgap_up, this->pelec->bandgap_dw);
+                            }
+                            GlobalC::CHR_MIX.auto_set(bandgap_for_autoset, GlobalC::ucell);
+                        }
                         //conv_elec = this->estate.mix_rho();
                         GlobalC::CHR_MIX.mix_rho(iter, pelec->charge);
+                        //----------charge mixing done-----------
                     }
                 }
 #ifdef __MPI
@@ -237,7 +274,7 @@ namespace ModuleESolver
 #ifdef __MPI
                 FPTYPE duration = (FPTYPE)(MPI_Wtime() - iterstart);
 #else
-                FPTYPE duration = (std::chrono::system_clock::now() - iterstart).count() / CLOCKS_PER_SEC;
+                FPTYPE duration = (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - iterstart)).count() / static_cast<FPTYPE>(1e6);
 #endif
                 printiter(iter, drho, duration, diag_ethr);
                 if (this->conv_elec)
@@ -273,7 +310,7 @@ namespace ModuleESolver
     template<typename FPTYPE, typename Device>
     void ESolver_KS<FPTYPE, Device>::printiter(const int iter, const FPTYPE drho, const FPTYPE duration, const FPTYPE ethr)
     {
-        GlobalC::en.print_etot(this->conv_elec, iter, drho, duration, ethr);
+        this->pelec->print_etot(this->conv_elec, iter, drho, duration, INPUT.printe, ethr);
     }
 
     template<typename FPTYPE, typename Device>

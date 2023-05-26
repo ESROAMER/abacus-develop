@@ -2,7 +2,7 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_io/write_wfc_nao.h"
 #include "module_io/read_wfc_nao.h"
-#include "src_parallel/parallel_common.h"
+#include "module_base/parallel_common.h"
 #include "module_base/memory.h"
 #include "module_base/timer.h"
 
@@ -19,31 +19,27 @@ Local_Orbital_wfc::~Local_Orbital_wfc()
 {
 
 	// used for k-points.
-	if(complex_flag && this->wfck_flag)
+	if(this->complex_flag)
 	{
+        delete[] this->wfc_k_grid2;
+    }
+    if(this->wfck_flag)
+    {
 		for(int i=0; i<GlobalC::kv.nks; i++)
 		{
-			//for(int j=0; j<GlobalV::NBANDS; j++)
-			//{
-			//	delete[] this->wfc_k_grid[i][j];
-			//}
 			delete[] this->wfc_k_grid[i];
-			//std::cout<<"delete wfc_k_grid["<<i<<"] success"<<std::endl;
 		}
 		delete[] this->wfc_k_grid;
-		//std::cout<<"delete wfc_k_grid success"<<std::endl;
-		if(GlobalV::NLOCAL!= 0 )
-		{
-			delete[] this->wfc_k_grid2;
-			//std::cout<<"delete wfc_k_grid2 success"<<std::endl;
-		}
 	}
 
 }
 
 void Local_Orbital_wfc::allocate_k(const int& lgd,
     psi::Psi<std::complex<double>>* psi,
-    elecstate::ElecState* pelec)
+    elecstate::ElecState* pelec,
+    const int& nks,
+    const int& nkstot,
+    const std::vector<ModuleBase::Vector3<double>>& kvec_c)
 {
 	ModuleBase::TITLE("Local_Orbital_wfc","allocate_k");
 	if(GlobalV::NLOCAL < GlobalV::NBANDS)
@@ -55,8 +51,8 @@ void Local_Orbital_wfc::allocate_k(const int& lgd,
 	// allocate the first part (only once!).
 	if(this->wfck_flag == false)
 	{
-		this->wfc_k_grid = new std::complex<double>**[GlobalC::kv.nks];
-		for(int ik=0; ik<GlobalC::kv.nks; ik++)
+		this->wfc_k_grid = new std::complex<double>**[nks];
+		for(int ik=0; ik<nks; ik++)
 		{
 			this->wfc_k_grid[ik] = new std::complex<double>*[GlobalV::NBANDS];
 		}
@@ -75,9 +71,9 @@ void Local_Orbital_wfc::allocate_k(const int& lgd,
 	{
 		//std::cout<<"lgd="<<lgd<<" ; GlobalV::NLOCAL="<<GlobalV::NLOCAL<<std::endl; //delete 2015-09-06, xiaohui
 		const int page=GlobalV::NBANDS*lgd;
-		this->wfc_k_grid2=new std::complex<double> [GlobalC::kv.nks*page];
-		ModuleBase::GlobalFunc::ZEROS(wfc_k_grid2, GlobalC::kv.nks*page);
-		for(int ik=0; ik<GlobalC::kv.nks; ik++)
+		this->wfc_k_grid2=new std::complex<double> [nks*page];
+		ModuleBase::GlobalFunc::ZEROS(wfc_k_grid2, nks*page);
+		for(int ik=0; ik<nks; ik++)
 		{
 			for(int ib=0; ib<GlobalV::NBANDS; ib++)
 			{
@@ -99,20 +95,20 @@ void Local_Orbital_wfc::allocate_k(const int& lgd,
 	else if(GlobalC::wf.init_wfc == "file")
 	{
 		int error;
-		std::cout << " Read in wave functions files: " << GlobalC::kv.nkstot << std::endl;
+		std::cout << " Read in wave functions files: " << nkstot << std::endl;
         if(psi == nullptr)
         {
             ModuleBase::WARNING_QUIT("allocate_k","psi should be allocated first!");
         }
         else
         {
-            psi->resize(GlobalC::kv.nkstot, this->ParaV->ncol_bands, this->ParaV->nrow);
+            psi->resize(nkstot, this->ParaV->ncol_bands, this->ParaV->nrow);
         }
-		for(int ik=0; ik<GlobalC::kv.nkstot; ++ik)
+		for(int ik=0; ik<nkstot; ++ik)
 		{
             GlobalV::ofs_running << " Read in wave functions " << ik + 1 << std::endl;
             std::complex<double>** ctot;
-            error = ModuleIO::read_wfc_nao_complex(ctot, ik, this->ParaV, psi, pelec);
+            error = ModuleIO::read_wfc_nao_complex(ctot, ik, kvec_c[ik], this->ParaV, psi, pelec);
 #ifdef __MPI
             Parallel_Common::bcast_int(error);
 #endif
@@ -304,7 +300,7 @@ void Local_Orbital_wfc::wfc_2d_to_grid(
     {
         std::stringstream ss;
         ss << GlobalV::global_out_dir << "LOWF_K_" << ik + 1 << ".dat";
-        ModuleIO::write_wfc_nao_complex(ss.str(), ctot, ik, ekb, wg);
+        ModuleIO::write_wfc_nao_complex(ss.str(), ctot, ik, GlobalC::kv.kvec_c[ik], ekb, wg);
         for (int i = 0; i < GlobalV::NBANDS; i++)
         {
             delete[] ctot[i];

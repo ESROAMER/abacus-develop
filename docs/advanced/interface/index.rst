@@ -9,6 +9,9 @@ Interfaces to Other Softwares
    deepks
    dpgen
    deeph
+   Hefei-NAMD
    phonopy
    Wannier90
    ase
+   pyatb
+   ShengBTE

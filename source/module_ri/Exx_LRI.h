@@ -8,17 +8,19 @@
 
 #include "LRI_CV.h"
 #include "module_hamilt_general/module_xc/exx_info.h"
-#include "module_orbital/ORB_atomic_lm.h"
+#include "module_basis/module_ao/ORB_atomic_lm.h"
 #include "module_base/matrix.h"
 #include <RI/physics/Exx.h>
 
 #include <vector>
 #include <array>
 #include <map>
+#include <deque>
 #include <mpi.h>
 
 	class Local_Orbital_Charge;
 	class Parallel_Orbitals;
+	class Mix_DMk_2D;
 	
 	template<typename Tdata>
 	class RPA_LRI;
@@ -37,9 +39,9 @@ private:
 public:
 	Exx_LRI( const Exx_Info::Exx_Info_RI &info_in ) :info(info_in){}
 
-	void init(const MPI_Comm &mpi_comm_in);
+	void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in);
 	void cal_exx_ions();
-	void cal_exx_elec(const Local_Orbital_Charge &loc, const Parallel_Orbitals &pv);
+	void cal_exx_elec(const Mix_DMk_2D &mix_DMk_2D, const Parallel_Orbitals &pv);
 	void cal_exx_force();
 	void cal_exx_stress();
 
@@ -53,7 +55,8 @@ public:
 
 private:
 	const Exx_Info::Exx_Info_RI &info;
-	MPI_Comm mpi_comm;
+    MPI_Comm mpi_comm;
+    const K_Vectors *p_kv;
 
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;

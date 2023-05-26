@@ -1,8 +1,9 @@
 #include "charge_mixing.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_base/inverse_matrix.h"
-#include "src_parallel/parallel_reduce.h"
+#include "module_base/parallel_reduce.h"
 #include "module_base/timer.h"
+#include "module_base/element_elec_config.h"
 
 Charge_Mixing::Charge_Mixing()
 {
@@ -47,22 +48,76 @@ void Charge_Mixing::set_mixing
     return;
 }
 
+void Charge_Mixing::need_auto_set()
+{
+	this->autoset = true;
+}
+
+void Charge_Mixing::auto_set(const double& bandgap_in, const UnitCell& ucell_)
+{
+	//auto set parameters once
+	if(!this->autoset)
+	{
+		return;
+	}
+	else {
+		this->autoset = false;
+	}
+	GlobalV::ofs_running<<"--------------AUTO-SET---------------"<<std::endl;
+	//0.2 for metal and 0.7 for others
+	if(bandgap_in * ModuleBase::Ry_to_eV < 1.0)
+	{
+		this->mixing_beta = 0.2;
+	}
+	else
+	{
+		this->mixing_beta = 0.7;
+	}
+	GlobalV::ofs_running<<"      Autoset mixing_beta to "<<this->mixing_beta<<std::endl;
+
+	bool has_trans_metal = false;
+	// find elements of cell
+	for(int it=0;it<ucell_.ntype;it++)
+	{
+		if(ModuleBase::IsTransMetal.find(ucell_.atoms[it].ncpp.psd) != ModuleBase::IsTransMetal.end())
+		{
+			if(ModuleBase::IsTransMetal.at(ucell_.atoms[it].ncpp.psd)) 
+			{
+				has_trans_metal = true;
+			}
+		}
+	}
+	// auto set kerker mixing for trans metal system
+	if(has_trans_metal)
+	{
+		this->mixing_gg0 = 1.5;
+	}
+	else
+	{
+		this->mixing_gg0 = 0.0;
+	}
+	GlobalV::ofs_running<<"      Autoset mixing_gg0 to "<<this->mixing_gg0<<std::endl;
+	GlobalV::ofs_running<<"-------------------------------------"<<std::endl;
+	//auto set for inhomogeneous system
+
+}
+
 double Charge_Mixing::get_drho(Charge* chr, const double nelec)
 {
 	for (int is=0; is<GlobalV::NSPIN; is++)
     {
 		ModuleBase::GlobalFunc::NOTE("Perform FFT on rho(r) to obtain rho(G).");
-        GlobalC::rhopw->real2recip(chr->rho[is], chr->rhog[is]);
+        this->rhopw->real2recip(chr->rho[is], chr->rhog[is]);
 
 		ModuleBase::GlobalFunc::NOTE("Perform FFT on rho_save(r) to obtain rho_save(G).");
-        GlobalC::rhopw->real2recip(chr->rho_save[is], chr->rhog_save[is]);
+        this->rhopw->real2recip(chr->rho_save[is], chr->rhog_save[is]);
 
 
 		ModuleBase::GlobalFunc::NOTE("Calculate the charge difference between rho(G) and rho_save(G)");
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 512)
 #endif
-        for (int ig=0; ig<GlobalC::rhopw->npw; ig++)
+        for (int ig=0; ig<this->rhopw->npw; ig++)
         {
            chr->rhog[is][ig] -= chr->rhog_save[is][ig];
         }
@@ -73,7 +128,9 @@ double Charge_Mixing::get_drho(Charge* chr, const double nelec)
 	
 	if(GlobalV::test_charge)GlobalV::ofs_running << " scf_thr from rhog_dot_product is " << scf_thr << std::endl;
 	
-	if(GlobalV::BASIS_TYPE=="pw" && !GlobalV::test_charge)
+	// This is a temporary method to choose the type of scf_thr, in order to test different scf_thr_type.
+	// Charge mixing will be refactored later.
+	if(GlobalV::SCF_THR_TYPE == 1 && !GlobalV::test_charge)
 	{
 		return scf_thr;
 	}
@@ -82,10 +139,14 @@ double Charge_Mixing::get_drho(Charge* chr, const double nelec)
 	double scf_thr2 = 0.0;
 	for(int is=0; is<GlobalV::NSPIN; is++)
 	{
+		if(is!=0 && is!=3 && GlobalV::DOMAG_Z)
+		{
+			continue;
+		}
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:scf_thr2)
 #endif
-		for(int ir=0; ir<GlobalC::rhopw->nrxx; ir++)
+		for(int ir=0; ir<this->rhopw->nrxx; ir++)
 		{
 			scf_thr2 += abs( chr->rho[is][ir] - chr->rho_save[is][ir] );
 		}
@@ -94,14 +155,14 @@ double Charge_Mixing::get_drho(Charge* chr, const double nelec)
 	Parallel_Reduce::reduce_double_pool( scf_thr2 );
 	assert( nelec != 0);
 	assert( GlobalC::ucell.omega > 0);
-	assert( GlobalC::rhopw->nxyz > 0);
-	scf_thr2 *= GlobalC::ucell.omega / static_cast<double>( GlobalC::rhopw->nxyz );
+	assert( this->rhopw->nxyz > 0);
+	scf_thr2 *= GlobalC::ucell.omega / static_cast<double>( this->rhopw->nxyz );
 	scf_thr2 /= nelec;
 	if(GlobalV::test_charge)GlobalV::ofs_running << " scf_thr from real space grid is " << scf_thr2 << std::endl;
 
 	// mohan add 2011-01-22
 	//if(LINEAR_SCALING && LOCAL_BASIS) xiaohui modify 2013-09-01
-	if(GlobalV::BASIS_TYPE=="lcao" )
+	if(GlobalV::SCF_THR_TYPE == 2)
 	{
 		scf_thr = scf_thr2;	
 	}
@@ -117,11 +178,16 @@ void Charge_Mixing::mix_rho(const int &iter, Charge* chr)
 	double **rho123 = new double*[GlobalV::NSPIN];
 	for(int is=0; is<GlobalV::NSPIN; ++is)
 	{
-		rho123[is] = new double[GlobalC::rhopw->nrxx];
+		rho123[is] = new double[this->rhopw->nrxx];
+		if(is!=0 && is!=3 && GlobalV::DOMAG_Z)
+		{
+			ModuleBase::GlobalFunc::ZEROS(rho123[is], this->rhopw->nrxx);
+			continue;
+		} 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 512)
 #endif
-		for(int ir=0; ir<GlobalC::rhopw->nrxx; ++ir)
+		for(int ir=0; ir<this->rhopw->nrxx; ++ir)
 		{
 			rho123[is][ir] = chr->rho[is][ir];
 		}
@@ -133,11 +199,11 @@ void Charge_Mixing::mix_rho(const int &iter, Charge* chr)
 		kin_r123 = new double*[GlobalV::NSPIN];
 		for(int is=0; is<GlobalV::NSPIN; ++is)
 		{
-			kin_r123[is] = new double[GlobalC::rhopw->nrxx];
+			kin_r123[is] = new double[this->rhopw->nrxx];
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 512)
 #endif
-			for(int ir=0; ir<GlobalC::rhopw->nrxx; ++ir)
+			for(int ir=0; ir<this->rhopw->nrxx; ++ir)
 			{
 				kin_r123[is][ir] = chr->kin_r[is][ir];
 			}
@@ -163,12 +229,13 @@ void Charge_Mixing::mix_rho(const int &iter, Charge* chr)
 
 	// mohan add 2012-06-05
 	// rho_save is the charge before mixing
-#ifdef _OPENMP
-#pragma omp parallel for collapse(2) schedule(static, 512)
-#endif
 	for(int is=0; is<GlobalV::NSPIN; is++)
 	{
-		for(int ir=0; ir<GlobalC::rhopw->nrxx; ++ir)
+		if(is!=0 && is!=3 && GlobalV::DOMAG_Z) continue;
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 512)
+#endif
+		for(int ir=0; ir<this->rhopw->nrxx; ++ir)
 		{
 			chr->rho_save[is][ir] = rho123[is][ir];
 		}
@@ -187,7 +254,7 @@ void Charge_Mixing::mix_rho(const int &iter, Charge* chr)
 #endif
 		for(int is=0; is<GlobalV::NSPIN; is++)
 		{
-			for(int ir=0; ir<GlobalC::rhopw->nrxx; ++ir)
+			for(int ir=0; ir<this->rhopw->nrxx; ++ir)
 			{
 				chr->kin_r_save[is][ir] = kin_r123[is][ir];
 			}
@@ -221,36 +288,36 @@ void Charge_Mixing::plain_mixing(Charge* chr) const
 	{
 		if(this->mixing_gg0 > 0.0)
 		{
-			double* Rrho = new double[GlobalC::rhopw->nrxx];
-			std::complex<double> *kerpulay = new std::complex<double>[GlobalC::rhopw->npw];
-			double* kerpulayR = new double[GlobalC::rhopw->nrxx];
+			double* Rrho = new double[this->rhopw->nrxx];
+			std::complex<double> *kerpulay = new std::complex<double>[this->rhopw->npw];
+			double* kerpulayR = new double[this->rhopw->nrxx];
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 512)
 #endif
-			for(int ir=0; ir<GlobalC::rhopw->nrxx; ir++)
+			for(int ir=0; ir<this->rhopw->nrxx; ir++)
 			{
 				Rrho[ir] = chr->rho[is][ir] - chr->rho_save[is][ir];
 			}
-			GlobalC::rhopw->real2recip(Rrho, kerpulay);
+			this->rhopw->real2recip(Rrho, kerpulay);
 
 			const double fac = this->mixing_gg0;
 			const double gg0 = std::pow(fac * 0.529177 / GlobalC::ucell.tpiba, 2);
-			double* filter_g = new double[GlobalC::rhopw->npw];
+			double* filter_g = new double[this->rhopw->npw];
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 256)
 #endif
-			for(int ig=0; ig<GlobalC::rhopw->npw; ig++)
+			for(int ig=0; ig<this->rhopw->npw; ig++)
 			{
-				double gg = GlobalC::rhopw->gg[ig];
+				double gg = this->rhopw->gg[ig];
 				filter_g[ig] = max(gg / (gg + gg0), 0.1);
 
 				kerpulay[ig] = (1 - filter_g[ig]) * kerpulay[ig];
 			}
-			GlobalC::rhopw->recip2real(kerpulay, kerpulayR);
+			this->rhopw->recip2real(kerpulay, kerpulayR);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 128)
 #endif
-			for(int ir=0; ir<GlobalC::rhopw->nrxx; ir++)
+			for(int ir=0; ir<this->rhopw->nrxx; ir++)
 			{
 				Rrho[ir] = Rrho[ir] - kerpulayR[ir];
 				chr->rho[is][ir] = Rrho[ir] * mixing_beta + chr->rho_save[is][ir];
@@ -267,7 +334,7 @@ void Charge_Mixing::plain_mixing(Charge* chr) const
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 256)
 #endif
-			for (int ir=0; ir<GlobalC::rhopw->nrxx; ir++)
+			for (int ir=0; ir<this->rhopw->nrxx; ir++)
 			{
 				chr->rho[is][ir] = chr->rho[is][ir]*mixing_beta + mix_old*chr->rho_save[is][ir];
 				chr->rho_save[is][ir] = chr->rho[is][ir];
@@ -279,7 +346,7 @@ void Charge_Mixing::plain_mixing(Charge* chr) const
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, 256)
 #endif
-			for (int ir=0; ir<GlobalC::rhopw->nrxx; ir++)
+			for (int ir=0; ir<this->rhopw->nrxx; ir++)
 			{
 				chr->kin_r[is][ir] = chr->kin_r[is][ir]*mixing_beta + mix_old*chr->kin_r_save[is][ir];
 				chr->kin_r_save[is][ir] = chr->kin_r[is][ir];
@@ -309,10 +376,10 @@ double Charge_Mixing::rhog_dot_product(
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:sum)
 #endif
-		for (int ig=0; ig<GlobalC::rhopw->npw; ++ig)
+		for (int ig=0; ig<this->rhopw->npw; ++ig)
 		{
-			if(GlobalC::rhopw->gg[ig]<1e-8) continue;
-			sum += ( conj( rhog1[0][ig] )* rhog2[0][ig] ).real() / GlobalC::rhopw->gg[ig];
+			if(this->rhopw->gg[ig]<1e-8) continue;
+			sum += ( conj( rhog1[0][ig] )* rhog2[0][ig] ).real() / this->rhopw->gg[ig];
 		}
 		sum *= fac;
 		return sum;
@@ -330,10 +397,10 @@ double Charge_Mixing::rhog_dot_product(
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:sum)
 #endif
-			for (int ig=0; ig<GlobalC::rhopw->npw; ++ig)
+			for (int ig=0; ig<this->rhopw->npw; ++ig)
 			{
-				if(GlobalC::rhopw->gg[ig]<1e-8) continue;
-				sum += ( conj( rhog1[0][ig]+rhog1[1][ig] ) * (rhog2[0][ig]+rhog2[1][ig]) ).real() / GlobalC::rhopw->gg[ig];
+				if(this->rhopw->gg[ig]<1e-8) continue;
+				sum += ( conj( rhog1[0][ig]+rhog1[1][ig] ) * (rhog2[0][ig]+rhog2[1][ig]) ).real() / this->rhopw->gg[ig];
 			}
 			sum *= fac;
 
@@ -352,7 +419,7 @@ double Charge_Mixing::rhog_dot_product(
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:mag)
 #endif
-			for (int ig=0; ig<GlobalC::rhopw->npw; ig++)
+			for (int ig=0; ig<this->rhopw->npw; ig++)
 			{
 				mag += ( conj( rhog1[0][ig]-rhog1[1][ig] ) * ( rhog2[0][ig]-rhog2[1][ig] ) ).real();
 			}
@@ -379,13 +446,13 @@ double Charge_Mixing::rhog_dot_product(
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:sum)
 #endif
-			for (int ig=0; ig<GlobalC::rhopw->npw; ig++)
+			for (int ig=0; ig<this->rhopw->npw; ig++)
 			{
-				if(ig==GlobalC::rhopw->ig_gge0) continue;
-				sum += ( conj( rhog1[0][ig] )* rhog2[0][ig] ).real() / GlobalC::rhopw->gg[ig];
+				if(ig==this->rhopw->ig_gge0) continue;
+				sum += ( conj( rhog1[0][ig] )* rhog2[0][ig] ).real() / this->rhopw->gg[ig];
 			}
 			sum *= fac;
-			const int ig0 = GlobalC::rhopw->ig_gge0;
+			const int ig0 = this->rhopw->ig_gge0;
 			if(ig0 > 0)
 			{
 				sum += fac2 * ((conj( rhog1[1][ig0])*rhog2[1][ig0]).real() +
@@ -400,7 +467,7 @@ double Charge_Mixing::rhog_dot_product(
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:sum)
 #endif
-			for (int ig=0; ig<GlobalC::rhopw->npw; ig++)
+			for (int ig=0; ig<this->rhopw->npw; ig++)
 			{
 				if(ig == ig0) continue;
 				sum += fac3 * ((conj( rhog1[1][ig])*rhog2[1][ig]).real() +

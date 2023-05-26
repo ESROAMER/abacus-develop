@@ -6,30 +6,13 @@
 #include "module_base/global_variable.h"
 #include "module_base/lapack_connector.h"
 #include "module_base/timer.h"
-#include "src_parallel/parallel_reduce.h"
+#include "module_base/parallel_reduce.h"
 #include "module_hsolver/kernels/math_kernel_op.h"
 #include "module_hsolver/kernels/dngvd_op.h"
 #include "module_psi/kernels/device.h"
 
 namespace hsolver{
 
-template<typename FPTYPE, typename Device>
-FPTYPE DiagoIterAssist<FPTYPE, Device>::avg_iter = 0.0;
-
-template<typename FPTYPE, typename Device>
-int DiagoIterAssist<FPTYPE, Device>::PW_DIAG_NMAX = 30;
-
-template<typename FPTYPE, typename Device>
-FPTYPE DiagoIterAssist<FPTYPE, Device>::PW_DIAG_THR = 1.0e-2;
-
-template<typename FPTYPE, typename Device>
-bool DiagoIterAssist<FPTYPE, Device>::need_subspace = false;
-
-template<typename FPTYPE, typename Device>
-std::complex<FPTYPE> DiagoIterAssist<FPTYPE, Device>::one = std::complex<FPTYPE>(1, 0);
-
-template<typename FPTYPE, typename Device>
-std::complex<FPTYPE> DiagoIterAssist<FPTYPE, Device>::zero = std::complex<FPTYPE>(0, 0);
 //----------------------------------------------------------------------
 // Hamiltonian diagonalization in the subspace spanned
 // by nstart states psi (atomic or random wavefunctions).
@@ -409,7 +392,7 @@ void DiagoIterAssist<FPTYPE, Device>::diagH_LAPACK(
         // set eigenvalues in CPU to e in CPU
         syncmem_var_op()(ctx, ctx, e, eigenvalues, nbands);
     }
-    
+
     delmem_var_op()(ctx, eigenvalues);
 
 

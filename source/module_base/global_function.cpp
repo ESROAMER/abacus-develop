@@ -3,7 +3,7 @@
 //==========================================================
 #include "global_function.h"
 
-#include "../src_parallel/parallel_common.h"
+#include "module_base/parallel_common.h"
 #include "global_file.h"
 
 //==========================================================
@@ -73,9 +73,6 @@ void MAKE_DIR(const std::string &fn)
             ModuleBase::WARNING_QUIT("MAKE_DIR", fn);
         }
     }
-#ifdef __MPI
-    MPI_Barrier(MPI_COMM_WORLD);
-#endif
     return;
 }
 
@@ -112,9 +109,8 @@ void DONE(std::ofstream &ofs, const std::string &description, const bool only_ra
 // NAME : TEST_LEVEL
 // control the test_level
 //==========================================================
-void TEST_LEVEL(const std::string &name)
+void TEST_LEVEL(const std::string &name, bool disable=true)
 {
-    bool disable = true;
     if (disable) return;
 
     if (name == "none")
