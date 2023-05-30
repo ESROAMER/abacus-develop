@@ -88,6 +88,38 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
     this->LM.divide_HS_in_frag(GlobalV::GAMMA_ONLY_LOCAL, orb_con.ParaV, GlobalC::kv.nks);
     //------------------init Hamilt_lcao----------------------
 
+#ifdef __EXX
+    // PLEASE simplify the Exx_Global interface
+    // mohan add 2021-03-25
+    // Peize Lin 2016-12-03
+    if (GlobalV::CALCULATION == "scf" || GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax"
+        || GlobalV::CALCULATION == "md")
+    {
+        if (GlobalC::exx_info.info_global.cal_exx)
+        {
+            /* In the special "two-level" calculation case,
+            first scf iteration only calculate the functional without exact exchange.
+            but in "nscf" calculation, there is no need of "two-level" method. */
+            if (ucell.atoms[0].ncpp.xc_func == "HSE" || ucell.atoms[0].ncpp.xc_func == "PBE0" ||
+                ucell.atoms[0].ncpp.xc_func == "LC_PBE" || ucell.atoms[0].ncpp.xc_func == "LC_WPBE" ||
+                ucell.atoms[0].ncpp.xc_func == "LRC_WPBEH" || ucell.atoms[0].ncpp.xc_func == "CAM_PBEH")
+            {
+                XC_Functional::set_xc_type("pbe");
+            }
+            else if (ucell.atoms[0].ncpp.xc_func == "SCAN0")
+            {
+                XC_Functional::set_xc_type("scan");
+            }
+
+            // GlobalC::exx_lcao.init();
+            if (GlobalC::exx_info.info_ri.real_number)
+                GlobalC::exx_lri_double.init(MPI_COMM_WORLD, GlobalC::kv);
+            else
+                GlobalC::exx_lri_complex.init(MPI_COMM_WORLD, GlobalC::kv);
+        }
+    }
+#endif
+
     // pass Hamilt-pointer to Operator
     this->UHM.genH.LM = this->UHM.LM = &this->LM;
     // pass basis-pointer to EState and Psi
@@ -183,6 +215,32 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
     {
         this->pelec_td->print_band(ik, INPUT.printe, iter);
     }
+
+#ifdef __EXX
+    // Peize Lin add 2020.04.04
+    if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
+    {
+        // add exx
+        // Peize Lin add 2016-12-03
+        this->pelec->set_exx();
+
+        if (GlobalC::restart.info_load.load_H && GlobalC::restart.info_load.load_H_finish
+            && !GlobalC::restart.info_load.restart_exx)
+        {
+            XC_Functional::set_xc_type(GlobalC::ucell.atoms[0].ncpp.xc_func);
+            // GlobalC::exx_lcao.cal_exx_elec(this->LOC, this->LOWF.wfc_k_grid);
+            if (GlobalC::exx_info.info_ri.real_number)
+                GlobalC::exx_lri_double.cal_exx_elec(this->mix_DMk_2D, *this->LOWF.ParaV);
+            else
+                GlobalC::exx_lri_complex.cal_exx_elec(this->mix_DMk_2D, *this->LOWF.ParaV);
+            GlobalC::restart.info_load.restart_exx = true;
+        }
+    }
+    else
+    {
+        this->pelec->f_en.exx = 0.;
+    }
+#endif
 
     // using new charge density.
     this->pelec->cal_energies(1);
