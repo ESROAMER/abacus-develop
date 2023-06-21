@@ -1291,7 +1291,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
     }
 }
 
-bool ESolver_KS_LCAO::do_after_converge(int& iter)
+bool ESolver_KS_LCAO::do_after_converge(const int istep, int &iter)
 {
 #ifdef __EXX
 
