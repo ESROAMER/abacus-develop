@@ -292,46 +292,18 @@ bool ESolver_KS_LCAO_TDDFT::do_after_converge(const int istep, int &iter)
 
     if (stop)
     {
-        if (istep >= 1 && this->conv_elec)
-        {
-            if (this->psi != nullptr)
-            {
-                this->psi[0].fix_k(ik);
-                this->pelec->print_psi(this->psi[0]);
-            }
-            else
-            {
-                this->psid[0].fix_k(ik);
-                this->pelec->print_psi(this->psid[0]);
-            }
-        }
-        elecstate::ElecStateLCAO::out_wfc_flag = 0;
-    }
-
-    // Calculate new potential according to new Charge Density
-    if (!this->conv_elec)
-    {
-        if (GlobalV::NSPIN == 4)
-            GlobalC::ucell.cal_ux();
-        this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
-        this->pelec->f_en.descf = this->pelec->cal_delta_escf();
-    }
-    else
-    {
-        this->pelec->cal_converged();
-    }
 
     // store wfc and Hk laststep
-    if (istep >= 1 && this->conv_elec)
-    {
-        if (this->psi_laststep == nullptr)
+        if (istep >= (wf.init_wfc == "file" ? 0 : 1) && this->conv_elec)
+        {
+            if (this->psi_laststep == nullptr)
 #ifdef __MPI
                 this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks,
                                                                         this->LOWF.ParaV->ncol_bands,
                                                                         this->LOWF.ParaV->nrow,
                                                                         nullptr);
 #else
-            this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks, GlobalV::NBANDS, GlobalV::NLOCAL, nullptr);
+                this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks, GlobalV::NBANDS, GlobalV::NLOCAL, nullptr);
 #endif
 
             if (td_htype == 1)
