@@ -2528,6 +2528,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_hse_omega = "0.2";
         else if (dft_functional == "cam_pbeh")
             exx_hse_omega = "0.7";
+        else 
+            exx_hse_omega = "0.0";
     }
     if (exx_real_number == "default")
     {
@@ -2538,10 +2540,14 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_ccp_rmesh_times == "default")
     {
-        if (dft_functional == "hf" || dft_functional == "pbe0" || dft_functional == "scan0")
+        if (dft_functional == "hf" || dft_functional == "pbe0" || dft_functional == "scan0" ||
+            dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
             exx_ccp_rmesh_times = "5";
         else if (dft_functional == "hse")
             exx_ccp_rmesh_times = "1.5";
+        else if (dft_functional == "cam_pbeh")
+            exx_ccp_rmesh_times = "3";
     }
     if (symmetry == "default")
     {   //deal with no-forced default value

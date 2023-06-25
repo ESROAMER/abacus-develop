@@ -497,7 +497,9 @@ void Input_Conv::Convert(void)
     {
         GlobalC::restart.folder = GlobalV::global_readin_dir + "restart/";
         if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
-            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0")
+            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
+            || INPUT.dft_functional == "cam_pbeh")
         {
             GlobalC::restart.info_load.load_charge = true;
         }
