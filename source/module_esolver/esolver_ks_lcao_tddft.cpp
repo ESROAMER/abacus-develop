@@ -21,7 +21,6 @@
 #include "module_elecstate/elecstate_lcao.h"
 #include "module_elecstate/elecstate_lcao_tddft.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/hamilt_lcao.h"
-#include "module_hamilt_lcao/hamilt_lcaodft/global_fp.h"
 #include "module_hsolver/hsolver_lcao.h"
 #include "module_psi/psi.h"
 
@@ -114,9 +113,9 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
 
             // GlobalC::exx_lcao.init();
             if (GlobalC::exx_info.info_ri.real_number)
-                GlobalC::exx_lri_double.init(MPI_COMM_WORLD, GlobalC::kv);
+                this->exx_lri_double->init(MPI_COMM_WORLD, kv);
             else
-                GlobalC::exx_lri_complex.init(MPI_COMM_WORLD, GlobalC::kv);
+                this->exx_lri_complex->init(MPI_COMM_WORLD, kv);
         }
     }
 #endif
@@ -238,29 +237,10 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
     }
 
 #ifdef __EXX
-    // Peize Lin add 2020.04.04
-    if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
-    {
-        // add exx
-        // Peize Lin add 2016-12-03
-        this->pelec->set_exx();
-
-        if (GlobalC::restart.info_load.load_H && GlobalC::restart.info_load.load_H_finish
-            && !GlobalC::restart.info_load.restart_exx)
-        {
-            XC_Functional::set_xc_type(GlobalC::ucell.atoms[0].ncpp.xc_func);
-            // GlobalC::exx_lcao.cal_exx_elec(this->LOC, this->LOWF.wfc_k_grid);
-            if (GlobalC::exx_info.info_ri.real_number)
-                GlobalC::exx_lri_double.cal_exx_elec(this->mix_DMk_2D, *this->LOWF.ParaV);
-            else
-                GlobalC::exx_lri_complex.cal_exx_elec(this->mix_DMk_2D, *this->LOWF.ParaV);
-            GlobalC::restart.info_load.restart_exx = true;
-        }
-    }
+    if (GlobalC::exx_info.info_ri.real_number)
+        this->exd->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
     else
-    {
-        this->pelec->f_en.exx = 0.;
-    }
+        this->exc->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
 #endif
 
     // using new charge density.
