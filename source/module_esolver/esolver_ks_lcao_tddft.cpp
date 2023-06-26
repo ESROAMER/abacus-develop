@@ -558,8 +558,8 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
         ModuleBase::GlobalFunc::ZEROS(WORK, LWORK);
         int IPIV[GlobalV::NLOCAL];
 
-        LapackConnector::zgetrf(GlobalV::NLOCAL, GlobalV::NLOCAL, Sinv, GlobalV::NLOCAL, IPIV, &INFO);
-        LapackConnector::zgetri(GlobalV::NLOCAL, Sinv, GlobalV::NLOCAL, IPIV, WORK, LWORK, &INFO);
+        LapackConnector::getrf(GlobalV::NLOCAL, GlobalV::NLOCAL, Sinv, GlobalV::NLOCAL, IPIV, &INFO);
+        LapackConnector::getri(GlobalV::NLOCAL, Sinv, GlobalV::NLOCAL, IPIV, WORK, LWORK, &INFO);
 
         this->LOC.edm_k_tddft[ik] = 0.5 * (Sinv * Htmp * this->LOC.dm_k[ik] + this->LOC.dm_k[ik] * Htmp * Sinv);
         delete[] WORK;
