@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include "module_base/timer.h"
 
-void Force_LCAO_gamma::cal_fvnl_dbeta_new(
-	const std::vector<ModuleBase::matrix> &dm2d, 
+void Force_LCAO_gamma::cal_fvnl_dbeta(
+    const elecstate::DensityMatrix<double, double>* DM,
 	const bool isforce, 
 	const bool isstress, 
 	ModuleBase::matrix& fvnl_dbeta, 
@@ -54,12 +54,28 @@ void Force_LCAO_gamma::cal_fvnl_dbeta_new(
 			for (int iw1=0; iw1<GlobalC::ucell.atoms[T1].nw; ++iw1)
 			{
 				const int iw1_all = start1 + iw1;
-				const int iw1_local = this->ParaV->trace_loc_row[iw1_all];
-				const int iw2_local = this->ParaV->trace_loc_col[iw1_all];
+                const int iw1_local = this->ParaV->global2local_row(iw1_all);
+                const int iw2_local = this->ParaV->global2local_col(iw1_all);
 				if(iw1_local < 0 && iw2_local < 0) continue;
                 
                 std::vector<std::vector<double>> nlm;
 
+#ifdef USE_NEW_TWO_CENTER
+                //=================================================================
+                //          new two-center integral (temporary)
+                //=================================================================
+                int L1 = atom1->iw2l[ iw1 ];
+                int N1 = atom1->iw2n[ iw1 ];
+                int m1 = atom1->iw2m[ iw1 ];
+
+                // convert m (0,1,...2l) to M (-l, -l+1, ..., l-1, l)
+                int M1 = (m1 % 2 == 0) ? -m1/2 : (m1+1)/2;
+
+                ModuleBase::Vector3<double> dtau = GlobalC::ucell.atoms[T0].tau[I0] - tau1;
+
+                GlobalC::UOT.two_center_bundle->overlap_orb_beta->snap(
+                        T1, L1, N1, M1, T0, dtau * GlobalC::ucell.lat0, true, nlm);
+#else
                 GlobalC::UOT.snap_psibeta_half(
                     GlobalC::ORB,
                     GlobalC::ucell.infoNL,
@@ -68,6 +84,7 @@ void Force_LCAO_gamma::cal_fvnl_dbeta_new(
                     atom1->iw2m[ iw1 ], // m1
                     atom1->iw2n[ iw1 ], // N1
                     GlobalC::ucell.atoms[T0].tau[I0], T0, 1); //R0,T0
+#endif
 
                 assert(nlm.size()==4);
                 nlm_tot[ad1].insert({iw1,nlm});
@@ -114,12 +131,12 @@ void Force_LCAO_gamma::cal_fvnl_dbeta_new(
                 for (int iw1=0; iw1<GlobalC::ucell.atoms[T1].nw; ++iw1)
                 {
                     const int iw1_all = start1 + iw1;
-                    const int iw1_local = this->ParaV->trace_loc_row[iw1_all];
+                    const int iw1_local = this->ParaV->global2local_row(iw1_all);
                     if(iw1_local < 0)continue;
                     for (int iw2=0; iw2<GlobalC::ucell.atoms[T2].nw; ++iw2)
                     {
                         const int iw2_all = start2 + iw2;
-                        const int iw2_local = this->ParaV->trace_loc_col[iw2_all];
+                        const int iw2_local = this->ParaV->global2local_col(iw2_all);
                         if(iw2_local < 0)continue;
 
                         double nlm[3] = {0,0,0};
@@ -184,7 +201,8 @@ void Force_LCAO_gamma::cal_fvnl_dbeta_new(
                         for(int is=0; is<GlobalV::NSPIN; ++is)
                         {
                             //sum += dm2d[is][index];
-                            sum += dm2d[is](iw2_local, iw1_local);
+                            //sum += dm2d[is](iw2_local, iw1_local);
+                            sum += DM->get_DMK(is+1, 0, iw2_local, iw1_local);
                         }
                         sum *= 2.0;
 
@@ -218,8 +236,8 @@ void Force_LCAO_gamma::cal_fvnl_dbeta_new(
 }
 
 void Force_LCAO_gamma::cal_ftvnl_dphi(
-	const std::vector<ModuleBase::matrix> &dm2d, 
-	const bool isforce, 
+    const elecstate::DensityMatrix<double, double>* DM,
+    const bool isforce, 
 	const bool isstress, 
 	ModuleBase::matrix& ftvnl_dphi, 
 	ModuleBase::matrix& stvnl_dphi)
@@ -232,8 +250,8 @@ void Force_LCAO_gamma::cal_ftvnl_dphi(
         const int iat = GlobalC::ucell.iwt2iat[i];
         for(int j=0; j<GlobalV::NLOCAL; j++)
         {
-            const int mu = this->ParaV->trace_loc_row[j];
-            const int nu = this->ParaV->trace_loc_col[i];
+            const int mu = this->ParaV->global2local_row(j);
+            const int nu = this->ParaV->global2local_col(i);
 
             if (mu >= 0 && nu >= 0 )
             {
@@ -243,7 +261,8 @@ void Force_LCAO_gamma::cal_ftvnl_dphi(
                 double sum = 0.0;
                 for(int is=0; is<GlobalV::NSPIN; ++is)
                 {
-                    sum += dm2d[is](nu, mu);
+                    //sum += dm2d[is](nu, mu);
+                    sum += DM->get_DMK(is+1, 0, nu, mu);
                 }
                 sum *= 2.0;
 

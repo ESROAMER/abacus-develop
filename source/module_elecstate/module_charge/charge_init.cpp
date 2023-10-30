@@ -14,8 +14,11 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_hamilt_pw/hamilt_pwdft/parallel_grid.h"
 #include "module_io/rho_io.h"
+#ifdef USE_PAW
+#include "module_cell/module_paw/paw_cell.h"
+#endif
 
-void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMatrix& strucFac)
+void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMatrix& strucFac, const int& nbz, const int& bz)
 {
     ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running, "init_chg", GlobalV::init_chg);
 
@@ -23,6 +26,21 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
     if (GlobalV::init_chg == "atomic") // mohan add 2007-10-17
     {
         this->atomic_rho(GlobalV::NSPIN, GlobalC::ucell.omega, rho, strucFac, GlobalC::ucell);
+
+        // liuyu 2023-06-29 : move here from atomic_rho(), which will be called several times in charge extrapolation
+        // wenfei 2021-7-29 : initial tau = 3/5 rho^2/3, Thomas-Fermi
+        if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
+        {
+            const double pi = 3.141592653589790;
+            const double fact = (3.0 / 5.0) * pow(3.0 * pi * pi, 2.0 / 3.0);
+            for (int is = 0; is < GlobalV::NSPIN; ++is)
+            {
+                for (int ir = 0; ir < this->rhopw->nrxx; ++ir)
+                {
+                    kin_r[is][ir] = fact * pow(std::abs(rho[is][ir]) * GlobalV::NSPIN, 5.0 / 3.0) / GlobalV::NSPIN;
+                }
+            }
+        }
     }
     else if (GlobalV::init_chg == "file")
     {
@@ -137,6 +155,9 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
         }
         GlobalC::restart.info_load.load_charge_finish = true;
     }
+#ifdef __MPI
+    this->init_chgmpi(nbz, bz);
+#endif
 }
 
 //==========================================================
@@ -221,8 +242,8 @@ void Charge::set_rho_core(
     double rhoneg = 0.0;
     for (int ir = 0; ir < this->rhopw->nrxx; ir++)
     {
-        rhoneg += min(0.0, this->rhopw->ft.get_auxr_data<double>()[ir].real());
-        rhoima += abs(this->rhopw->ft.get_auxr_data<double>()[ir].imag());
+        rhoneg += std::min(0.0, this->rhopw->ft.get_auxr_data<double>()[ir].real());
+        rhoima += std::abs(this->rhopw->ft.get_auxr_data<double>()[ir].imag());
         // NOTE: Core charge is computed in reciprocal space and brought to real
         // space by FFT. For non smooth core charges (or insufficient cut-off)
         // this may result in negative values in some grid points.
@@ -236,8 +257,8 @@ void Charge::set_rho_core(
     }
 
 	// mohan fix bug 2011-04-03
-	Parallel_Reduce::reduce_double_pool( rhoneg );
-	Parallel_Reduce::reduce_double_pool( rhoima );
+    Parallel_Reduce::reduce_pool(rhoneg);
+    Parallel_Reduce::reduce_pool(rhoima);
 
 	// mohan changed 2010-2-2, make this same as in atomic_rho.
 	// still lack something......
@@ -251,6 +272,18 @@ void Charge::set_rho_core(
     ModuleBase::timer::tick("Charge","set_rho_core");
     return;
 } // end subroutine set_rhoc
+
+void Charge::set_rho_core_paw()
+{
+    ModuleBase::TITLE("Charge","set_rho_core_paw");
+#ifdef USE_PAW
+    double* tmp = new double[nrxx];
+    GlobalC::paw_cell.get_vloc_ncoret(tmp,this->rho_core);
+    delete[] tmp;
+
+    this->rhopw->real2recip(this->rho_core,this->rhog_core);
+#endif
+}
 
 void Charge::non_linear_core_correction
 (

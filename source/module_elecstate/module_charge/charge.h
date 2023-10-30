@@ -42,6 +42,16 @@ class Charge
     double **kin_r = nullptr; // kinetic energy density in real space, for meta-GGA
     double **kin_r_save = nullptr; // kinetic energy density in real space, for meta-GGA
                                    // wenfei 2021-07-28
+  private:
+    //temporary
+    double *_space_rho = nullptr, *_space_rho_save = nullptr;
+    std::complex<double> *_space_rhog = nullptr, *_space_rhog_save = nullptr;
+    double *_space_kin_r = nullptr, *_space_kin_r_save = nullptr;
+
+  public:
+    double **nhat = nullptr; //compensation charge for PAW
+    double **nhat_save = nullptr; //compensation charge for PAW
+                                 // wenfei 2023-09-05
 
     double *rho_core = nullptr;
     std::complex<double> *rhog_core = nullptr;
@@ -50,8 +60,16 @@ class Charge
 
     void set_rhopw(ModulePW::PW_Basis* rhopw_in);
 
-    void init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMatrix& strucFac);
-    // mohan update 2021-02-20
+    /**
+     * @brief Init charge density from file or atomic pseudo-wave-functions
+     * 
+     * @param eferm_iout fermi energy to be initialized
+     * @param strucFac [in] structure factor 
+     * @param nbz [in] number of big grids in z direction
+     * @param bz [in] number of small grids in big grids for z dirction
+     */
+    void init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMatrix& strucFac, const int& nbz, const int& bz);
+    
     void allocate(const int &nspin_in);
 
     void atomic_rho(const int spin_number_need,
@@ -61,6 +79,7 @@ class Charge
                     const UnitCell& ucell) const;
 
     void set_rho_core(const ModuleBase::ComplexMatrix &structure_factor);
+    void set_rho_core_paw();
 
     void renormalize_rho(void);
 
@@ -82,8 +101,28 @@ class Charge
     void init_final_scf(); //LiuXh add 20180619
 
 	public:
+    /**
+     * @brief init some arrays for mpi_inter_pools, rho_mpi
+     * 
+     * @param nbz number of bigz in big grids
+     * @param bz  number of z for each bigz
+     */
+    void init_chgmpi(const int& nbz, const int& bz);
 
-    void rho_mpi(const int& nbz, const int& bz);
+    /**
+     * @brief Sum rho at different pools (k-point parallelism).
+     *        Only used when GlobalV::KPAR > 1
+     */
+    void rho_mpi();
+
+	  /**
+	   * @brief 	Reduce among different pools 
+     *          If NPROC_IN_POOLs are all the same, use GlobalV::INTER_POOL
+     *          else, gather rho in a POOL, and then reduce among different POOLs
+	   * 
+	   * @param array_rho f(rho): an array [nrxx]
+	   */
+	  void reduce_diff_pools(double* array_rho) const;
 
     // mohan add 2021-02-20
     int nrxx; // number of r vectors in this processor
@@ -99,6 +138,13 @@ class Charge
     bool allocate_rho;
 
     bool allocate_rho_final_scf; // LiuXh add 20180606
+#ifdef __MPI
+  private:
+    bool use_intel_pool = false; //use INTER_POOL when NPROC_IN_POOLs are all the same
+    int *rec = nullptr; //The number of elements each process should receive into the receive buffer.
+    int *dis = nullptr; //The displacement (relative to recvbuf) for each process in the receive buffer.
+#endif
+    
 };
 
 #endif // charge

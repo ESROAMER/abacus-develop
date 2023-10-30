@@ -29,7 +29,7 @@ class Stochastic_Iter
 
     void sum_stoband(Stochastic_WF& stowf,
                      elecstate::ElecState* pes,
-                     hamilt::Hamilt<double>* pHamilt,
+                     hamilt::Hamilt<std::complex<double>>* pHamilt,
                      ModulePW::PW_Basis_K* wfc_basis);
 
     double calne(elecstate::ElecState* pes);
@@ -40,7 +40,7 @@ class Stochastic_Iter
 
     void checkemm(const int &ik, const int istep, const int iter, Stochastic_WF& stowf);
 
-    void check_precision(const double ref,const double thr, const string info);
+    void check_precision(const double ref,const double thr, const std::string info);
 
     ModuleBase::Chebyshev<double>* p_che = nullptr;
 

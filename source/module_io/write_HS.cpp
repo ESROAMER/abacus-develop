@@ -185,13 +185,13 @@ void ModuleIO::save_HS_triangle(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL - i);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL - i);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = i; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -215,8 +215,8 @@ void ModuleIO::save_HS_triangle(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_double_all(lineH, GlobalV::NLOCAL - i);
-            Parallel_Reduce::reduce_double_all(lineS, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_all(lineH, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_all(lineS, GlobalV::NLOCAL - i);
 
             if (GlobalV::DRANK == 0)
             {
@@ -266,8 +266,8 @@ void ModuleIO::save_HS_triangle(const int istep,
         {
             if (GlobalV::out_app_flag)
             {
-                g1.open(ssh.str().c_str(), ofstream::app);
-                g2.open(sss.str().c_str(), ofstream::app);
+                g1.open(ssh.str().c_str(), std::ofstream::app);
+                g2.open(sss.str().c_str(), std::ofstream::app);
             }
             else
             {
@@ -286,13 +286,13 @@ void ModuleIO::save_HS_triangle(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL - i);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL - i);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = i; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -316,8 +316,8 @@ void ModuleIO::save_HS_triangle(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_double_all(lineH, GlobalV::NLOCAL - i);
-            Parallel_Reduce::reduce_double_all(lineS, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_all(lineH, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_all(lineS, GlobalV::NLOCAL - i);
 
             if (GlobalV::DRANK == 0)
             {
@@ -429,13 +429,13 @@ void ModuleIO::save_HS_complete(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = 0; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -459,8 +459,8 @@ void ModuleIO::save_HS_complete(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_double_all(lineH, GlobalV::NLOCAL);
-            Parallel_Reduce::reduce_double_all(lineS, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_all(lineH, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_all(lineS, GlobalV::NLOCAL);
 
             if (GlobalV::DRANK == 0)
             {
@@ -510,8 +510,8 @@ void ModuleIO::save_HS_complete(const int istep,
         {
             if (GlobalV::out_app_flag)
             {
-                g1.open(ssh.str().c_str(), ofstream::app);
-                g2.open(sss.str().c_str(), ofstream::app);
+                g1.open(ssh.str().c_str(), std::ofstream::app);
+                g2.open(sss.str().c_str(), std::ofstream::app);
             }
             else
             {
@@ -530,13 +530,13 @@ void ModuleIO::save_HS_complete(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = 0; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -560,8 +560,8 @@ void ModuleIO::save_HS_complete(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_double_all(lineH, GlobalV::NLOCAL);
-            Parallel_Reduce::reduce_double_all(lineS, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_all(lineH, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_all(lineS, GlobalV::NLOCAL);
 
             if (GlobalV::DRANK == 0)
             {
@@ -705,13 +705,13 @@ void ModuleIO::save_HS_complex_triangle(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL - i);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL - i);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = i; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -735,8 +735,8 @@ void ModuleIO::save_HS_complex_triangle(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_complex_double_pool(lineH, GlobalV::NLOCAL - i);
-            Parallel_Reduce::reduce_complex_double_pool(lineS, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_pool(lineH, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_pool(lineS, GlobalV::NLOCAL - i);
 
             if (GlobalV::DRANK == 0)
             {
@@ -786,8 +786,8 @@ void ModuleIO::save_HS_complex_triangle(const int istep,
         {
             if (GlobalV::out_app_flag)
             {
-                g1.open(ssh.str().c_str(), ofstream::app);
-                g2.open(sss.str().c_str(), ofstream::app);
+                g1.open(ssh.str().c_str(), std::ofstream::app);
+                g2.open(sss.str().c_str(), std::ofstream::app);
             }
             else
             {
@@ -806,13 +806,13 @@ void ModuleIO::save_HS_complex_triangle(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL - i);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL - i);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = i; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -836,8 +836,8 @@ void ModuleIO::save_HS_complex_triangle(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_complex_double_pool(lineH, GlobalV::NLOCAL - i);
-            Parallel_Reduce::reduce_complex_double_pool(lineS, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_pool(lineH, GlobalV::NLOCAL - i);
+            Parallel_Reduce::reduce_pool(lineS, GlobalV::NLOCAL - i);
 
             if (GlobalV::DRANK == 0)
             {
@@ -950,13 +950,13 @@ void ModuleIO::save_HS_complex_complete(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = 0; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -980,8 +980,8 @@ void ModuleIO::save_HS_complex_complete(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_complex_double_pool(lineH, GlobalV::NLOCAL);
-            Parallel_Reduce::reduce_complex_double_pool(lineS, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_pool(lineH, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_pool(lineS, GlobalV::NLOCAL);
 
             if (GlobalV::DRANK == 0)
             {
@@ -1031,8 +1031,8 @@ void ModuleIO::save_HS_complex_complete(const int istep,
         {
             if (GlobalV::out_app_flag)
             {
-                g1.open(ssh.str().c_str(), ofstream::app);
-                g2.open(sss.str().c_str(), ofstream::app);
+                g1.open(ssh.str().c_str(), std::ofstream::app);
+                g2.open(sss.str().c_str(), std::ofstream::app);
             }
             else
             {
@@ -1051,13 +1051,13 @@ void ModuleIO::save_HS_complex_complete(const int istep,
             ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL);
             ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL);
 
-            ir = pv.trace_loc_row[i];
+            ir = pv.global2local_row(i);
             if (ir >= 0)
             {
                 // data collection
                 for (int j = 0; j < GlobalV::NLOCAL; j++)
                 {
-                    ic = pv.trace_loc_col[j];
+                    ic = pv.global2local_col(j);
                     if (ic >= 0)
                     {
                         int iic;
@@ -1081,8 +1081,8 @@ void ModuleIO::save_HS_complex_complete(const int istep,
                 // do nothing
             }
 
-            Parallel_Reduce::reduce_complex_double_pool(lineH, GlobalV::NLOCAL);
-            Parallel_Reduce::reduce_complex_double_pool(lineS, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_pool(lineH, GlobalV::NLOCAL);
+            Parallel_Reduce::reduce_pool(lineS, GlobalV::NLOCAL);
 
             if (GlobalV::DRANK == 0)
             {
@@ -1219,13 +1219,13 @@ void ModuleIO::save_HSR_tr(const int current_spin, LCAO_Matrix &lm)
                     // ModuleBase::GlobalFunc::ZEROS(lineH, GlobalV::NLOCAL);
                     // ModuleBase::GlobalFunc::ZEROS(lineS, GlobalV::NLOCAL);
 
-                    ir = lm.ParaV->trace_loc_row[i];
+                    ir = lm.ParaV->global2local_row(i);
                     if (ir >= 0)
                     {
                         // for(int j=i; j<GlobalV::NLOCAL; j++)
                         for (int j = 0; j < GlobalV::NLOCAL; j++)
                         {
-                            ic = lm.ParaV->trace_loc_col[j];
+                            ic = lm.ParaV->global2local_col(j);
                             if (ic >= 0)
                             {
                                 // lineH[j-i] = H[ir*lm.ParaV->ncol+ic];
@@ -1257,17 +1257,17 @@ void ModuleIO::save_HSR_tr(const int current_spin, LCAO_Matrix &lm)
                         // do nothing
                     }
 
-                    // Parallel_Reduce::reduce_double_all(lineH,GlobalV::NLOCAL-i);
-                    // Parallel_Reduce::reduce_double_all(lineS,GlobalV::NLOCAL-i);
+                    // Parallel_Reduce::reduce_all(lineH,GlobalV::NLOCAL-i);
+                    // Parallel_Reduce::reduce_all(lineS,GlobalV::NLOCAL-i);
                     if (GlobalV::NSPIN != 4)
                     {
-                        Parallel_Reduce::reduce_double_all(lineH, GlobalV::NLOCAL);
-                        Parallel_Reduce::reduce_double_all(lineS, GlobalV::NLOCAL);
+                        Parallel_Reduce::reduce_all(lineH, GlobalV::NLOCAL);
+                        Parallel_Reduce::reduce_all(lineS, GlobalV::NLOCAL);
                     }
                     else
                     {
-                        Parallel_Reduce::reduce_complex_double_all(lineH_soc, GlobalV::NLOCAL);
-                        Parallel_Reduce::reduce_complex_double_all(lineS_soc, GlobalV::NLOCAL);
+                        Parallel_Reduce::reduce_all(lineH_soc, GlobalV::NLOCAL);
+                        Parallel_Reduce::reduce_all(lineS_soc, GlobalV::NLOCAL);
                     }
 
                     if (GlobalV::DRANK == 0)
@@ -1286,22 +1286,22 @@ void ModuleIO::save_HSR_tr(const int current_spin, LCAO_Matrix &lm)
                             // g2 << " " << lineS[j-i];
                             if (GlobalV::NSPIN != 4)
                             {
-                                if (abs(lineH[j]) < 1.0e-12)
+                                if (std::abs(lineH[j]) < 1.0e-12)
                                     lineH[j] = 0.0;
-                                if (abs(lineS[j]) < 1.0e-12)
+                                if (std::abs(lineS[j]) < 1.0e-12)
                                     lineS[j] = 0.0;
                                 g1 << " " << lineH[j];
                                 g2 << " " << lineS[j];
                             }
                             else
                             {
-                                if (abs(lineH_soc[j].real()) < 1.0e-12)
+                                if (std::abs(lineH_soc[j].real()) < 1.0e-12)
                                     lineH_soc[j] = std::complex<double>(0.0, lineH_soc[j].imag());
-                                if (abs(lineH_soc[j].imag()) < 1.0e-12)
+                                if (std::abs(lineH_soc[j].imag()) < 1.0e-12)
                                     lineH_soc[j] = std::complex<double>(lineH_soc[j].real(), 0.0);
-                                if (abs(lineS_soc[j].real()) < 1.0e-12)
+                                if (std::abs(lineS_soc[j].real()) < 1.0e-12)
                                     lineS_soc[j] = std::complex<double>(0.0, lineS_soc[j].imag());
-                                if (abs(lineS_soc[j].imag()) < 1.0e-12)
+                                if (std::abs(lineS_soc[j].imag()) < 1.0e-12)
                                     lineS_soc[j] = std::complex<double>(lineS_soc[j].real(), 0.0);
                                 g1 << " " << lineH_soc[j];
                                 g2 << " " << lineS_soc[j];

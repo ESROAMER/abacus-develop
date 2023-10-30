@@ -24,6 +24,8 @@ list(APPEND depend_files
   ../../../module_base/global_file.cpp
   ../../../module_base/libm/branred.cpp
   ../../../module_base/libm/sincos.cpp
+  ../../../module_base/spherical_bessel_transformer.cpp
+  ../../../module_base/cubic_spline.cpp
   ../ORB_control.cpp
   ../ORB_read.cpp
   ../ORB_atomic.cpp
@@ -35,12 +37,13 @@ list(APPEND depend_files
   ../ORB_table_phi.cpp
   ../ORB_table_alpha.cpp
   ../ORB_gen_tables.cpp
+  ../parallel_2d.cpp
   ../parallel_orbitals.cpp
   ../../../module_hamilt_lcao/hamilt_lcaodft/center2_orb-orb11.cpp
   )
 AddTest(
   TARGET orbital_equal_test
-  LIBS ${math_libs} device
+  LIBS ${math_libs} device numerical_atomic_orbitals container formatter 
   SOURCES 1_snap_equal_test.cpp ORB_unittest.cpp
   ../../../module_base/parallel_reduce.cpp ../../../module_base/parallel_global.cpp ../../../module_base/parallel_common.cpp
   ${depend_files}
@@ -107,6 +110,31 @@ AddTest(
     LIBS ${math_libs} device base
 )
 
+AddTest(
+    TARGET parallel_2d_test
+    SOURCES parallel_2d_test.cpp ../parallel_2d.cpp
+    LIBS ${math_libs} device base
+)
+
+install(FILES parallel_2d_test.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+find_program(BASH bash)
+add_test(NAME parallel_2d_test_para
+      COMMAND ${BASH} parallel_2d_test.sh
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+AddTest(
+    TARGET parallel_orbitals_test
+    SOURCES parallel_orbitals_test.cpp ../parallel_2d.cpp ../parallel_orbitals.cpp
+    LIBS ${math_libs} device base
+)
+
+install(FILES parallel_orbitals_test.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+find_program(BASH bash)
+add_test(NAME parallel_orbitals_test_para
+      COMMAND ${BASH} parallel_orbitals_test.sh
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 install(DIRECTORY lcao_H2O DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 install(DIRECTORY lcao_H2O DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/../../../tests)

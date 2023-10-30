@@ -127,12 +127,16 @@ void Occupy::iweights(const int nks,
                       const ModuleBase::matrix& ekb,
                       double& ef,
                       ModuleBase::matrix& wg,
-                      const int& is,
+                      const int& is, //<- is should be -1, 0, or 1. -1 means set all spins, and 0 means spin up, 1 means spin down.
                       const std::vector<int>& isk)
 {
     assert(is < 2);
+    double degspin = 2.0;
+    if (GlobalV::NSPIN == 4)
+        degspin = 1.0;
+    if (is != -1)
+        degspin = 1.0;
 
-    double degspin = (GlobalV::NSPIN == 1) ? 2.0 : 1.0;
     double ib_mind = nelec / degspin;
     int ib_min = std::ceil(ib_mind);
     if (ib_min != int(ib_mind))
@@ -143,8 +147,11 @@ void Occupy::iweights(const int nks,
 
     for (int ik = 0; ik < nks; ++ik)
     {
-        if (GlobalV::NSPIN == 2 && isk[ik] != is)
+        // when NSPIN=2, only calculate spin up or spin down with TWO_FERMI mode(nupdown != 0)
+        if (GlobalV::NSPIN == 2 && isk[ik] != is && is!=-1)
+        {
             continue;
+        }
 
         for (int ib = 0; ib < nbands; ++ib)
         {
@@ -337,7 +344,7 @@ sumkg:
         ef = (eup + elw) / 2.0;
         const double sumkmid = sumkg(ekb, nband, nks, wk, smearing_sigma, ngauss, ef, is, isk);
 
-        if (abs(sumkmid - nelec) < eps)
+        if (std::abs(sumkmid - nelec) < eps)
         {
             return;
         }
@@ -510,7 +517,7 @@ double Occupy::w1gauss(const double &x, const int n)
     //=======================
     if (n == -99)
     {
-        if (abs(x) <= 36.0)
+        if (std::abs(x) <= 36.0)
         {
             const double f = 1.00 / (1.00 + exp(-x));
             const double onemf = 1.00 - f;
@@ -775,7 +782,7 @@ double Occupy::wsweight(const ModuleBase::Vector3<double> &r, ModuleBase::Vector
             break;
         }
 
-        if (abs(ck) < eps)
+        if (std::abs(ck) < eps)
         {
             nreq++;
         }
@@ -851,14 +858,14 @@ void Occupy::efermit(double** ekb,const int nband,const int nks,const double &ne
         ef = (eup + elw) / 2.0;
         sumkmid = sumkt(ekb, GlobalV::NBANDS, nks, nspin, ntetra, tetra, ef);
 
-        if (abs(sumkmid - nelec) < better)
+        if (std::abs(sumkmid - nelec) < better)
         {
-            better = abs(sumkmid - nelec);
+            better = std::abs(sumkmid - nelec);
             efbetter = ef;
         }
 
         // converged
-        if (abs(sumkmid - nelec) < eps)
+        if (std::abs(sumkmid - nelec) < eps)
         {
             converge = true;
             break;

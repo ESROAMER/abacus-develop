@@ -8,12 +8,27 @@
 #include <complex>
 #include <iostream>
 
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+static __inline__ __device__ double atomicAdd(double *address, double val) {
+  unsigned long long int *address_as_ull = (unsigned long long int *)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val + __longlong_as_double(assumed)));
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN !=
+    // NaN) } while (assumed != old);
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+#endif
+
 namespace psi {
 namespace device {
 
 template<typename Device> AbacusDevice_t get_device_type (const Device* dev);
 
-template<typename FPTYPE> std::string get_current_precision (const std::complex<FPTYPE>* var);
+template<typename T> std::string get_current_precision(const T* var);
 
 template<typename Device> void print_device_info (const Device* dev, std::ofstream& ofs_device) {return;}
 

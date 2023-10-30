@@ -15,7 +15,7 @@ Nose_Hoover::Nose_Hoover(MD_para& MD_para_in, UnitCell& unit_in) : MD_base(MD_pa
 
     if (mdp.md_tfirst == 0)
     {
-        ModuleBase::WARNING_QUIT("Nose_Hoover", " md_tfirst must be larger than 0 in NHC !!! ");
+        ModuleBase::WARNING_QUIT("Nose_Hoover", " md_tfirst must be larger than 0 in NHC");
     }
 
     /// init NPT related variables
@@ -316,6 +316,7 @@ void Nose_Hoover::write_restart(const std::string& global_out_dir)
         std::ofstream file(ssc.str().c_str());
 
         file << step_ + step_rst_ << std::endl;
+        file << mdp.md_tfirst << std::endl;
         file << mdp.md_tchain << std::endl;
         for (int i = 0; i < mdp.md_tchain; ++i)
         {
@@ -376,7 +377,7 @@ void Nose_Hoover::restart(const std::string& global_readin_dir)
         if (ok)
         {
             double Mnum;
-            file >> step_rst_ >> Mnum;
+            file >> step_rst_ >> mdp.md_tfirst >> Mnum;
 
             if (Mnum != mdp.md_tchain)
             {
@@ -447,6 +448,7 @@ void Nose_Hoover::restart(const std::string& global_readin_dir)
 
 #ifdef __MPI
     MPI_Bcast(&step_rst_, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&mdp.md_tfirst, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(eta, mdp.md_tchain, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(v_eta, mdp.md_tchain, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     if (npt_flag)
@@ -504,7 +506,7 @@ void Nose_Hoover::particle_thermo()
 
             /// update rescale factor of particle velocity
             scale *= exp(-v_eta[0] * delta / 2.0);
-            if (!isfinite(scale))
+            if (!std::isfinite(scale))
             {
                 ModuleBase::WARNING_QUIT("Nose_Hoover", "Please set a proper md_tfreq!");
             }
@@ -741,30 +743,22 @@ void Nose_Hoover::update_volume(std::ofstream& ofs)
     }
 
     /// Diagonal components
-    if (mdp.md_prec_level == 1)
+    if (pflag[0])
     {
         factor = exp(v_omega[0] * mdp.md_dt / 2);
-        ucell.lat0 *= factor;
+        ucell.latvec.e11 *= factor;
     }
-    else
+
+    if (pflag[1])
     {
-        if (pflag[0])
-        {
-            factor = exp(v_omega[0] * mdp.md_dt / 2);
-            ucell.latvec.e11 *= factor;
-        }
+        factor = exp(v_omega[1] * mdp.md_dt / 2);
+        ucell.latvec.e22 *= factor;
+    }
 
-        if (pflag[1])
-        {
-            factor = exp(v_omega[1] * mdp.md_dt / 2);
-            ucell.latvec.e22 *= factor;
-        }
-
-        if (pflag[2])
-        {
-            factor = exp(v_omega[2] * mdp.md_dt / 2);
-            ucell.latvec.e33 *= factor;
-        }
+    if (pflag[2])
+    {
+        factor = exp(v_omega[2] * mdp.md_dt / 2);
+        ucell.latvec.e33 *= factor;
     }
 
     /// tri mode, off-diagonal components, second half
@@ -863,7 +857,7 @@ void Nose_Hoover::couple_stress()
         p_current[2] = stress(2, 2);
     }
 
-    if (!isfinite(p_current[0]) || !isfinite(p_current[1]) || !isfinite(p_current[2]))
+    if (!std::isfinite(p_current[0]) || !std::isfinite(p_current[1]) || !std::isfinite(p_current[2]))
     {
         ModuleBase::WARNING_QUIT("Nose_Hoover", "Non-numeric stress component!");
     }
@@ -872,7 +866,7 @@ void Nose_Hoover::couple_stress()
     p_current[4] = stress(0, 2);
     p_current[5] = stress(0, 1);
 
-    if (!isfinite(p_current[3]) || !isfinite(p_current[4]) || !isfinite(p_current[5]))
+    if (!std::isfinite(p_current[3]) || !std::isfinite(p_current[4]) || !std::isfinite(p_current[5]))
     {
         ModuleBase::WARNING_QUIT("Nose_Hoover", "Non-numeric stress component!");
     }

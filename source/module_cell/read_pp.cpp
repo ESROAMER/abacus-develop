@@ -1,63 +1,49 @@
 #include "read_pp.h"
-#include <iostream>
-#include <fstream>
+
 #include <math.h>
-#include <string>
-#include <sstream>
+
 #include <cstring> // Peize Lin fix bug about strcpy 2016-08-02
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
-
-using namespace std;
+#include "module_base/math_integral.h" // for numerical integration
 
 Pseudopot_upf::Pseudopot_upf()
 {
-	this->els = new std::string[1];
-	this->lchi = nullptr;
-	this->oc = nullptr;
-
-	this->r = nullptr;
-	this->rab = nullptr;
-	this->vloc = nullptr;
-
-	this->kkbeta = nullptr;
-	this->lll = nullptr;
-
-	this->rho_at = nullptr;
-	this->rho_atc = nullptr;
-
-	this->nn = nullptr;//zhengdy-soc
-	this->jchi = nullptr;
-	this->jjj = nullptr;
-
-	functional_error = 0;//xiaohui add 2015-03-24
 }
 
 Pseudopot_upf::~Pseudopot_upf()
 {
-	delete [] els; 
-	delete [] lchi;
-	delete [] oc;
-
-	delete [] r;    //mesh_1
-	delete [] rab;  //mesh_2
-	delete [] vloc;  //local_1
-
-	delete [] kkbeta; // nl_1
-	delete [] lll; // nl_2
-
-	delete [] rho_at;// psrhoatom_1
-	delete [] rho_atc;
-
-	delete [] nn;
-	delete [] jjj;
-	delete [] jchi;
+    delete[] r;
+    delete[] rab;
+    delete[] rho_atc;
+    delete[] vloc;
+    delete[] rho_at;
+    delete[] lll;
+    delete[] kbeta;
+    delete[] els;
+    delete[] els_beta;
+    delete[] nchi;
+    delete[] lchi;
+    delete[] oc;
+    delete[] epseu;
+    delete[] rcut_chi;
+    delete[] rcutus_chi;
+    delete[] rinner;
+    delete[] rcut;
+    delete[] rcutus;
+    delete[] nn;
+    delete[] jchi;
+    delete[] jjj;
 }
 
 int Pseudopot_upf::init_pseudo_reader(const std::string &fn, std::string &type)
 {
     ModuleBase::TITLE("Pseudopot_upf","init");
     // First check if this pseudo-potential has spin-orbit information
-    std::ifstream ifs(fn.c_str(), ios::in);
+    std::ifstream ifs(fn.c_str(), std::ios::in);
 
 	// can't find the file.
 	if (!ifs)
@@ -97,8 +83,10 @@ int Pseudopot_upf::init_pseudo_reader(const std::string &fn, std::string &type)
 		int info = read_pseudo_blps(ifs);
 		return info;
 	}
-
-	return 0;
+    else
+    {
+        return 4;
+    }
 }
 
 
@@ -107,7 +95,7 @@ int Pseudopot_upf::init_pseudo_reader(const std::string &fn, std::string &type)
 //----------------------------------------------------------
 int Pseudopot_upf::set_pseudo_type(const std::string &fn, std::string &type) //zws add
 {
-    std::ifstream pptype_ifs(fn.c_str(), ios::in);
+    std::ifstream pptype_ifs(fn.c_str(), std::ios::in);
     std::string dummy;
 	std::string strversion;
 
@@ -166,19 +154,19 @@ int Pseudopot_upf::average_p(const double& lambda)
 	}
 	//ModuleBase::WARNING_QUIT("average_p", "no soc upf used for lspinorb calculation, error!");
 
-	if(!this->has_so || (GlobalV::LSPINORB && abs(lambda_ - 1.0) < 1.0e-8) )
+	if(!this->has_so || (GlobalV::LSPINORB && std::abs(lambda_ - 1.0) < 1.0e-8) )
 	{
 		return error; 
 	}
 
-	//if(abs(lambda_)<1.0e-8)
+	//if(std::abs(lambda_)<1.0e-8)
 	if(!GlobalV::LSPINORB)
 	{
 		int new_nbeta = 0; //calculate the new nbeta
 		for(int nb=0; nb< this->nbeta; nb++)
 		{
 			new_nbeta++;
-			if(this->lll[nb] != 0 && abs(this->jjj[nb] - this->lll[nb] - 0.5) < 1e-6) //two J = l +- 0.5 average to one
+			if(this->lll[nb] != 0 && std::abs(this->jjj[nb] - this->lll[nb] - 0.5) < 1e-6) //two J = l +- 0.5 average to one
 			{
 				new_nbeta--;
 			}
@@ -196,12 +184,12 @@ int Pseudopot_upf::average_p(const double& lambda)
 			int ind=0, ind1=0;
 			if(l != 0)
 			{
-				if(abs(this->jjj[old_nbeta] - this->lll[old_nbeta] + 0.5) < 1e-6)
+				if(std::abs(this->jjj[old_nbeta] - this->lll[old_nbeta] + 0.5) < 1e-6)
 				{
-					if(abs(this->jjj[old_nbeta+1]-this->lll[old_nbeta+1]-0.5)>1e-6) 
+					if(std::abs(this->jjj[old_nbeta+1]-this->lll[old_nbeta+1]-0.5)>1e-6) 
 					{
 						error = 1;
-						std::cout<<"warning_quit! error beta function 1 !" <<endl;
+						std::cout<<"warning_quit! error beta function 1 !" <<std::endl;
 						return error;
 					}
 					ind = old_nbeta +1;
@@ -209,10 +197,10 @@ int Pseudopot_upf::average_p(const double& lambda)
 				}
 				else
 				{
-					if(abs(this->jjj[old_nbeta+1]-this->lll[old_nbeta+1]+0.5)>1e-6)
+					if(std::abs(this->jjj[old_nbeta+1]-this->lll[old_nbeta+1]+0.5)>1e-6)
 					{
 						error = 1;
-						std::cout<<"warning_quit! error beta function 2 !" <<endl;
+						std::cout<<"warning_quit! error beta function 2 !" <<std::endl;
 						return error;
 					}
 					ind = old_nbeta;
@@ -261,7 +249,7 @@ int Pseudopot_upf::average_p(const double& lambda)
 		for(int nb=0; nb<this->nwfc; nb++)
 		{
 			new_nwfc++;
-			if(this->lchi[nb] != 0 && abs(this->jchi[nb] - this->lchi[nb] - 0.5)<1e-6)
+			if(this->lchi[nb] != 0 && std::abs(this->jchi[nb] - this->lchi[nb] - 0.5)<1e-6)
 			{
 				new_nwfc--;
 			}
@@ -276,18 +264,18 @@ int Pseudopot_upf::average_p(const double& lambda)
 			int ind=0, ind1=0;
 			if(l!=0)
 			{
-				if(abs(this->jchi[old_nwfc] - this->lchi[old_nwfc] + 0.5) < 1e-6)
+				if(std::abs(this->jchi[old_nwfc] - this->lchi[old_nwfc] + 0.5) < 1e-6)
 				{
-					if(abs(this->jchi[old_nwfc+1]-this->lchi[old_nwfc+1]-0.5)>1e-6) 
-					{error++; std::cout<<"warning_quit! error chi function 1 !"<<endl; return error;}
+					if(std::abs(this->jchi[old_nwfc+1]-this->lchi[old_nwfc+1]-0.5)>1e-6) 
+					{error++; std::cout<<"warning_quit! error chi function 1 !"<<std::endl; return error;}
 	//					ModuleBase::WARNING_QUIT("average_p", "error chi function 1 !");
 					ind = old_nwfc +1;
 					ind1 = old_nwfc;
 				}
 				else
 				{
-					if(abs(this->jchi[old_nwfc+1]-this->lchi[old_nwfc+1]+0.5)>1e-6)
-					{error++; std::cout<<"warning_quit! error chi function 2 !"<<endl; return error;}
+					if(std::abs(this->jchi[old_nwfc+1]-this->lchi[old_nwfc+1]+0.5)>1e-6)
+					{error++; std::cout<<"warning_quit! error chi function 2 !"<<std::endl; return error;}
 	//					ModuleBase::WARNING_QUIT("average_p", "error chi function 2 !");
 					ind = old_nwfc;
 					ind1 = old_nwfc +1;
@@ -317,12 +305,12 @@ int Pseudopot_upf::average_p(const double& lambda)
 			int ind=0, ind1=0;
 			if(l != 0)
 			{
-				if(abs(this->jjj[nb] - this->lll[nb] + 0.5) < 1e-6)
+				if(std::abs(this->jjj[nb] - this->lll[nb] + 0.5) < 1e-6)
 				{
-					if(abs(this->jjj[nb+1]-this->lll[nb+1]-0.5)>1e-6) 
+					if(std::abs(this->jjj[nb+1]-this->lll[nb+1]-0.5)>1e-6) 
 					{
 						error = 1;
-						std::cout<<"warning_quit! error beta function 1 !" <<endl;
+						std::cout<<"warning_quit! error beta function 1 !" <<std::endl;
 						return error;
 					}
 					ind = nb +1;
@@ -330,17 +318,17 @@ int Pseudopot_upf::average_p(const double& lambda)
 				}
 				else
 				{
-					if(abs(this->jjj[nb+1]-this->lll[nb+1]+0.5)>1e-6)
+					if(std::abs(this->jjj[nb+1]-this->lll[nb+1]+0.5)>1e-6)
 					{
 						error = 1;
-						std::cout<<"warning_quit! error beta function 2 !" <<endl;
+						std::cout<<"warning_quit! error beta function 2 !" <<std::endl;
 						return error;
 					}
 					ind = nb;
 					ind1 = nb +1;
 				}
 				double vion1 = ((l+1.0) * this->dion(ind,ind) + l * this->dion(ind1,ind1)) / (2.0*l+1.0);
-				if(abs(vion1)<1.0e-10) vion1 = 0.1;
+				if(std::abs(vion1)<1.0e-10) vion1 = 0.1;
 				//average beta (betar)
 				const double sqrtDplus = sqrt(std::abs(this->dion(ind,ind) / vion1));
 				const double sqrtDminus = sqrt(std::abs(this->dion(ind1,ind1) / vion1));
@@ -371,17 +359,17 @@ int Pseudopot_upf::average_p(const double& lambda)
 			int ind=0, ind1=0;
 			if(l!=0)
 			{
-				if(abs(this->jchi[nb] - this->lchi[nb] + 0.5) < 1e-6)
+				if(std::abs(this->jchi[nb] - this->lchi[nb] + 0.5) < 1e-6)
 				{
-					if(abs(this->jchi[nb+1]-this->lchi[nb+1]-0.5)>1e-6) 
-					{error++; std::cout<<"warning_quit! error chi function 1 !"<<endl; return error;}
+					if(std::abs(this->jchi[nb+1]-this->lchi[nb+1]-0.5)>1e-6) 
+					{error++; std::cout<<"warning_quit! error chi function 1 !"<<std::endl; return error;}
 					ind = nb +1;
 					ind1 = nb;
 				}
 				else
 				{
-					if(abs(this->jchi[nb+1]-this->lchi[nb+1]+0.5)>1e-6)
-					{error++; std::cout<<"warning_quit! error chi function 2 !"<<endl; return error;}
+					if(std::abs(this->jchi[nb+1]-this->lchi[nb+1]+0.5)>1e-6)
+					{error++; std::cout<<"warning_quit! error chi function 2 !"<<std::endl; return error;}
 					ind = nb;
 					ind1 = nb +1;
 				}
@@ -422,4 +410,81 @@ void Pseudopot_upf::set_empty_element(void)
 		this->rho_at[ir] = 0;
 	}
 	return;
+}
+
+/**
+ * For USPP we set the augmentation charge as an l-dependent array in all
+ * cases. This is already the case when upf%q_with_l is .true.
+ * For vanderbilt US pseudos, where nqf and rinner are non zero, we do here
+ * what otherwise would be done multiple times in many parts of the code
+ * (such as in init_us_1, addusforce_r, bp_calc_btq, compute_qdipol)
+ * whenever the q_l(r) were to be constructed.
+ * For simple rrkj3 pseudos we duplicate the information contained in q(r)
+ * for all q_l(r).
+ *
+ * This requires a little extra memory but unifies the treatment of q_l(r)
+ * and allows further weaking with the augmentation charge.
+ */
+void Pseudopot_upf::set_upf_q()
+{
+    if (tvanp && !q_with_l)
+    {
+        qfuncl.create(nqlc, nbeta * (nbeta + 1) / 2, mesh);
+        for (int nb = 0; nb < nbeta; nb++)
+        {
+            int ln = lll[nb];
+            for (int mb = nb; mb < nbeta; mb++)
+            {
+                int lm = lll[mb];
+                int nmb = mb * (mb + 1) / 2 + nb;
+
+                for (int l = std::abs(ln - lm); l <= ln + lm; l += 2)
+                {
+                    // copy q(r) to the l-dependent grid
+                    for (int ir = 0; ir < mesh; ir++)
+                    {
+                        qfuncl(l, nmb, ir) = qfunc(nmb, ir);
+                    }
+
+                    // adjust the inner values on the l-dependent grid if nqf and rinner are defined
+                    if (nqf > 0 && rinner[l] > 0.0)
+                    {
+                        int ilast = 0;
+                        for (int ir = 0; ir < kkbeta; ++ir)
+                        {
+                            if (r[ir] < rinner[l])
+                            {
+                                ilast = ir + 1;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        this->setqfnew(nqf, ilast, l, 2, &qfcoef(nb, mb, l, 0), r, &qfuncl(l, nmb, 0));
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Pseudopot_upf::setqfnew(const int& nqf,
+                             const int& mesh,
+                             const int& l,
+                             const int& n,
+                             const double* qfcoef,
+                             const double* r,
+                             double* rho)
+{
+    for (int ir = 0; ir < mesh; ++ir)
+    {
+        double rr = r[ir] * r[ir];
+        rho[ir] = qfcoef[0];
+        for (int iq = 1; iq < nqf; ++iq)
+        {
+            rho[ir] += qfcoef[iq] * pow(rr, iq);
+        }
+        rho[ir] *= pow(r[ir], l + n);
+    }
 }

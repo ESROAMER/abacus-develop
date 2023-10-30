@@ -34,18 +34,17 @@ void stress_fill(
 
 //force for gamma only calculations
 //Pulay and HF terms are calculated together
-void LCAO_Deepks::cal_f_delta_gamma(const ModuleBase::matrix& dm,
+void LCAO_Deepks::cal_f_delta_gamma(const std::vector<std::vector<double>>& dm,
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col,
+    Grid_Driver& GridD,
     const bool isstress, ModuleBase::matrix& svnl_dalpha)
 {
     ModuleBase::TITLE("LCAO_Deepks", "cal_f_delta_gamma");
     this->F_delta.zero_out();
 
     const double Rcut_Alpha = orb.Alpha[0].getRcut();
+    int nrow = this->pv->nrow;
     for (int T0 = 0; T0 < ucell.ntype; T0++)
     {
 		Atom* atom0 = &ucell.atoms[T0]; 
@@ -100,13 +99,13 @@ void LCAO_Deepks::cal_f_delta_gamma(const ModuleBase::matrix& dm,
                     for (int iw1=0; iw1<nw1_tot; ++iw1)
                     {
                         const int iw1_all = start1 + iw1;
-                        const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
                         if(iw1_local < 0)continue;
 
                         for (int iw2=0; iw2<nw2_tot; ++iw2)
                         {
                             const int iw2_all = start2 + iw2;
-                            const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
                             if(iw2_local < 0)continue;
 
                             double nlm[3]={0,0,0};
@@ -144,15 +143,18 @@ void LCAO_Deepks::cal_f_delta_gamma(const ModuleBase::matrix& dm,
                             }
                             assert(ib==nlm1.size());
 
-                            // HF term is minus, only one projector for each atom force.
-                            this->F_delta(iat, 0) -= 2 * dm(iw1_local, iw2_local) * nlm[0];
-                            this->F_delta(iat, 1) -= 2 * dm(iw1_local, iw2_local) * nlm[1];
-                            this->F_delta(iat, 2) -= 2 * dm(iw1_local, iw2_local) * nlm[2];
+                            for(int is = 0; is < GlobalV::NSPIN; is ++)
+                            {
+                                // HF term is minus, only one projector for each atom force.
+                                this->F_delta(iat, 0) -= 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[0];
+                                this->F_delta(iat, 1) -= 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[1];
+                                this->F_delta(iat, 2) -= 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[2];
 
-                            // Pulay term is plus, only one projector for each atom force.
-                            this->F_delta(ibt, 0) += 2 * dm(iw1_local, iw2_local) * nlm[0];
-                            this->F_delta(ibt, 1) += 2 * dm(iw1_local, iw2_local) * nlm[1];
-                            this->F_delta(ibt, 2) += 2 * dm(iw1_local, iw2_local) * nlm[2];
+                                // Pulay term is plus, only one projector for each atom force.
+                                this->F_delta(ibt, 0) += 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[0];
+                                this->F_delta(ibt, 1) += 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[1];
+                                this->F_delta(ibt, 2) += 2 * dm[is][iw1_local * nrow + iw2_local] * nlm[2];
+                            }
 
                             if(isstress)
                             {
@@ -190,7 +192,11 @@ void LCAO_Deepks::cal_f_delta_gamma(const ModuleBase::matrix& dm,
                                 {
                                     for(int jpol=ipol;jpol<3;jpol++)
                                     {
-                                        svnl_dalpha(ipol, jpol) += dm(iw1_local, iw2_local) * (nlm[jpol] * r0[ipol] + nlm_t[jpol] * r1[ipol]);
+                                        for(int is = 0; is < GlobalV::NSPIN; is ++)
+                                        {
+                                            //svnl_dalpha(ipol, jpol) += dm[is](iw1_local, iw2_local) * (nlm[jpol] * r0[ipol] + nlm_t[jpol] * r1[ipol]);
+                                            svnl_dalpha(ipol, jpol) += dm[is][iw1_local * nrow + iw2_local] * (nlm[jpol] * r0[ipol] + nlm_t[jpol] * r1[ipol]);
+                                        }
                                     }
                                 }
                             }
@@ -212,12 +218,10 @@ void LCAO_Deepks::cal_f_delta_gamma(const ModuleBase::matrix& dm,
 //force for multi-k calculations
 //Pulay and HF terms are calculated together
 
-void LCAO_Deepks::cal_f_delta_k(const std::vector<ModuleBase::ComplexMatrix>& dm/**<[in] density matrix*/,
+void LCAO_Deepks::cal_f_delta_k(const std::vector<std::vector<std::complex<double>>>& dm,/**<[in] density matrix*/
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col,
+    Grid_Driver& GridD,
     const int nks,
     const std::vector<ModuleBase::Vector3<double>> &kvec_d,
     const bool isstress, ModuleBase::matrix& svnl_dalpha)
@@ -227,7 +231,7 @@ void LCAO_Deepks::cal_f_delta_k(const std::vector<ModuleBase::ComplexMatrix>& dm
     this->F_delta.zero_out();
 
     const double Rcut_Alpha = orb.Alpha[0].getRcut();
-
+    int nrow = this->pv->nrow;
     for (int T0 = 0; T0 < ucell.ntype; T0++)
     {
 		Atom* atom0 = &ucell.atoms[T0]; 
@@ -287,13 +291,13 @@ void LCAO_Deepks::cal_f_delta_k(const std::vector<ModuleBase::ComplexMatrix>& dm
                     for (int iw1=0; iw1<nw1_tot; ++iw1)
                     {
                         const int iw1_all = start1 + iw1;
-                        const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
                         if(iw1_local < 0)continue;
 
                         for (int iw2=0; iw2<nw2_tot; ++iw2)
                         {
                             const int iw2_all = start2 + iw2;
-                            const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
                             if(iw2_local < 0)continue;
                             double dm_current;
                             std::complex<double> tmp = 0.0;
@@ -301,7 +305,8 @@ void LCAO_Deepks::cal_f_delta_k(const std::vector<ModuleBase::ComplexMatrix>& dm
                             {
                                 const double arg = - ( kvec_d[ik] * (dR2-dR1) ) * ModuleBase::TWO_PI;
                                 const std::complex<double> kphase = std::complex <double> ( cos(arg),  sin(arg) );
-                                tmp += dm[ik](iw1_local, iw2_local) * kphase;
+                                //tmp += dm[ik](iw1_local, iw2_local) * kphase;
+                                tmp += dm[ik][iw1_local * nrow + iw2_local] * kphase;
                             }
                             dm_current=tmp.real();
 
@@ -411,7 +416,7 @@ void LCAO_Deepks::check_f_delta(const int nat, ModuleBase::matrix& svnl_dalpha)
 {
     ModuleBase::TITLE("LCAO_Deepks", "check_F_delta");
 
-    ofstream ofs("F_delta.dat");
+    std::ofstream ofs("F_delta.dat");
     ofs<<std::setprecision(10);
 
     for (int iat=0; iat<nat; iat++)
@@ -419,7 +424,7 @@ void LCAO_Deepks::check_f_delta(const int nat, ModuleBase::matrix& svnl_dalpha)
         ofs << F_delta(iat,0) << " " << F_delta(iat,1) << " " << F_delta(iat,2) << std::endl;
     }
 
-    ofstream ofs1("stress_delta.dat");
+    std::ofstream ofs1("stress_delta.dat");
     ofs1<<std::setprecision(10);
     for (int ipol=0; ipol<3; ipol++)
     {

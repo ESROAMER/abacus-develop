@@ -80,7 +80,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 				throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
 		}
 	};
-	this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp( this->abfs, info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times,  kv_in);
+    this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times, p_kv->nkstot_full);
 
 
 	for( size_t T=0; T!=this->abfs.size(); ++T )

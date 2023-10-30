@@ -1,11 +1,13 @@
+#include "winput.h"
+
 #ifdef __MPI
-	#include "mpi.h"
+#include "mpi.h"
 #endif
+
 #include <cstring>
 #include <iostream>
-#include "winput.h"
-#include "module_hamilt_pw/hamilt_pwdft/global.h"
 
+#include "module_hamilt_pw/hamilt_pwdft/global.h"
 
 std::string winput::target;//add 2008-06-04
 std::string winput::wlmr_dir;
@@ -99,7 +101,7 @@ void winput::Read(const std::string &fn)
 	
 	if(GlobalV::MY_RANK!=0) return;
 
-	std::ifstream ifs(fn.c_str(), ios::in);
+	std::ifstream ifs(fn.c_str(), std::ios::in);
 	if (!ifs)
 	{
 		//xiaohui move warning 2015-09-30
@@ -548,7 +550,7 @@ void winput::Print(const std::string &fn)
 	if(GlobalV::MY_RANK!=0) return;
  
 	std::ofstream ofs(fn.c_str());
-	ofs << std::setiosflags(ios::left);
+	ofs << std::setiosflags(std::ios::left);
 	ofs << "WANNIER_PARAMETERS" << std::endl;
 
 	ofs << "#Parameters (General)" << std::endl;

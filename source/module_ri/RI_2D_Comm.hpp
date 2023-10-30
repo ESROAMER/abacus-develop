@@ -18,6 +18,13 @@
 #include <string>
 #include <stdexcept>
 
+inline RI::Tensor<double> tensor_conj(const RI::Tensor<double>& t) { return t; }
+inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::complex<double>>& t)
+{
+    RI::Tensor<std::complex<double>> r(t.shape);
+    for (int i = 0;i < t.data->size();++i)(*r.data)[i] = std::conj((*t.data)[i]);
+    return r;
+}
 template<typename Tdata, typename Tmatrix>
 auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tmatrix*> &mks_2D, const Parallel_Orbitals &pv)
 -> std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>>
@@ -38,23 +45,28 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tma
 			RI::Tensor<Tdata> mR_2D;
 			for(const int ik : ik_list)
 			{
-				using Tdata_m = typename Tmatrix::type;
-				RI::Tensor<Tdata_m> mk_2D = RI_Util::Matrix_to_Tensor<Tdata_m>(*mks_2D[ik]);
+                using Tdata_m = typename Tmatrix::value_type;
+                RI::Tensor<Tdata_m> mk_2D = RI_Util::Vector_to_Tensor<Tdata_m>(*mks_2D[ik], pv.get_col_size(), pv.get_row_size());
 				const Tdata_m frac = SPIN_multiple
 					* RI::Global_Func::convert<Tdata_m>( std::exp(
-						- ModuleBase::TWO_PI*ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell)*GlobalC::ucell.latvec))));
-				if(mR_2D.empty())
-					mR_2D = RI::Global_Func::convert<Tdata>(mk_2D * frac);
-				else
-					mR_2D = mR_2D + RI::Global_Func::convert<Tdata>(mk_2D * frac);
+                        -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell) * GlobalC::ucell.latvec))));
+                auto set_mR_2D = [&mR_2D](auto&& mk_frac) {
+                    if (mR_2D.empty())
+                        mR_2D = RI::Global_Func::convert<Tdata>(mk_frac);
+                    else
+                        mR_2D = mR_2D + RI::Global_Func::convert<Tdata>(mk_frac);
+                    };
+                if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
+                    set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5)));
+                else set_mR_2D(mk_2D * frac);
 			}
 
 			for(int iwt0_2D=0; iwt0_2D!=mR_2D.shape[0]; ++iwt0_2D)
 			{
 				const int iwt0 =
 					ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER()
-					? pv.MatrixInfo.col_set[iwt0_2D]
-					: pv.MatrixInfo.row_set[iwt0_2D];
+                    ? pv.local2global_col(iwt0_2D)
+                    : pv.local2global_row(iwt0_2D);
 				int iat0, iw0_b, is0_b;
 				std::tie(iat0,iw0_b,is0_b) = RI_2D_Comm::get_iat_iw_is_block(iwt0);
 				const int it0 = GlobalC::ucell.iat2it[iat0];
@@ -62,8 +74,8 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tma
 				{
 					const int iwt1 =
 						ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER()
-						? pv.MatrixInfo.row_set[iwt1_2D]
-						: pv.MatrixInfo.col_set[iwt1_2D];
+                        ? pv.local2global_row(iwt1_2D)
+                        : pv.local2global_col(iwt1_2D);
 					int iat1, iw1_b, is1_b;
 					std::tie(iat1,iw1_b,is1_b) = RI_2D_Comm::get_iat_iw_is_block(iwt1);
 					const int it1 = GlobalC::ucell.iat2it[iat1];
@@ -113,16 +125,16 @@ void RI_2D_Comm::add_Hexx(
 				for(size_t iw0_b=0; iw0_b<H.shape[0]; ++iw0_b)
 				{
 					const int iwt0 = RI_2D_Comm::get_iwt(iat0, iw0_b, is0_b);
-					if(pv.trace_loc_row[iwt0]<0)	continue;
+                    if (pv.global2local_row(iwt0) < 0)	continue;
 					for(size_t iw1_b=0; iw1_b<H.shape[1]; ++iw1_b)
 					{
 						const int iwt1 = RI_2D_Comm::get_iwt(iat1, iw1_b, is1_b);
-						if(pv.trace_loc_col[iwt1]<0)	continue;
+                        if (pv.global2local_col(iwt1) < 0)	continue;
 
 						if(GlobalV::GAMMA_ONLY_LOCAL)
 							lm.set_HSgamma(iwt0, iwt1,
 								RI::Global_Func::convert<double>(H(iw0_b, iw1_b)) * RI::Global_Func::convert<double>(frac),
-								'L', lm.Hloc.data());
+                                lm.Hloc.data());
 						else
 							lm.set_HSk(iwt0, iwt1,
 								RI::Global_Func::convert<std::complex<double>>(H(iw0_b, iw1_b)) * frac,

@@ -20,6 +20,20 @@ Magnetism::~Magnetism()
     delete[] this->start_magnetization;
 }
 
+namespace ModuleIO
+{
+void print_force(std::ofstream& ofs_running,
+                 const UnitCell& cell,
+                 const std::string& name,
+                 const ModuleBase::matrix& force,
+                 bool ry = true)
+{
+}
+void print_stress(const std::string& name, const ModuleBase::matrix& scs, const bool screen, const bool ry)
+{
+}
+} // namespace ModuleIO
+
 class Setcell
 {
   public:
@@ -91,7 +105,7 @@ class Setcell
             ucell.atoms[0].mbl[ia].set(1, 1, 1);
         }
 
-        ucell.omega = abs(ucell.latvec.Det()) * ucell.lat0 * ucell.lat0 * ucell.lat0;
+        ucell.omega = std::abs(ucell.latvec.Det()) * ucell.lat0 * ucell.lat0 * ucell.lat0;
 
         ucell.GT = ucell.latvec.Inverse();
         ucell.G = ucell.GT.Transpose();

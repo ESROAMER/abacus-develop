@@ -1,6 +1,10 @@
 #include "module_basis/module_nao/radial_set.h"
 
 #include <algorithm>
+#include <cstring>
+#include <memory>
+
+#include "module_base/spherical_bessel_transformer.h"
 
 RadialSet::~RadialSet()
 {
@@ -9,53 +13,32 @@ RadialSet::~RadialSet()
     delete[] index_map_;
 }
 
-double RadialSet::rcut_max() const
+RadialSet::RadialSet(const RadialSet& other) :
+    symbol_(other.symbol_),
+    itype_(other.itype_),
+    lmax_(other.lmax_),
+    rcut_max_(other.rcut_max_),
+    nzeta_(nullptr),
+    nzeta_max_(other.nzeta_max_),
+    nchi_(other.nchi_),
+    chi_(nullptr),
+    index_map_(nullptr)
 {
-    double rmax = 0.0;
-    for (int i = 0; i != nchi_; ++i)
+    if (nchi_ == 0)
     {
-        if (chi_[i].rcut() > rmax)
-        {
-            rmax = chi_[i].rcut();
-        }
-    }
-    return rmax;
-}
-
-RadialSet::RadialSet(const RadialSet& other)
-{
-    symbol_ = other.symbol_;
-    itype_ = other.itype_;
-    lmax_ = other.lmax_;
-
-    nzeta_ = nullptr;
-    if (lmax_ >= 0)
-    {
-        nzeta_ = new int[lmax_ + 1];
-        for (int l = 0; l <= lmax_; l++)
-            nzeta_[l] = other.nzeta_[l];
-    }
-    nzeta_max_ = other.nzeta_max_;
-    nchi_ = other.nchi_;
-
-    chi_ = nullptr;
-    if (nchi_ > 0)
-    {
-        chi_ = new NumericalRadial[nchi_];
-        for (int i = 0; i < nchi_; i++)
-        {
-            chi_[i] = other.chi_[i]; // deep copy
-        }
+        return;
     }
 
-    index_map_ = nullptr;
-    if (lmax_ >= 0 && nzeta_max_ > 0)
+    nzeta_ = new int[lmax_ + 1];
+    std::memcpy(nzeta_, other.nzeta_, (lmax_ + 1) * sizeof(int));
+
+    index_map_ = new int[(lmax_ + 1) * nzeta_max_];
+    std::memcpy(index_map_, other.index_map_, (lmax_ + 1) * nzeta_max_ * sizeof(int));
+
+    chi_ = new NumericalRadial[nchi_];
+    for (int i = 0; i < nchi_; i++)
     {
-        index_map_ = new int[(lmax_ + 1) * nzeta_max_];
-        for (int i = 0; i < (lmax_ + 1) * nzeta_max_; i++)
-        {
-            index_map_[i] = other.index_map_[i];
-        }
+        chi_[i] = other.chi_[i]; // deep copy
     }
 }
 
@@ -69,22 +52,25 @@ RadialSet& RadialSet::operator=(const RadialSet& rhs)
     symbol_ = rhs.symbol_;
     itype_ = rhs.itype_;
     lmax_ = rhs.lmax_;
-
-    delete[] nzeta_;
-    nzeta_ = nullptr;
-    if (lmax_ >= 0)
-    {
-        nzeta_ = new int[lmax_ + 1];
-        for (int l = 0; l <= lmax_; l++)
-            nzeta_[l] = rhs.nzeta_[l];
-    }
+    rcut_max_ = rhs.rcut_max_;
     nzeta_max_ = rhs.nzeta_max_;
     nchi_ = rhs.nchi_;
 
+    delete[] nzeta_;
     delete[] chi_;
+    delete[] index_map_;
+    nzeta_ = nullptr;
     chi_ = nullptr;
+    index_map_ = nullptr;
+
     if (nchi_ > 0)
     {
+        nzeta_ = new int[lmax_ + 1];
+        std::memcpy(nzeta_, rhs.nzeta_, (lmax_ + 1) * sizeof(int));
+
+        index_map_ = new int[(lmax_ + 1) * nzeta_max_];
+        std::memcpy(index_map_, rhs.index_map_, (lmax_ + 1) * nzeta_max_ * sizeof(int));
+
         chi_ = new NumericalRadial[nchi_];
         for (int i = 0; i < nchi_; i++)
         {
@@ -92,23 +78,24 @@ RadialSet& RadialSet::operator=(const RadialSet& rhs)
         }
     }
 
-    delete[] index_map_;
-    index_map_ = nullptr;
-    if (lmax_ >= 0 && nzeta_max_ > 0)
-    {
-        index_map_ = new int[(lmax_ + 1) * nzeta_max_];
-        for (int i = 0; i < (lmax_ + 1) * nzeta_max_; i++)
-        {
-            index_map_[i] = rhs.index_map_[i];
-        }
-    }
     return *this;
+}
+
+void RadialSet::set_rcut_max()
+{
+    rcut_max_ = 0.0;
+    for (int i = 0; i < nchi_; ++i)
+    {
+        rcut_max_ = std::max(rcut_max_, chi_[i].rcut());
+    }
 }
 
 int RadialSet::index(const int l, const int izeta) const
 {
+#ifdef __DEBUG
     assert(l >= 0 && l <= lmax_);
     assert(izeta >= 0 && izeta < nzeta_[l]);
+#endif
     return index_map_[l * nzeta_max_ + izeta];
 }
 
@@ -119,8 +106,9 @@ void RadialSet::indexing()
         return;
     }
 
+#ifdef __DEBUG
     assert(lmax_ >= 0);
-    nzeta_max_ = *std::max_element(nzeta_, nzeta_ + lmax_ + 1);
+#endif
 
     delete[] index_map_;
     index_map_ = new int[(lmax_ + 1) * nzeta_max_];
@@ -129,15 +117,7 @@ void RadialSet::indexing()
     {
         for (int izeta = 0; izeta != nzeta_max_; ++izeta)
         {
-            if (izeta >= nzeta_[l])
-            {
-                index_map_[l * nzeta_max_ + izeta] = -1; // -1 means no such orbital
-            }
-            else
-            {
-                index_map_[l * nzeta_max_ + izeta] = index_chi;
-                ++index_chi;
-            }
+            index_map_[l * nzeta_max_ + izeta] = izeta >= nzeta_[l] ? -1 : index_chi++;
         }
     }
 }
@@ -145,26 +125,40 @@ void RadialSet::indexing()
 const NumericalRadial& RadialSet::chi(const int l, const int izeta)
 {
     int i = index_map_[l * nzeta_max_ + izeta];
+#ifdef __DEBUG
     assert(i >= 0 && i < nchi_);
+#endif
     return chi_[i];
 }
 
-void RadialSet::set_transformer(ModuleBase::SphericalBesselTransformer* const sbt, const int update)
+void RadialSet::set_transformer(ModuleBase::SphericalBesselTransformer sbt, const int update)
 {
     for (int i = 0; i < nchi_; i++)
+    {
         chi_[i].set_transformer(sbt, update);
+    }
 }
 
 void RadialSet::set_grid(const bool for_r_space, const int ngrid, const double* grid, const char mode)
 {
     for (int i = 0; i < nchi_; i++)
+    {
         chi_[i].set_grid(for_r_space, ngrid, grid, mode);
+    }
+    rcut_max_ = grid[ngrid - 1];
 }
 
-void RadialSet::set_uniform_grid(const bool for_r_space, const int ngrid, const double cutoff, const char mode)
+void RadialSet::set_uniform_grid(const bool for_r_space,
+                                 const int ngrid,
+                                 const double cutoff,
+                                 const char mode,
+                                 const bool enable_fft)
 {
     for (int i = 0; i < nchi_; i++)
-        chi_[i].set_uniform_grid(for_r_space, ngrid, cutoff, mode);
+    {
+        chi_[i].set_uniform_grid(for_r_space, ngrid, cutoff, mode, enable_fft);
+    }
+    rcut_max_ = cutoff;
 }
 
 void RadialSet::cleanup()

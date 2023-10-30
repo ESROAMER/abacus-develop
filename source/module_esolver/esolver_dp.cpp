@@ -20,12 +20,14 @@
 
 #include "module_base/parallel_common.h"
 #include "module_base/timer.h"
+#include "module_io/output_log.h"
 
 namespace ModuleESolver
 {
 
     void ESolver_DP::Init(Input& inp, UnitCell& ucell)
     {
+        ucell_ = &ucell;
         dp_potential = 0;
         dp_force.create(ucell.nat, 3);
         dp_virial.create(3, 3);
@@ -94,6 +96,8 @@ namespace ModuleESolver
         dp.compute(dp_potential, f, v, coord, atype, cell);
 
         dp_potential /= ModuleBase::Ry_to_eV;
+        GlobalV::ofs_running << " final etot is " << std::setprecision(11) << dp_potential * ModuleBase::Ry_to_eV
+                             << " eV" << std::endl;
 
         const double fact_f = ModuleBase::Ry_to_eV * ModuleBase::ANGSTROM_AU;
         const double fact_v = ucell.omega * ModuleBase::Ry_to_eV;
@@ -113,7 +117,7 @@ namespace ModuleESolver
             }
         }
 #else
-        ModuleBase::WARNING_QUIT("DP_pot", "Please recompile with -D__DPMD");
+        ModuleBase::WARNING_QUIT("ESolver_DP", "Please recompile with -D__DPMD");
 #endif
         ModuleBase::timer::tick("ESolver_DP", "Run");
     }
@@ -126,11 +130,13 @@ namespace ModuleESolver
     void ESolver_DP::cal_Force(ModuleBase::matrix& force)
     {
         force = dp_force;
+        ModuleIO::print_force(GlobalV::ofs_running, *ucell_, "TOTAL-FORCE (eV/Angstrom)", force, false);
     }
 
     void ESolver_DP::cal_Stress(ModuleBase::matrix& stress)
     {
         stress = dp_virial;
+        ModuleIO::print_stress("TOTAL-STRESS", stress, true, false);
     }
 
     void ESolver_DP::postprocess()
@@ -195,12 +201,18 @@ namespace ModuleESolver
 
                     for (int it = 0; it < ucell.ntype; ++it)
                     {
+                        bool consistent = false;
                         for (int it2 = 0; it2 < ntype_dp; ++it2)
                         {
                             if (ucell.atom_label[it] == label[it2])
                             {
                                 dp_type[it] = it2;
+                                consistent = true;
                             }
+                        }
+                        if (!consistent)
+                        {
+                            ModuleBase::WARNING_QUIT("ESolver_DP", "Unsupported atom types for the DP model");
                         }
                     }
                     delete[] label;
@@ -217,7 +229,7 @@ namespace ModuleESolver
 
         if (!ok)
         {
-            ModuleBase::WARNING_QUIT("type_map", "can not find the DP model");
+            ModuleBase::WARNING_QUIT("ESolver_DP", "can not find the DP model");
         }
         return find_type;
     }

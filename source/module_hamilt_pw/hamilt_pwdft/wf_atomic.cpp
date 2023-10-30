@@ -36,6 +36,7 @@ WF_atomic::~WF_atomic()
 //==========================================================
 void WF_atomic::init_at_1(Structure_Factor *sf_in)
 {
+    if(GlobalV::use_paw) return;
     if (GlobalV::test_wf) ModuleBase::TITLE("WF_atomic","init_at_1");
     ModuleBase::timer::tick("WF_atomic","init_at_1");
     this->psf = sf_in;
@@ -99,29 +100,79 @@ void WF_atomic::init_at_1(Structure_Factor *sf_in)
             ModuleBase::Integral::Simpson_Integral(nmesh, inner_part, atom->ncpp.rab, unit);
             delete[] inner_part;
 
-			GlobalV::ofs_running << " the unit of pseudo atomic orbital is " << unit;
+            // liuyu add 2023-10-06
+            if (unit < 1e-8)
+            {
+                // set occupancy to a small negative number so that this wfc
+                // is not going to be used for starting wavefunctions
+                atom->ncpp.oc[ic] = -1e-8;
+                GlobalV::ofs_running << "WARNING: norm of atomic wavefunction # " << ic + 1 << " of atomic type "
+                                     << atom->ncpp.psd << " is zero" << std::endl;
+            }
+            // only occupied states are normalized
+            if (atom->ncpp.oc[ic] < 0)
+            {
+                continue;
+            }
+            // the US part if needed
+            if (atom->ncpp.tvanp)
+            {
+                double* norm_beta = new double[atom->ncpp.kkbeta];
+                double* work = new double[atom->ncpp.nbeta];
+                for (int ib = 0; ib < atom->ncpp.nbeta; ib++)
+                {
+                    bool match = false;
+                    if (atom->ncpp.lchi[ic] == atom->ncpp.lll[ib])
+                    {
+                        if (atom->ncpp.has_so)
+                        {
+                            if (std::abs(atom->ncpp.jchi[ic] - atom->ncpp.jjj[ib]) < 1e-6)
+                            {
+                                match = true;
+                            }
+                        }
+                        else
+                        {
+                            match = true;
+                        }
+                    }
+                    if (match)
+                    {
+                        for (int ik = 0; ik < atom->ncpp.kkbeta; ik++)
+                        {
+                            norm_beta[ik] = atom->ncpp.betar(ib, ik) * atom->ncpp.chi(ic, ik);
+                        }
+                        ModuleBase::Integral::Simpson_Integral(atom->ncpp.kkbeta, norm_beta, atom->ncpp.rab, work[ib]);
+                    }
+                    else
+                    {
+                        work[ib] = 0.0;
+                    }
+                }
+                for (int ib1 = 0; ib1 < atom->ncpp.nbeta; ib1++)
+                {
+                    for (int ib2 = 0; ib2 < atom->ncpp.nbeta; ib2++)
+                    {
+                        unit += atom->ncpp.qqq(ib1, ib2) * work[ib1] * work[ib2];
+                    }
+                }
+                delete[] norm_beta;
+                delete[] work;
+            } // endif tvanp
 
             //=================================
             // normalize radial wave functions
             //=================================
-            for (int ir=0; ir<nmesh; ir++)
+            unit = std::sqrt(unit);
+            if (std::abs(unit - 1.0) > 1e-6)
             {
-                atom->ncpp.chi(ic,ir) /= sqrt(unit);
+                GlobalV::ofs_running << "WARNING: norm of atomic wavefunction # " << ic + 1 << " of atomic type "
+                                     << atom->ncpp.psd << " is " << unit << ", renormalized" << std::endl;
+                for (int ir = 0; ir < nmesh; ir++)
+                {
+                    atom->ncpp.chi(ic, ir) /= unit;
+                }
             }
-
-            //===========
-            // recheck
-            //===========
-            inner_part = new double[nmesh];
-            for (int ir=0; ir<nmesh; ir++)
-            {
-                inner_part[ir] = atom->ncpp.chi(ic,ir) * atom->ncpp.chi(ic,ir);
-            }
-            unit = 0.0;
-            ModuleBase::Integral::Simpson_Integral(nmesh, inner_part, atom->ncpp.rab, unit);
-            delete[] inner_part;
-
-			GlobalV::ofs_running << ", renormalize to " << unit << std::endl;
 
             if (atom->ncpp.oc[ic] >= 0.0)
             {
@@ -167,25 +218,9 @@ void WF_atomic::print_PAOs(void)const
     {
         for (int icc=0; icc<GlobalC::ucell.atoms[it].ncpp.nchi ;icc++)
         {
-            int ic = icc;
-            if(GlobalV::NSPIN==4) ic = icc/2;
-            std::string orbital_type;
-            if (ic == 0)  orbital_type = "S";
-            else if (ic == 1) orbital_type = "P";
-            else if (ic == 2) orbital_type = "D";
-			else if (ic == 3) orbital_type = "F"; // mohan add 2009-12-15
-			else if (ic == 4) orbital_type = "G"; // liuyu add 2021-05-07
-            else
-            {
-				GlobalV::ofs_warning << "\n nchi = " << GlobalC::ucell.atoms[it].ncpp.nchi << std::endl;
-                ModuleBase::WARNING_QUIT("WF_atomic::print_PAOs", "unknown PAO type.");
-            }
-
             std::stringstream ss;
-            ss << GlobalV::global_out_dir
-            << GlobalC::ucell.atoms[it].label << "/"
-            << GlobalC::ucell.atoms[it].label << "-"
-            << orbital_type << ".ORBITAL";
+            ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << "/" << GlobalC::ucell.atoms[it].label
+               << "-" << GlobalC::ucell.atoms[it].ncpp.els[icc] << ".ORBITAL";
 
             std::ofstream ofs(ss.str().c_str());
             ofs << "Mesh " << GlobalC::ucell.atoms[it].ncpp.msh;
@@ -292,7 +327,7 @@ void WF_atomic::atomic_wfc(const int ik,
                                               ModuleBase::GlobalFunc::ZEROS(aux, np);
                                               for(int n1=0;n1<2*l+1;n1++){
                                                  const int lm = l*l +n1;
-                                                 if(abs(soc.rotylm(n1,ind))>1e-8)
+                                                 if(std::abs(soc.rotylm(n1,ind))>1e-8)
                                                    for(int ig=0; ig<np;ig++)
                                                       aux[ig] += soc.rotylm(n1,ind)* ylm(lm,ig);
                                               }

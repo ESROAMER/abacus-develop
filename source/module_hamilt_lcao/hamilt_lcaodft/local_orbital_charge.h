@@ -12,7 +12,7 @@
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_hamilt.h"
 #include "module_psi/psi.h"
 #include "module_elecstate/elecstate.h"
-
+#include "module_hamilt_lcao/hamilt_lcaodft/DM_gamma_2d_to_grid.h"
 class Local_Orbital_Charge
 {
 	public:
@@ -24,10 +24,13 @@ class Local_Orbital_Charge
     void allocate_dm_wfc(const Grid_Technique& gt,
         elecstate::ElecState* pelec,
         Local_Orbital_wfc &lowf,
-        psi::Psi<double>* psid,
+        psi::Psi<double>* psi,
+        const K_Vectors& kv);
+    void allocate_dm_wfc(const Grid_Technique& gt,
+        elecstate::ElecState* pelec,
+        Local_Orbital_wfc& lowf,
         psi::Psi<std::complex<double>>* psi,
         const K_Vectors& kv);
-
 	//-----------------
 	// in DM_gamma.cpp
 	//-----------------
@@ -83,6 +86,9 @@ class Local_Orbital_Charge
 
     std::map<Abfs::Vector3_Order<int>, std::map<size_t, std::map<size_t, double>>> DMR_sparse;
 
+    void set_dm_k(int ik, std::complex<double>* dm_k_in); // set dm_k from a pointer
+    void set_dm_gamma(int is, double* dm_gamma_in); // set dm_gamma from a pointer
+
 private:
 
 	// whether the DM array has been allocated
@@ -100,26 +106,10 @@ private:
 	// add by yshen on 9/22/2014
 	// these variables are memory pool for DM series matrixes, 
 	// so that these matrixes will be storaged continuously in the memory.
-	double **DM_pool;
-	
-	// Buffer parameters for tranforming 2D block-cyclic distributed DM matrix 
-	// to grid distributed DM matrix
-    int *sender_2D_index;
-    int sender_size;
-    int *sender_size_process;
-    int *sender_displacement_process;
-    double* sender_buffer;
+    double** DM_pool;
 
-    int *receiver_local_index;
-    int receiver_size;
-    int *receiver_size_process;
-    int *receiver_displacement_process;
-    double* receiver_buffer;
+    DMgamma_2dtoGrid dm2g;
 
-#ifdef __MPI
-    int setAlltoallvParameter(MPI_Comm comm_2D, int blacs_ctxt, int nblk);
-#endif
-    void cal_dk_gamma_from_2D(void);
 };
 
 #endif

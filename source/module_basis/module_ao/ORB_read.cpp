@@ -1,12 +1,13 @@
 #include "ORB_read.h"
-#include <cstring>		// Peize Lin fix bug about strcmp 2016-08-02
-#include <cassert>
-#include "module_base/math_integral.h"
-#include "module_base/tool_check.h"
-#include "module_base/parallel_common.h"
+
 #include <algorithm>
+#include <cassert>
+#include <cstring> // Peize Lin fix bug about strcmp 2016-08-02
+
+#include "module_base/math_integral.h"
+#include "module_base/parallel_common.h"
 #include "module_base/timer.h"
-using namespace std;
+#include "module_base/tool_check.h"
 
 //==============================
 // Define an object here! 
@@ -37,6 +38,11 @@ LCAO_Orbitals::~LCAO_Orbitals()
 {
 	delete[] Phi;
 	delete[] Alpha;
+}
+
+const LCAO_Orbitals& LCAO_Orbitals::get_const_instance()
+{
+	return GlobalC::ORB;
 }
 
 #ifdef __MPI

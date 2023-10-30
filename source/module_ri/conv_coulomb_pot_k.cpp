@@ -147,23 +147,36 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
     for (size_t ir = orbs.getNr(); ir < Nr; ++ir)
         r_radial[ir] = orbs.get_r_radial().back() + (ir - orbs.getNr()) * dr;
 
-    Numerical_Orbital_Lm orbs_ccp;
-    orbs_ccp.set_orbital_info(orbs.getLabel(),
-                              orbs.getType(),
-                              orbs.getL(),
-                              orbs.getChi(),
-                              Nr,
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
-                              Numerical_Orbital_Lm::Psi_Type::Psik2,
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
-                              orbs.getNk(),
-                              orbs.getDk(),
-                              orbs.getDruniform(),
-                              false,
-                              true,
-                              GlobalV::CAL_FORCE);
-    return orbs_ccp;
+	const double dr = orbs.get_rab().back();
+	const int Nr = (static_cast<int>(orbs.getNr()*rmesh_times)) | 1;
+	std::vector<double> rab(Nr);
+	for( size_t ir=0; ir<std::min(orbs.getNr(),Nr); ++ir )
+		rab[ir] = orbs.getRab(ir);
+	for( size_t ir=orbs.getNr(); ir<Nr; ++ir )
+		rab[ir] = dr;
+	std::vector<double> r_radial(Nr);
+	for( size_t ir=0; ir<std::min(orbs.getNr(),Nr); ++ir )
+		r_radial[ir] = orbs.getRadial(ir);
+	for( size_t ir=orbs.getNr(); ir<Nr; ++ir )
+        r_radial[ir] = orbs.get_r_radial().back() + (ir - orbs.getNr() + 1) * dr;
+	
+	Numerical_Orbital_Lm orbs_ccp;
+	orbs_ccp.set_orbital_info(
+ 		orbs.getLabel(),
+	 	orbs.getType(),
+		orbs.getL(),
+		orbs.getChi(),
+	    Nr,
+		ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
+		ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
+		Numerical_Orbital_Lm::Psi_Type::Psik2,
+		ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
+		orbs.getNk(),
+		orbs.getDk(),
+		orbs.getDruniform(),
+		false,
+		true, GlobalV::CAL_FORCE);
+	return orbs_ccp;
 }
 
 template <>

@@ -39,6 +39,19 @@ We recommend [Intel® oneAPI toolkit](https://software.intel.com/content/www/us/
 
 Please refer to our [guide](https://github.com/deepmodeling/abacus-develop/wiki/Building-and-Running-ABACUS) on installing requirements.
 
+## Install requirements by toolchain
+
+We offer a set of [toolchain](https://github.com/deepmodeling/abacus-develop/tree/develop/toolchain) 
+scripts to compile and install all the requirements
+automatically and suitable for machine characteristic in an online or offline way. 
+The toolchain can be downloaded with ABACUS repo, which is easily used and can 
+have a convenient installation under HPC environment in both `GNU` or `Intel-oneAPI` toolchain.
+Sometimes, ABACUS by toolchain installation may have highly efficient performance.
+A Tutorial for using this toolchain can be accessed in [bohrium-notebook](https://nb.bohrium.dp.tech/detail/5215742477)
+
+> Notice: the toolchain is under development, please let me know if you encounter any problem in using this toolchain.
+
+
 ## Get ABACUS source code
 
 Of course a copy of ABACUS source code is required, which can be obtained via one of the following choices:
@@ -184,19 +197,21 @@ We also support [Gitpod](https://www.gitpod.io/): [Open in Gitpod](https://gitpo
 
 ## Install by conda
 
-Conda is a package management system with a separated environment, not requiring system privileges. A pre-built ABACUS binary with all requirements is available at [deepmodeling conda channel](https://anaconda.org/deepmodeling/abacus).
+Conda is a package management system with a separated environment, not requiring system privileges. A pre-built ABACUS binary with all requirements is available at [conda-forge](https://anaconda.org/conda-forge/abacus). Conda will install the GPU-accelerated version of ABACUS if a valid GPU driver is present.
 
 ```bash
 # Install
 # We recommend installing ABACUS in a new environment to avoid potential conflicts:
-conda create -n abacus_env abacus -c deepmodeling -c conda-forge
+conda create -n abacus_env abacus -c conda-forge
 
 # Run
 conda activate abacus_env
 OMP_NUM_THREADS=1 mpirun -n 4 abacus
 
 # Update
-conda update -n abacus_env abacus -c deepmodeling -c conda-forge
+conda update -n abacus_env abacus -c conda-forge
 ```
 
-For more details on building a conda package of ABACUS, please refer to the [conda recipe file](/conda/meta.yaml) [online](https://github.com/deepmodeling/abacus-develop/blob/develop/conda/meta.yaml).
+For more details on building a conda package of ABACUS, please refer to the [conda recipe file](https://github.com/deepmodeling/abacus-develop/blob/develop/conda/meta.yaml).
+
+> Note: The [deepmodeling conda channel](https://anaconda.org/deepmodeling/abacus) offers historical versions of ABACUS.

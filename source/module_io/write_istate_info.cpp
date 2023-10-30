@@ -1,4 +1,5 @@
 #include "write_istate_info.h"
+
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
 #include "module_base/timer.h"
@@ -24,7 +25,7 @@ void ModuleIO::write_istate_info(const ModuleBase::matrix &ekb,const ModuleBase:
         {
             if (GlobalV::RANK_IN_POOL != 0 || GlobalV::MY_STOGROUP != 0 ) continue;
 #endif
-            std::ofstream ofsi2(ss.str().c_str(), ios::app);
+            std::ofstream ofsi2(ss.str().c_str(), std::ios::app);
             if (GlobalV::NSPIN == 1 || GlobalV::NSPIN == 4)
             {
                 for (int ik = 0; ik < kv.nks; ik++)

@@ -32,7 +32,7 @@ void ElecState::fixed_weights(const std::vector<double>& ocp_kb)
     {
         num_elec += ocp_kb[i];
     }
-    if (abs(num_elec - GlobalV::nelec) > 1.0e-5)
+    if (std::abs(num_elec - GlobalV::nelec) > 1.0e-5)
     {
         ModuleBase::WARNING_QUIT("ElecState::fixed_weights",
                                  "total number of occupations is wrong , please check ocp_set");
@@ -192,7 +192,7 @@ void ElecState::calEBand()
         //==================================
         this->f_en.eband /= GlobalV::NPROC_IN_POOL;
 #ifdef __MPI
-        Parallel_Reduce::reduce_double_all(this->f_en.eband);
+        Parallel_Reduce::reduce_all(this->f_en.eband);
 #endif
     }
     return;
@@ -202,15 +202,22 @@ void ElecState::init_scf(const int istep, const ModuleBase::ComplexMatrix& struc
 {
     //---------Charge part-----------------
     // core correction potential.
-    this->charge->set_rho_core(strucfac);
+    if(!GlobalV::use_paw)
+    {
+        this->charge->set_rho_core(strucfac);
+    }
+    else
+    {
+        this->charge->set_rho_core_paw();
+    }
 
     //--------------------------------------------------------------------
     // (2) other effective potentials need charge density,
     // choose charge density from ionic step 0.
     //--------------------------------------------------------------------
-    if (istep == 0 || GlobalV::md_prec_level == 2)
+    if (istep == 0)
     {
-        this->charge->init_rho(this->eferm, strucfac);
+        this->charge->init_rho(this->eferm, strucfac, this->bigpw->nbz, this->bigpw->bz);
     }
 
     // renormalize the charge density

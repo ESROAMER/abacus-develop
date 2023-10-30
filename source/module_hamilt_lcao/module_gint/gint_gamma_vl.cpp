@@ -10,6 +10,8 @@
 #include "module_basis/module_ao/ORB_read.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/local_orbital_wfc.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_hamilt_lcao/module_hcontainer/hcontainer_funcs.h"
+
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -26,7 +28,7 @@ extern "C"
     void Cblacs_pcoord(int icontxt, int pnum, int *prow, int *pcol);
 }
 
-void Gint_Gamma::cal_vlocal(Gint_inout *inout, const bool new_e_iteration)
+void Gint_Gamma::cal_vlocal(Gint_inout* inout, LCAO_Matrix* lm, bool new_e_iteration)
 {
 	const int max_size = this->gridt->max_atom;
 	const int lgd = this->gridt->lgd;
@@ -35,15 +37,16 @@ void Gint_Gamma::cal_vlocal(Gint_inout *inout, const bool new_e_iteration)
 	{
         if (max_size >0 && lgd > 0)
         {
-            pvpR_grid = new double[lgd*lgd];
-            ModuleBase::GlobalFunc::ZEROS(pvpR_grid, lgd*lgd);            
+            this->hRGint->set_zero();
+            //pvpR_grid = new double[lgd*lgd];
+            //ModuleBase::GlobalFunc::ZEROS(pvpR_grid, lgd*lgd);            
         }
 
         this->cal_gint(inout);
+        //this->vl_grid_to_2D(pvpR_grid, *lm->ParaV, lgd, new_e_iteration, lm->Hloc.data(),
+        //    std::bind(&LCAO_Matrix::set_HSgamma, lm, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
-		this->vl_grid_to_2D(lgd,inout->lm[0], new_e_iteration);
-
-		if (max_size >0 && lgd > 0) delete[] pvpR_grid;
+        //if (max_size > 0 && lgd > 0) delete[] pvpR_grid;
 	}
 }
 
@@ -192,7 +195,8 @@ inline int setBufferParameter(
 }
 #endif
 
-void Gint_Gamma::vl_grid_to_2D(const int lgd_now, LCAO_Matrix &lm, const bool new_e_iteration)
+void Gint_Gamma::vl_grid_to_2D(const double* vl_grid, const Parallel_2D& p2d, const int loc_grid_dim, const bool new_e_iteration, double* vl_2d,
+    std::function<void(const int&, const int&, const double&, double*)> setfunc)
 {
     ModuleBase::timer::tick("Gint_Gamma","distri_vl");
     // setup send buffer and receive buffer size
@@ -201,7 +205,7 @@ void Gint_Gamma::vl_grid_to_2D(const int lgd_now, LCAO_Matrix &lm, const bool ne
     {
         ModuleBase::timer::tick("Gint_Gamma","distri_vl_index");
         #ifdef __MPI
-        setBufferParameter(*this->gridt, lm.ParaV->comm_2D, lm.ParaV->blacs_ctxt, lm.ParaV->nb,
+        setBufferParameter(*this->gridt, p2d.comm_2D, p2d.blacs_ctxt, p2d.nb,
                            this->sender_index_size, this->sender_local_index,
                            this->sender_size_process, this->sender_displacement_process,
                            this->sender_size, this->sender_buffer,
@@ -226,11 +230,11 @@ void Gint_Gamma::vl_grid_to_2D(const int lgd_now, LCAO_Matrix &lm, const bool ne
         const int icol=this->sender_local_index[i+1];
         if(irow<=icol)
 		{
-            this->sender_buffer[i/2]=pvpR_grid[irow*lgd_now+icol];
+            this->sender_buffer[i / 2] = vl_grid[irow * loc_grid_dim + icol];
 		}
         else
 		{
-            this->sender_buffer[i/2]=pvpR_grid[icol*lgd_now+irow];
+            this->sender_buffer[i / 2] = vl_grid[icol * loc_grid_dim + irow];
 		}
     }
 
@@ -242,7 +246,7 @@ void Gint_Gamma::vl_grid_to_2D(const int lgd_now, LCAO_Matrix &lm, const bool ne
     #ifdef __MPI
     MPI_Alltoallv(this->sender_buffer, this->sender_size_process, this->sender_displacement_process, MPI_DOUBLE,
                   this->receiver_buffer, this->receiver_size_process,
-					this->receiver_displacement_process, MPI_DOUBLE, lm.ParaV->comm_2D);
+        this->receiver_displacement_process, MPI_DOUBLE, p2d.comm_2D);
     #endif
 
 #ifdef __DEBUG
@@ -252,11 +256,61 @@ void Gint_Gamma::vl_grid_to_2D(const int lgd_now, LCAO_Matrix &lm, const bool ne
     // put local data to H matrix
     for(int i=0; i<this->receiver_index_size; i+=2)
     {
-        const int g_row=this->receiver_global_index[i];
-        const int g_col=this->receiver_global_index[i+1];
-        lm.set_HSgamma(g_row,g_col,this->receiver_buffer[i/2],'L', lm.Hloc.data());
+        const int g_row = this->receiver_global_index[i];
+        const int g_col = this->receiver_global_index[i + 1];
+        setfunc(g_row, g_col, this->receiver_buffer[i / 2], vl_2d);
     }
 
     ModuleBase::timer::tick("Gint_Gamma","distri_vl_value");
     ModuleBase::timer::tick("Gint_Gamma","distri_vl");
+}
+
+#ifdef __MPI
+#include "module_hamilt_lcao/module_hcontainer/hcontainer_funcs.h"
+#endif
+void Gint_Gamma::transfer_pvpR(hamilt::HContainer<double>* hR)
+{
+    ModuleBase::TITLE("Gint_Gamma","transfer_pvpR");
+    ModuleBase::timer::tick("Gint_Gamma","transfer_pvpR");
+
+    for(int iap=0;iap<this->hRGint->size_atom_pairs();iap++)
+    {
+        auto& ap = this->hRGint->get_atom_pair(iap);
+        const int iat1 = ap.get_atom_i();
+        const int iat2 = ap.get_atom_j();
+        if(iat1 > iat2)
+        {
+            // fill lower triangle matrix with upper triangle matrix
+            // gamma_only case, only 1 R_index in each AtomPair
+            // the upper <IJR> is <iat2, iat1, 0>
+            const hamilt::AtomPair<double>* upper_ap = this->hRGint->find_pair(iat2, iat1);
+#ifdef __DEBUG
+            assert(upper_ap != nullptr);
+#endif
+            double* lower_matrix = ap.get_pointer(0);
+            for(int irow=0; irow<ap.get_row_size(); ++irow)
+            {
+                for(int icol=0; icol<ap.get_col_size(); ++icol)
+                {
+                    *lower_matrix++ = upper_ap->get_value(icol, irow);
+                }
+            }
+        }
+    }
+#ifdef __MPI
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if(size == 1)
+    {
+        hR->add(*this->hRGint);
+    }
+    else
+    {
+        hamilt::transferSerials2Parallels(*this->hRGint, hR);
+    }
+#else
+    hR->add(*this->hRGint);
+#endif
+
+    ModuleBase::timer::tick("Gint_Gamma","transfer_pvpR");
 }

@@ -1,7 +1,7 @@
 #ifndef SURCHEM_H
 #define SURCHEM_H
 
-#include "atom_in.h"
+#include "module_base/atom_in.h"
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
 #include "module_base/matrix.h"
@@ -75,7 +75,7 @@ class surchem
     void cal_Acomp(const UnitCell& cell,
                    const ModulePW::PW_Basis* rho_basis,
                    const double* const* const rho,
-                   vector<double>& res);
+                   std::vector<double>& res);
 
     void minimize_cg(const UnitCell& ucell,
                      const ModulePW::PW_Basis* rho_basis,

@@ -52,6 +52,7 @@ TEST_F(write_input,print)
         EXPECT_THAT(output,testing::HasSubstr("symmetry                       1 #the control of symmetry"));
         EXPECT_THAT(output,testing::HasSubstr("init_vel                       0 #read velocity from STRU or not"));
         EXPECT_THAT(output,testing::HasSubstr("symmetry_prec                  1e-05 #accuracy for symmetry"));
+        EXPECT_THAT(output, testing::HasSubstr("symmetry_autoclose             0 #whether to close symmetry automatically when error occurs in symmetry analysis"));
         EXPECT_THAT(output,testing::HasSubstr("nelec                          0 #input number of electrons"));
         EXPECT_THAT(output,testing::HasSubstr("out_mul                        0 # mulliken  charge or not"));
         EXPECT_THAT(output,testing::HasSubstr("noncolin                       0 #using non-collinear-spin"));
@@ -175,9 +176,9 @@ TEST_F(write_input,print)
         EXPECT_THAT(output,testing::HasSubstr("smearing_sigma                 0.002 #energy range for smearing"));
         EXPECT_THAT(output,testing::HasSubstr(""));
         EXPECT_THAT(output,testing::HasSubstr("#Parameters (7.Charge Mixing)"));
-        EXPECT_THAT(output,testing::HasSubstr("mixing_type                    pulay #plain; pulay; broyden"));
+        EXPECT_THAT(output,testing::HasSubstr("mixing_type                    broyden #plain; pulay; broyden"));
         EXPECT_THAT(output,testing::HasSubstr("mixing_beta                    0.7 #mixing parameter: 0 means no new charge"));
-        EXPECT_THAT(output,testing::HasSubstr("mixing_ndim                    8 #mixing dimension in pulay"));
+        EXPECT_THAT(output,testing::HasSubstr("mixing_ndim                    8 #mixing dimension in pulay or broyden"));
         EXPECT_THAT(output,testing::HasSubstr("mixing_gg0                     0 #mixing parameter in kerker"));
         EXPECT_THAT(output,testing::HasSubstr("mixing_tau                     0 #whether to mix tau in mGGA calculation"));
         EXPECT_THAT(output,testing::HasSubstr("mixing_dftu                    0 #whether to mix locale in DFT+U calculation"));
@@ -309,6 +310,11 @@ TEST_F(write_input,print)
         EXPECT_THAT(output,testing::HasSubstr("towannier90                    0 #use wannier90 code interface or not"));
         EXPECT_THAT(output,testing::HasSubstr("nnkpfile                       seedname.nnkp #the wannier90 code nnkp file name"));
         EXPECT_THAT(output,testing::HasSubstr("wannier_spin                   up #calculate spin in wannier90 code interface"));
+        EXPECT_THAT(output,testing::HasSubstr("out_wannier_mmn                1 #output .mmn file or not"));
+        EXPECT_THAT(output,testing::HasSubstr("out_wannier_amn                1 #output .amn file or not"));
+        EXPECT_THAT(output,testing::HasSubstr("out_wannier_unk                1 #output UNK. file or not"));
+        EXPECT_THAT(output,testing::HasSubstr("out_wannier_eig                1 #output .eig file or not"));
+        EXPECT_THAT(output,testing::HasSubstr("out_wannier_wvfn_formatted     1 #output UNK. file in text format or in binary format"));
         EXPECT_THAT(output,testing::HasSubstr(""));
         EXPECT_THAT(output,testing::HasSubstr("#Parameters (18.implicit_solvation)"));    
         EXPECT_THAT(output,testing::HasSubstr("imp_sol                        0 #calculate implicit solvation correction or not"));

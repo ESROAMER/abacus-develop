@@ -134,10 +134,10 @@ void Numerical_Basis::output_overlap(const psi::Psi<std::complex<double>>& psi, 
 #ifdef __MPI
         for (int ik = 0; ik < kv.nks; ik++)
         {
-            Parallel_Reduce::reduce_complex_double_pool( overlap_Q[ik].ptr, overlap_Q[ik].getSize() );
-            Parallel_Reduce::reduce_complex_double_pool( overlap_Sq[ik].ptr, overlap_Sq[ik].getSize() );
+            Parallel_Reduce::reduce_pool(overlap_Q[ik].ptr, overlap_Q[ik].getSize());
+            Parallel_Reduce::reduce_pool(overlap_Sq[ik].ptr, overlap_Sq[ik].getSize());
         }
-        Parallel_Reduce::reduce_double_pool(overlap_V.c, overlap_V.nr*overlap_V.nc);		// Peize Lin add 2020.04.23
+        Parallel_Reduce::reduce_pool(overlap_V.c, overlap_V.nr * overlap_V.nc);		// Peize Lin add 2020.04.23
     #endif
 
         this->output_info(ofs, bessel_basis, kv);
@@ -551,7 +551,7 @@ void Numerical_Basis::output_info(std::ofstream& ofs, const Bessel_Basis& bessel
         ofs << GlobalC::ucell.lmax << " lmax" << std::endl;
     }
 
-    ofs << scientific;
+    ofs << std::scientific;
 
     ofs << std::setprecision(8);
     // NOTICE: ofs_warning << "\n The precison may affect the optimize result.";
@@ -736,7 +736,7 @@ void Numerical_Basis::output_overlap_Sq(const std::string& name,
             {
                 if ( GlobalV::RANK_IN_POOL == 0)
                 {
-                    ofs.open(name.c_str(), ios::app);
+                    ofs.open(name.c_str(), std::ios::app);
                     const int ik_now = ik - GlobalC::Pkpoints.startk_pool[GlobalV::MY_POOL] + is * nkstot;
 
                     const int size = overlap_Sq[ik_now].getSize();
@@ -773,7 +773,7 @@ void Numerical_Basis::output_overlap_Sq(const std::string& name,
     }
     if (GlobalV::MY_RANK==0)
     {
-        ofs.open(name.c_str(), ios::app);
+        ofs.open(name.c_str(), std::ios::app);
         ofs << "\n</OVERLAP_Sq>" << std::endl;
     }
 }

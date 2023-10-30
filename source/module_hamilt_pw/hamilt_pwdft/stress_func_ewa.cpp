@@ -93,7 +93,7 @@ void Stress_Func<FPTYPE, Device>::stress_ewa(ModuleBase::matrix& sigma, ModulePW
 			}
 		}
 		rhostar /= GlobalC::ucell.omega;
-		sewald = fact* (ModuleBase::TWO_PI) * ModuleBase::e2 * ModuleBase::libm::exp(-g2a) / g2 * pow(abs(rhostar),2);
+		sewald = fact* (ModuleBase::TWO_PI) * ModuleBase::e2 * ModuleBase::libm::exp(-g2a) / g2 * pow(std::abs(rhostar),2);
 		local_sdewald -= sewald;
 		for(int l=0;l<3;l++)
 		{
@@ -187,7 +187,7 @@ void Stress_Func<FPTYPE, Device>::stress_ewa(ModuleBase::matrix& sigma, ModulePW
 		for(int m=0;m<l+1;m++)
 		{
 			sigma(l,m)=-sigma(l,m);
-			Parallel_Reduce::reduce_double_pool( sigma(l,m) );
+            Parallel_Reduce::reduce_pool(sigma(l, m));
 		}
 	}
 	for(int l=0;l<3;l++)

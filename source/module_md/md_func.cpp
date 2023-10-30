@@ -160,13 +160,15 @@ void rand_vel(const int& natom,
 }
 
 void init_vel(const UnitCell& unit_in,
-              const double& temperature,
               const int& my_rank,
+              const bool& restart,
+              double& temperature,
               double* allmass,
               int& frozen_freedom,
               ModuleBase::Vector3<int>* ionmbl,
               ModuleBase::Vector3<double>* vel)
 {
+    std::cout << " ----------------------------------- INIT VEL ---------------------------------------" << std::endl;
     ModuleBase::Vector3<int> frozen;
     get_mass_mbl(unit_in, allmass, frozen, ionmbl);
     frozen_freedom = frozen.x + frozen.y + frozen.z;
@@ -179,13 +181,40 @@ void init_vel(const UnitCell& unit_in,
 
     if (unit_in.init_vel)
     {
+        std::cout << " READ VEL FROM STRU" << std::endl;
         read_vel(unit_in, vel);
+        double kinetic = 0.0;
+        double t_current = MD_func::current_temp(kinetic, unit_in.nat, frozen_freedom, allmass, vel);
+        if (restart)
+        {
+            std::cout << " RESTART MD, CURRENT TEMPERATURE IS " << t_current * ModuleBase::Hartree_to_K << " K"
+                      << std::endl;
+        }
+        else if (temperature < 0)
+        {
+            std::cout << " UNSET INITIAL TEMPERATURE, AUTOSET TO " << t_current * ModuleBase::Hartree_to_K << " K"
+                      << std::endl;
+            temperature = t_current;
+        }
+        else if (std::fabs(temperature - t_current) > 1e-8)
+        {
+            std::cout << " INITIAL TEMPERATURE IN INPUT  = " << temperature * ModuleBase::Hartree_to_K << " K"
+                      << std::endl;
+            std::cout << " READING TEMPERATURE FROM STRU = " << t_current * ModuleBase::Hartree_to_K << " K"
+                      << std::endl;
+            std::cout << " INCONSISTENCE, PLEASE CHECK" << std::endl;
+            std::cout << " ------------------------------------- DONE -----------------------------------------"
+                      << std::endl;
+            exit(0);
+        }
     }
     else
     {
+        std::cout << " RANDOM VEL ACCORDING TO INITIAL TEMPERATURE: " << temperature * ModuleBase::Hartree_to_K << " K"
+                  << std::endl;
         rand_vel(unit_in.nat, temperature, allmass, frozen_freedom, frozen, ionmbl, my_rank, vel);
     }
-    std::cout << "--------------------------------- INITVEL DONE ------------------------------------" << std::endl;
+    std::cout << " ------------------------------------- DONE -----------------------------------------" << std::endl;
 }
 
 void force_virial(ModuleESolver::ESolver* p_esolver,
@@ -240,7 +269,7 @@ void print_stress(std::ofstream& ofs, const ModuleBase::matrix& virial, const Mo
     ofs << "Virial Term is " << virial_scalar * unit_transform << " kbar " << std::endl;
     ofs << "Kinetic Term is " << (stress_scalar - virial_scalar) * unit_transform << " kbar " << std::endl;
 
-    ofs.unsetf(ios::fixed);
+    ofs.unsetf(std::ios::fixed);
     ofs << std::setprecision(8) << std::endl;
     ModuleBase::GlobalFunc::NEW_PART("MD STRESS (kbar)");
     for (int i = 0; i < 3; i++)
@@ -248,7 +277,7 @@ void print_stress(std::ofstream& ofs, const ModuleBase::matrix& virial, const Mo
         ofs << std::setw(15) << stress(i, 0) * unit_transform << std::setw(15) << stress(i, 1) * unit_transform
             << std::setw(15) << stress(i, 2) * unit_transform << std::endl;
     }
-    ofs << std::setiosflags(ios::left);
+    ofs << std::setiosflags(std::ios::left);
 }
 
 void dump_info(const int& step,
@@ -267,11 +296,11 @@ void dump_info(const int& step,
     std::ofstream ofs;
     if (step == 0)
     {
-        ofs.open(file.str(), ios::trunc);
+        ofs.open(file.str(), std::ios::trunc);
     }
     else
     {
-        ofs.open(file.str(), ios::app);
+        ofs.open(file.str(), std::ios::app);
     }
 
     const double unit_pos = unit_in.lat0 / ModuleBase::ANGSTROM_AU;                                  ///< Angstrom
@@ -280,7 +309,7 @@ void dump_info(const int& step,
     const double unit_force = ModuleBase::Hartree_to_eV * ModuleBase::ANGSTROM_AU;                   ///< eV/Angstrom
 
     ofs << "MDSTEP:  " << step << std::endl;
-    ofs << std::setprecision(12) << std::setiosflags(ios::fixed);
+    ofs << std::setprecision(12) << std::setiosflags(std::ios::fixed);
 
     ofs << "LATTICE_CONSTANT: " << unit_in.lat0_angstrom << " Angstrom" << std::endl;
 
@@ -406,10 +435,9 @@ void temp_vector(const int& natom,
     }
 }
 
-double current_step(const int& my_rank, const std::string& file_dir)
+void current_md_info(const int& my_rank, const std::string& file_dir, int& md_step, double& temperature)
 {
     bool ok = true;
-    int step = 0;
 
     if (my_rank == 0)
     {
@@ -424,7 +452,7 @@ double current_step(const int& my_rank, const std::string& file_dir)
 
         if (ok)
         {
-            file >> step;
+            file >> md_step >> temperature;
             file.close();
         }
     }
@@ -435,13 +463,13 @@ double current_step(const int& my_rank, const std::string& file_dir)
 
     if (!ok)
     {
-        ModuleBase::WARNING_QUIT("current_step", "no Restart_md.dat!");
+        ModuleBase::WARNING_QUIT("current_md_info", "no Restart_md.dat!");
     }
 
 #ifdef __MPI
-    MPI_Bcast(&step, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&md_step, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&temperature, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
-    return step;
 }
 
 } // namespace MD_func

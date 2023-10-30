@@ -1,4 +1,5 @@
 #include "to_wannier90.h"
+#include "binstream.h"
 
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_base/math_integral.h"
@@ -41,8 +42,12 @@ toWannier90::~toWannier90()
     delete[] tag_cal_band;
 }
 
-void toWannier90::init_wannier_pw(const ModuleBase::matrix& ekb,
-    const ModulePW::PW_Basis* rhopw,
+void toWannier90::init_wannier_pw(const bool out_wannier_mmn, 
+    const bool out_wannier_amn, 
+    const bool out_wannier_unk, 
+    const bool out_wannier_eig,
+    const bool wvfn_formatted,
+    const ModuleBase::matrix& ekb,
     const ModulePW::PW_Basis_K* wfcpw,
     const ModulePW::PW_Basis_Big* bigpw,
     const K_Vectors& kv,
@@ -63,11 +68,22 @@ void toWannier90::init_wannier_pw(const ModuleBase::matrix& ekb,
         }
     }
 
-    writeUNK(wfcpw, *psi, bigpw);
-    outEIG(ekb);
-    cal_Mmn(*psi, rhopw, wfcpw);
-    cal_Amn(*psi, wfcpw);
-
+    if (out_wannier_unk)
+    {
+        writeUNK(wvfn_formatted, wfcpw, *psi, bigpw);
+    }
+    if (out_wannier_eig)
+    {
+        outEIG(ekb);
+    }
+    if (out_wannier_mmn)
+    {
+        cal_Mmn(*psi, wfcpw);
+    }
+    if (out_wannier_amn)
+    {
+        cal_Amn(*psi, wfcpw);
+    }
     /*
     if(GlobalV::MY_RANK==0)
     {
@@ -91,9 +107,13 @@ void toWannier90::init_wannier_pw(const ModuleBase::matrix& ekb,
 }
 
 #ifdef __LCAO
-void toWannier90::init_wannier_lcao(const Grid_Technique& gt,
+void toWannier90::init_wannier_lcao(const bool out_wannier_mmn, 
+                                    const bool out_wannier_amn, 
+                                    const bool out_wannier_unk, 
+                                    const bool out_wannier_eig,
+                                    const bool wvfn_formatted,
+                                    const Grid_Technique& gt,
                                     const ModuleBase::matrix& ekb,
-                                    const ModulePW::PW_Basis* rhopw,
                                     const ModulePW::PW_Basis_K* wfcpw,
                                     const ModulePW::PW_Basis_Big* bigpw,
                                     const Structure_Factor& sf,
@@ -115,12 +135,26 @@ void toWannier90::init_wannier_lcao(const Grid_Technique& gt,
             ModuleBase::WARNING_QUIT("toWannier90::init_wannier", "Error wannier_spin set,is not \"up\" or \"down\" ");
         }
     }
-
-    getUnkFromLcao(wfcpw, sf, kv, wfcpw->npwk_max);
-    cal_Amn(this->unk_inLcao[0], wfcpw);
-    cal_Mmn(this->unk_inLcao[0], rhopw, wfcpw);
-    writeUNK(wfcpw, this->unk_inLcao[0], bigpw);
-    outEIG(ekb);
+    if (out_wannier_unk)
+    {
+        getUnkFromLcao(wfcpw, sf, kv, wfcpw->npwk_max);
+    }
+    if (out_wannier_amn)
+    {
+        cal_Amn(this->unk_inLcao[0], wfcpw);
+    }
+    if (out_wannier_mmn)
+    {
+        cal_Mmn(this->unk_inLcao[0], wfcpw);
+    }
+    if (out_wannier_unk)
+    {
+        writeUNK(wvfn_formatted,wfcpw, this->unk_inLcao[0], bigpw);
+    }
+    if (out_wannier_eig)
+    {
+        outEIG(ekb);
+    }
 }
 #endif
 
@@ -133,7 +167,7 @@ void toWannier90::read_nnkp(const K_Vectors& kv)
 
     GlobalV::ofs_running << "reading the " << wannier_file_name << ".nnkp file." << std::endl;
 
-    std::ifstream nnkp_read(INPUT.nnkpfile.c_str(), ios::in);
+    std::ifstream nnkp_read(INPUT.nnkpfile.c_str(), std::ios::in);
 
     if (!nnkp_read)
         ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error during readin parameters.");
@@ -147,23 +181,23 @@ void toWannier90::read_nnkp(const K_Vectors& kv)
 
         real_lattice_nnkp = real_lattice_nnkp / GlobalC::ucell.lat0_angstrom;
 
-        if (abs(real_lattice_nnkp.e11 - GlobalC::ucell.latvec.e11) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e11 - GlobalC::ucell.latvec.e11) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e12 - GlobalC::ucell.latvec.e12) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e12 - GlobalC::ucell.latvec.e12) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e13 - GlobalC::ucell.latvec.e13) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e13 - GlobalC::ucell.latvec.e13) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e21 - GlobalC::ucell.latvec.e21) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e21 - GlobalC::ucell.latvec.e21) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e22 - GlobalC::ucell.latvec.e22) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e22 - GlobalC::ucell.latvec.e22) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e23 - GlobalC::ucell.latvec.e23) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e23 - GlobalC::ucell.latvec.e23) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e31 - GlobalC::ucell.latvec.e31) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e31 - GlobalC::ucell.latvec.e31) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e32 - GlobalC::ucell.latvec.e32) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e32 - GlobalC::ucell.latvec.e32) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
-        if (abs(real_lattice_nnkp.e33 - GlobalC::ucell.latvec.e33) > 1.0e-4)
+        if (std::abs(real_lattice_nnkp.e33 - GlobalC::ucell.latvec.e33) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error real_lattice in *.nnkp file");
     }
 
@@ -177,23 +211,23 @@ void toWannier90::read_nnkp(const K_Vectors& kv)
         const double tpiba_angstrom = ModuleBase::TWO_PI / GlobalC::ucell.lat0_angstrom;
         recip_lattice_nnkp = recip_lattice_nnkp / tpiba_angstrom;
 
-        if (abs(recip_lattice_nnkp.e11 - GlobalC::ucell.G.e11) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e11 - GlobalC::ucell.G.e11) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e12 - GlobalC::ucell.G.e12) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e12 - GlobalC::ucell.G.e12) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e13 - GlobalC::ucell.G.e13) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e13 - GlobalC::ucell.G.e13) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e21 - GlobalC::ucell.G.e21) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e21 - GlobalC::ucell.G.e21) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e22 - GlobalC::ucell.G.e22) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e22 - GlobalC::ucell.G.e22) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e23 - GlobalC::ucell.G.e23) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e23 - GlobalC::ucell.G.e23) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e31 - GlobalC::ucell.G.e31) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e31 - GlobalC::ucell.G.e31) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e32 - GlobalC::ucell.G.e32) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e32 - GlobalC::ucell.G.e32) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
-        if (abs(recip_lattice_nnkp.e33 - GlobalC::ucell.G.e33) > 1.0e-4)
+        if (std::abs(recip_lattice_nnkp.e33 - GlobalC::ucell.G.e33) > 1.0e-4)
             ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error recip_lattice in *.nnkp file");
     }
 
@@ -210,11 +244,11 @@ void toWannier90::read_nnkp(const K_Vectors& kv)
         for (int ik = 0; ik < numkpt_nnkp; ik++)
         {
             nnkp_read >> kpoints_direct_nnkp[ik].x >> kpoints_direct_nnkp[ik].y >> kpoints_direct_nnkp[ik].z;
-            if (abs(kpoints_direct_nnkp[ik].x - kv.kvec_d[ik].x) > 1.0e-4)
+            if (std::abs(kpoints_direct_nnkp[ik].x - kv.kvec_d[ik].x) > 1.0e-4)
                 ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error kpoints in *.nnkp file");
-            if (abs(kpoints_direct_nnkp[ik].y - kv.kvec_d[ik].y) > 1.0e-4)
+            if (std::abs(kpoints_direct_nnkp[ik].y - kv.kvec_d[ik].y) > 1.0e-4)
                 ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error kpoints in *.nnkp file");
-            if (abs(kpoints_direct_nnkp[ik].z - kv.kvec_d[ik].z) > 1.0e-4)
+            if (std::abs(kpoints_direct_nnkp[ik].z - kv.kvec_d[ik].z) > 1.0e-4)
                 ModuleBase::WARNING_QUIT("toWannier90::read_nnkp", "Error kpoints in *.nnkp file");
         }
 
@@ -388,7 +422,7 @@ void toWannier90::outEIG(const ModuleBase::matrix& ekb)
                     continue;
                 index_band++;
                 eig_file << std::setw(5) << index_band << std::setw(5) << ik + 1 - start_k_index << std::setw(18)
-                         << showpoint << fixed << std::setprecision(12)
+                         << std::showpoint << std::fixed << std::setprecision(12)
                          << ekb(ik, ib) * ModuleBase::Ry_to_eV << std::endl;
             }
         }
@@ -397,7 +431,8 @@ void toWannier90::outEIG(const ModuleBase::matrix& ekb)
     }
 }
 
-void toWannier90::writeUNK(const ModulePW::PW_Basis_K* wfcpw,
+void toWannier90::writeUNK(const bool wvfn_formatted,
+                           const ModulePW::PW_Basis_K* wfcpw,
                            const psi::Psi<std::complex<double>>& psi_pw,
                            const ModulePW::PW_Basis_Big* bigpw)
 {
@@ -450,19 +485,19 @@ void toWannier90::writeUNK(const ModulePW::PW_Basis_K* wfcpw,
    porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k].imag()
                                     //jingan test
                                     //<< "       " << std::setw(12) << std::setprecision(9) <<
-   std::setiosflags(ios::scientific) << abs(porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k])
+   std::setiosflags(ios::scientific) << std::abs(porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k])
                                     << std::endl;
                         }
                         else
                         {
                             double zero = 0.0;
                             unkfile << std::setw(20) << std::setprecision(9) << std::setiosflags(ios::scientific) <<
-   abs( porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k] )
+   std::abs( porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k] )
                                     << std::setw(20) << std::setprecision(9) << std::setiosflags(ios::scientific) <<
    zero
                                     //jingan test
                                     //<< "       " << std::setw(12) << std::setprecision(9) <<
-   std::setiosflags(ios::scientific) << abs(porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k])
+   std::setiosflags(ios::scientific) << std::abs(porter[i*rhopw->ny*rhopw->nz + j*rhopw->nz + k])
                                     << std::endl;
                         }
                     }
@@ -528,28 +563,36 @@ void toWannier90::writeUNK(const ModulePW::PW_Basis_K* wfcpw,
         for (int ik = start_k_index; ik < (cal_num_kpts + start_k_index); ik++)
         {
             std::ofstream unkfile;
-
+            Binstream unkfile_b;
+            
             if (GlobalV::MY_RANK == 0)
             {
+                
                 std::stringstream name;
                 if (GlobalV::NSPIN == 1 || GlobalV::NSPIN == 4)
                 {
-                    name << GlobalV::global_out_dir << "UNK" << std::setw(5) << setfill('0') << ik + 1 << ".1";
+                    name << GlobalV::global_out_dir << "UNK" << std::setw(5) << std::setfill('0') << ik + 1 << ".1";
                 }
                 else if (GlobalV::NSPIN == 2)
                 {
                     if (wannier_spin == "up")
-                        name << GlobalV::global_out_dir << "UNK" << std::setw(5) << setfill('0')
-                             << ik + 1 - start_k_index << ".1";
+                        name << GlobalV::global_out_dir << "UNK" << std::setw(5) << std::setfill('0')
+                            << ik + 1 - start_k_index << ".1";
                     else if (wannier_spin == "down")
-                        name << GlobalV::global_out_dir << "UNK" << std::setw(5) << setfill('0')
-                             << ik + 1 - start_k_index << ".2";
+                        name << GlobalV::global_out_dir << "UNK" << std::setw(5) << std::setfill('0')
+                            << ik + 1 - start_k_index << ".2";
                 }
-
-                unkfile.open(name.str(), ios::out);
-
-                unkfile << std::setw(12) << wfcpw->nx << std::setw(12) << wfcpw->ny << std::setw(12) << wfcpw->nz
-                        << std::setw(12) << ik + 1 << std::setw(12) << num_bands << std::endl;
+                if (wvfn_formatted)
+                {
+                    unkfile.open(name.str(), std::ios::out);
+                    unkfile << std::setw(12) << wfcpw->nx << std::setw(12) << wfcpw->ny << std::setw(12) << wfcpw->nz
+                            << std::setw(12) << ik + 1 << std::setw(12) << num_bands << std::endl;
+                }
+                else
+                {
+                    unkfile_b.open(name.str(), "w");
+                    unkfile_b << int(20) << wfcpw->nx << wfcpw->ny << wfcpw->nz << ik + 1 << num_bands << 20;
+                }
             }
 
             for (int ib = 0; ib < GlobalV::NBANDS; ib++)
@@ -558,6 +601,14 @@ void toWannier90::writeUNK(const ModulePW::PW_Basis_K* wfcpw,
                     continue;
 
                 wfcpw->recip2real(&psi_pw(ik, ib, 0), porter, ik);
+
+                if (GlobalV::MY_RANK == 0)
+                {
+                    if (!wvfn_formatted)
+                    {
+                        unkfile_b << wfcpw->nz * wfcpw->ny * wfcpw->nx * 8 * 2; // sizeof(double) = 8
+                    }
+                }
 
                 // save the rho one z by one z.
                 for (int iz = 0; iz < wfcpw->nz; iz++)
@@ -596,24 +647,47 @@ void toWannier90::writeUNK(const ModulePW::PW_Basis_K* wfcpw,
                     // write data
                     if (GlobalV::MY_RANK == 0)
                     {
-                        for (int iy = 0; iy < wfcpw->ny; iy++)
+                        if (wvfn_formatted)
                         {
-                            for (int ix = 0; ix < wfcpw->nx; ix++)
+                            for (int iy = 0; iy < wfcpw->ny; iy++)
                             {
-                                unkfile << std::setw(20) << std::setprecision(9) << std::setiosflags(ios::scientific)
-                                        << zpiece[ix * wfcpw->ny + iy].real() << std::setw(20) << std::setprecision(9)
-                                        << std::setiosflags(ios::scientific) << zpiece[ix * wfcpw->ny + iy].imag()
-                                        << std::endl;
+                                for (int ix = 0; ix < wfcpw->nx; ix++)
+                                {
+                                    unkfile << std::setw(20) << std::setprecision(9) << std::setiosflags(std::ios::scientific)
+                                            << zpiece[ix * wfcpw->ny + iy].real() << std::setw(20) << std::setprecision(9)
+                                            << std::setiosflags(std::ios::scientific) << zpiece[ix * wfcpw->ny + iy].imag()
+                                            << std::endl;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for (int iy = 0; iy < wfcpw->ny; iy++)
+                            {
+                                for (int ix = 0; ix < wfcpw->nx; ix++)
+                                {
+                                    unkfile_b << zpiece[ix * wfcpw->ny + iy].real() << zpiece[ix * wfcpw->ny + iy].imag();
+                                }
                             }
                         }
                     }
                 } // end iz
+                if (GlobalV::MY_RANK == 0)
+                {
+                    if (!wvfn_formatted)
+                    {
+                        unkfile_b << wfcpw->nz * wfcpw->ny * wfcpw->nx * 8 * 2; // sizeof(double) = 8
+                    }
+                }
                 MPI_Barrier(POOL_WORLD);
-            }
+            } // ib
 
             if (GlobalV::MY_RANK == 0)
             {
-                unkfile.close();
+                if (wvfn_formatted)
+                    unkfile.close();
+                else
+                    unkfile_b.close();
             }
         }
     }
@@ -638,7 +712,7 @@ void toWannier90::cal_Amn(const psi::Psi<std::complex<double>>& psi_pw, const Mo
     {
         time_t time_now = time(NULL);
         std::string fileaddress = GlobalV::global_out_dir + wannier_file_name + ".amn";
-        Amn_file.open(fileaddress.c_str(), ios::out);
+        Amn_file.open(fileaddress.c_str(), std::ios::out);
         Amn_file << " Created on " << ctime(&time_now);
         Amn_file << std::setw(12) << num_bands << std::setw(12) << cal_num_kpts << std::setw(12) << num_wannier
                  << std::endl;
@@ -681,11 +755,11 @@ void toWannier90::cal_Amn(const psi::Psi<std::complex<double>>& psi_pw, const Mo
                 if (GlobalV::MY_RANK == 0)
                 {
                     Amn_file << std::setw(5) << index_band << std::setw(5) << iw + 1 << std::setw(5)
-                             << ik + 1 - start_k_index << std::setw(18) << showpoint << fixed << std::setprecision(12)
-                             << amn.real() << std::setw(18) << showpoint << fixed << std::setprecision(12)
+                             << ik + 1 - start_k_index << std::setw(18) << std::showpoint << std::fixed << std::setprecision(12)
+                             << amn.real() << std::setw(18) << std::showpoint << std::fixed << std::setprecision(12)
                              << amn.imag()
                              // jingan test
-                             //<< "   " << std::setw(18) << std::setprecision(13) << abs(amn)
+                             //<< "   " << std::setw(18) << std::setprecision(13) << std::abs(amn)
                              << std::endl;
                 }
             }
@@ -699,7 +773,6 @@ void toWannier90::cal_Amn(const psi::Psi<std::complex<double>>& psi_pw, const Mo
 }
 
 void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
-                          const ModulePW::PW_Basis* rhopw,
                           const ModulePW::PW_Basis_K* wfcpw)
 {
     // test by jingan
@@ -711,7 +784,7 @@ void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
     if (GlobalV::MY_RANK == 0)
     {
         std::string fileaddress = GlobalV::global_out_dir + wannier_file_name + ".mmn";
-        mmn_file.open(fileaddress.c_str(), ios::out);
+        mmn_file.open(fileaddress.c_str(), std::ios::out);
 
         time_t time_now = time(NULL);
         mmn_file << " Created on " << ctime(&time_now);
@@ -758,6 +831,35 @@ void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
             {
                 if (!tag_cal_band[m])
                     continue;
+                // (1) set value
+                std::complex<double>* psir = new std::complex<double>[wfcpw->nmaxgr];
+                std::complex<double>* phase = new std::complex<double>[wfcpw->nmaxgr];
+                ModuleBase::GlobalFunc::ZEROS(phase, wfcpw->nmaxgr);
+                ModuleBase::GlobalFunc::ZEROS(psir, wfcpw->nmaxgr);
+                int cal_ik = ik + start_k_index;
+                int cal_ikb = ikb + start_k_index;
+                // get the phase value in realspace
+                for (int ig = 0; ig < wfcpw->npwk[cal_ik]; ig++)
+                {
+                    if (wfcpw->getgdirect(cal_ik,ig) == -phase_G) // It should be used carefully. We cannot judge if two double are equal.
+                    {
+                        phase[ig] = std::complex<double>(1.0, 0.0);
+                        break;
+                    }
+                }
+
+                // (2) fft and get value
+                wfcpw->recip2real(phase, phase, cal_ik);
+                //wfcpw->recip2real(&psi_pw(ik, iband_L, 0), psir, ik);
+                wfcpw->recip2real(&psi_pw(cal_ikb, m, 0), psir, cal_ikb);
+
+                for (int ir = 0; ir < wfcpw->nrxx; ir++)
+                {
+                    psir[ir] *= phase[ir];
+                }
+
+                //wfcpw->real2recip(psir, psir, ikb); //ikb, not ik
+                wfcpw->real2recip(psir, psir, cal_ik);
                 for (int n = 0; n < GlobalV::NBANDS; n++)
                 {
                     if (!tag_cal_band[n])
@@ -766,8 +868,8 @@ void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
 
                     if (!gamma_only_wannier)
                     {
-                        int cal_ik = ik + start_k_index;
-                        int cal_ikb = ikb + start_k_index;
+                        // int cal_ik = ik + start_k_index;
+                        // int cal_ikb = ikb + start_k_index;
                         // test by jingan
                         // GlobalV::ofs_running << __FILE__ << __LINE__ << "cal_ik = " << cal_ik << "cal_ikb = " <<
                         // cal_ikb << std::endl;
@@ -775,7 +877,7 @@ void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
                         // std::complex<double> *unk_L_r = new std::complex<double>[wfcpw->nrxx];
                         // ToRealSpace(cal_ik,n,psi_pw,unk_L_r,phase_G);
                         // mmn = unkdotb(unk_L_r,cal_ikb,m,psi_pw);
-                        mmn = unkdotkb(rhopw, wfcpw, cal_ik, cal_ikb, n, m, phase_G, psi_pw);
+                        mmn = unkdotkb(wfcpw, cal_ik, cal_ikb, n, m, psir, phase, phase_G, psi_pw);
                         // delete[] unk_L_r;
                     }
                     else
@@ -786,15 +888,17 @@ void toWannier90::cal_Mmn(const psi::Psi<std::complex<double>>& psi_pw,
 
                     if (GlobalV::MY_RANK == 0)
                     {
-                        mmn_file << std::setw(18) << std::setprecision(12) << showpoint << fixed << mmn.real()
-                                 << std::setw(18) << std::setprecision(12) << showpoint << fixed
+                        mmn_file << std::setw(18) << std::setprecision(12) << std::showpoint << std::fixed << mmn.real()
+                                 << std::setw(18) << std::setprecision(12) << std::showpoint << std::fixed
                                  << mmn.imag()
                                  // jingan test
-                                 //<< "    " << std::setw(12) << std::setprecision(9) << abs(mmn)
+                                 //<< "    " << std::setw(12) << std::setprecision(9) << std::abs(mmn)
                                  << std::endl;
                     }
-                }
-            }
+                }//n
+                delete[] psir;
+                delete[] phase;
+            }//m
         }
     }
 
@@ -1622,54 +1726,66 @@ std::complex<double> toWannier90::unkdotb(const std::complex<double> *psir,
     return result;
 }
 */
-std::complex<double> toWannier90::unkdotkb(const ModulePW::PW_Basis* rhopw,
-                                           const ModulePW::PW_Basis_K* wfcpw,
+std::complex<double> toWannier90::unkdotkb(const ModulePW::PW_Basis_K* wfcpw,
                                            const int& ik,
                                            const int& ikb,
                                            const int& iband_L,
                                            const int& iband_R,
+                                           std::complex<double>* psir,
+                                           std::complex<double>* phase,
                                            const ModuleBase::Vector3<double> G,
                                            const psi::Psi<std::complex<double>>& psi_pw)
+/*
+Calculate and print <u_{n,k}|u_{u,k+b}> required by Wannier90.
+*/
 {
     // (1) set value
     std::complex<double> result(0.0, 0.0);
-    std::complex<double> *psir = new std::complex<double>[wfcpw->nmaxgr];
-    std::complex<double>* phase = new std::complex<double>[rhopw->nmaxgr];
+    // std::complex<double>* psir = new std::complex<double>[wfcpw->nmaxgr];
+    // std::complex<double>* phase = new std::complex<double>[wfcpw->nmaxgr];
+    // ModuleBase::GlobalFunc::ZEROS(phase, wfcpw->nmaxgr);
+    // ModuleBase::GlobalFunc::ZEROS(psir, wfcpw->nmaxgr);
 
-    // get the phase value in realspace
-    for (int ig = 0; ig < rhopw->npw; ig++)
-    {
-        if (rhopw->gdirect[ig] == G) // It should be used carefully. We cannot judge if two double are equal.
-        {
-            phase[ig] = std::complex<double>(1.0, 0.0);
-            break;
-        }
-    }
+    // // get the phase value in realspace
+    // for (int ig = 0; ig < wfcpw->npwk[ik]; ig++)
+    // {
+    //     if (wfcpw->getgdirect(ik,ig) == -G) // It should be used carefully. We cannot judge if two double are equal.
+    //     {
+    //         phase[ig] = std::complex<double>(1.0, 0.0);
+    //         break;
+    //     }
+    // }
 
-    // (2) fft and get value
-    rhopw->recip2real(phase, phase);
-    wfcpw->recip2real(&psi_pw(ik, iband_L, 0), psir, ik);
+    // // (2) fft and get value
+    // wfcpw->recip2real(phase, phase, ik);
+    // //wfcpw->recip2real(&psi_pw(ik, iband_L, 0), psir, ik);
+    // wfcpw->recip2real(&psi_pw(ikb, iband_R, 0), psir, ikb);
 
-    for (int ir = 0; ir < wfcpw->nrxx; ir++)
-    {
-        psir[ir] *= phase[ir];
-    }
+    // for (int ir = 0; ir < wfcpw->nrxx; ir++)
+    // {
+    //     psir[ir] *= phase[ir];
+    // }
 
-    wfcpw->real2recip(psir, psir, ik);
+    // //wfcpw->real2recip(psir, psir, ikb); //ikb, not ik
+    // wfcpw->real2recip(psir, psir, ik);
 
     std::complex<double> result_tem(0.0, 0.0);
 
-    for (int ig = 0; ig < psi_pw.get_ngk(ikb); ig++)
+    // for (int ig = 0; ig <wfcpw->npwk[ikb]; ig++)
+    // {
+    //     result_tem = result_tem + conj(psir[ig]) * psi_pw(ikb, iband_R, ig);
+    // }
+    for (int ig = 0; ig <wfcpw->npwk[ik]; ig++)
     {
-        result_tem = result_tem + conj(psir[ig]) * psi_pw(ikb, iband_R, ig);
+        result_tem = result_tem + psir[ig] * conj(psi_pw(ik, iband_L, ig));
     }
 #ifdef __MPI
     MPI_Allreduce(&result_tem, &result, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, POOL_WORLD);
 #else
     result = result_tem;
 #endif
-    delete[] psir;
-    delete[] phase;
+    // delete[] psir;
+    // delete[] phase;
     return result;
 }
 
@@ -1689,7 +1805,7 @@ std::complex<double> toWannier90::gamma_only_cal(const int &ib_L,
     for (int ig = 0; ig < psi->get_ngk(0); ig++)
     {
         // psir[ wfcpw->ng2fftw[ psi.igk(0,ig) ] ] = psi_pw[0](ib_L, ig);
-        psir[wfcpw->ng2fftw[psi.igk(0, ig)]] = std::complex<double>(abs(psi_pw[0](ib_L, ig)), 0.0);
+        psir[wfcpw->ng2fftw[psi.igk(0, ig)]] = std::complex<double>(std::abs(psi_pw[0](ib_L, ig)), 0.0);
     }
 
     // get the phase value in realspace
@@ -1724,7 +1840,7 @@ std::complex<double> toWannier90::gamma_only_cal(const int &ib_L,
     {
         // result = result + conj(psir_2[ wfcpw->ng2fftw[psi.igk(0,ig)] ]) * psi_pw[0](ib_R,ig) + psir[
 wfcpw->ng2fftw[ psi.igk(0,ig)] ] * conj(psi_pw[0](ib_R,ig));
-// std::complex<double> tem = std::complex<double>( abs(psi_pw[0](ib_R,ig)), 0.0 );
+// std::complex<double> tem = std::complex<double>( std::abs(psi_pw[0](ib_R,ig)), 0.0 );
 result = result + conj(psir[wfcpw->ng2fftw[psi.igk(0, ig)]]); // * tem;
     }
 
@@ -1767,7 +1883,8 @@ void toWannier90::getUnkFromLcao(const ModulePW::PW_Basis_K* wfcpw,
     {
         delete this->unk_inLcao;
     }
-    this->unk_inLcao = new psi::Psi<std::complex<double>>(num_kpts, GlobalV::NBANDS, npwx, nullptr);
+    this->unk_inLcao = new psi::Psi<std::complex<double>>(num_kpts, GlobalV::NBANDS, npwx, kv.ngk.data());
+    this->unk_inLcao->zero_out();
     ModuleBase::ComplexMatrix *orbital_in_G = new ModuleBase::ComplexMatrix[num_kpts];
 
     for (int ik = 0; ik < num_kpts; ik++)
@@ -1838,6 +1955,7 @@ void toWannier90::getUnkFromLcao(const ModulePW::PW_Basis_K* wfcpw,
 void toWannier90::get_lcao_wfc_global_ik(std::complex<double> **ctot, std::complex<double> **cc)
 {
     std::complex<double> *ctot_send = new std::complex<double>[GlobalV::NBANDS * GlobalV::NLOCAL];
+    ModuleBase::GlobalFunc::ZEROS(ctot_send, GlobalV::NBANDS * GlobalV::NLOCAL);
 
 #ifdef __MPI
     MPI_Status status;
@@ -1881,6 +1999,7 @@ void toWannier90::get_lcao_wfc_global_ik(std::complex<double> **ctot, std::compl
                     // receive trace_lo2
                     tag = i * 3 + 1;
                     int *trace_lo2 = new int[GlobalV::NLOCAL];
+                    ModuleBase::GlobalFunc::ZEROS(trace_lo2, GlobalV::NLOCAL);
 #ifdef __MPI
                     MPI_Recv(trace_lo2, GlobalV::NLOCAL, MPI_INT, i, tag, DIAG_WORLD, &status);
 #endif

@@ -66,7 +66,12 @@ TEST_F(InputTest, Default)
         EXPECT_FALSE(INPUT.towannier90);
         EXPECT_EQ(INPUT.nnkpfile,"seedname.nnkp");
         EXPECT_EQ(INPUT.wannier_spin,"up");
-        EXPECT_DOUBLE_EQ(INPUT.kspacing[0],0.0);
+		EXPECT_TRUE(INPUT.out_wannier_amn);
+		EXPECT_TRUE(INPUT.out_wannier_mmn);
+		EXPECT_TRUE(INPUT.out_wannier_unk);
+		EXPECT_TRUE(INPUT.out_wannier_eig);
+        EXPECT_TRUE(INPUT.out_wannier_wvfn_formatted);
+        EXPECT_DOUBLE_EQ(INPUT.kspacing[0], 0.0);
         EXPECT_DOUBLE_EQ(INPUT.kspacing[1],0.0);
         EXPECT_DOUBLE_EQ(INPUT.kspacing[2],0.0);
         EXPECT_DOUBLE_EQ(INPUT.min_dist_coef,0.2);
@@ -82,7 +87,8 @@ TEST_F(InputTest, Default)
         EXPECT_EQ(INPUT.symmetry,"default");
         EXPECT_FALSE(INPUT.init_vel);
         EXPECT_DOUBLE_EQ(INPUT.ref_cell_factor,1.0);
-        EXPECT_DOUBLE_EQ(INPUT.symmetry_prec,1.0e-5);
+        EXPECT_DOUBLE_EQ(INPUT.symmetry_prec, 1.0e-5);
+        EXPECT_FALSE(INPUT.symmetry_autoclose);
         EXPECT_EQ(INPUT.cal_force, 0);
         EXPECT_DOUBLE_EQ(INPUT.force_thr,1.0e-3);
         EXPECT_DOUBLE_EQ(INPUT.force_thr_ev2,0);
@@ -109,12 +115,18 @@ TEST_F(InputTest, Default)
         EXPECT_FALSE(INPUT.gamma_only);
         EXPECT_FALSE(INPUT.gamma_only_local);
         EXPECT_DOUBLE_EQ(INPUT.ecutwfc,50.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_ecut, 0.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_height, 0.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_sigma, 0.1);
         EXPECT_EQ(INPUT.nx,0);
         EXPECT_EQ(INPUT.ny,0);
         EXPECT_EQ(INPUT.nz,0);
         EXPECT_EQ(INPUT.bx,0);
         EXPECT_EQ(INPUT.by,0);
         EXPECT_EQ(INPUT.bz,0);
+        EXPECT_EQ(INPUT.nsx, 0);
+        EXPECT_EQ(INPUT.nsy, 0);
+        EXPECT_EQ(INPUT.nsz, 0);
         EXPECT_EQ(INPUT.diago_proc,0);
         EXPECT_EQ(INPUT.pw_diag_nmax,50);
         EXPECT_EQ(INPUT.diago_cg_prec,1);
@@ -138,7 +150,7 @@ TEST_F(InputTest, Default)
         EXPECT_EQ(INPUT.occupations,"smearing");
         EXPECT_EQ(INPUT.smearing_method,"fixed");
         EXPECT_DOUBLE_EQ(INPUT.smearing_sigma,0.01);
-        EXPECT_EQ(INPUT.mixing_mode,"pulay");
+        EXPECT_EQ(INPUT.mixing_mode,"broyden");
         EXPECT_DOUBLE_EQ(INPUT.mixing_beta,-10.0);
         EXPECT_EQ(INPUT.mixing_ndim,8);
         EXPECT_DOUBLE_EQ(INPUT.mixing_gg0,0.00);
@@ -146,7 +158,7 @@ TEST_F(InputTest, Default)
         EXPECT_EQ(INPUT.mem_saver,0);
         EXPECT_EQ(INPUT.printe,100);
         EXPECT_EQ(INPUT.init_chg,"atomic");
-        EXPECT_EQ(INPUT.chg_extrap,"atomic");
+        EXPECT_EQ(INPUT.chg_extrap, "default");
         EXPECT_EQ(INPUT.out_freq_elec,0);
         EXPECT_EQ(INPUT.out_freq_ion,0);
         EXPECT_EQ(INPUT.out_chg,0);
@@ -167,7 +179,7 @@ TEST_F(InputTest, Default)
         EXPECT_EQ(INPUT.out_interval,1);
         EXPECT_EQ(INPUT.out_app_flag,1);
         EXPECT_EQ(INPUT.out_mat_r,0);
-        EXPECT_FALSE(INPUT.out_wfc_lcao);
+        EXPECT_EQ(INPUT.out_wfc_lcao,0);
         EXPECT_FALSE(INPUT.out_alllog);
         EXPECT_DOUBLE_EQ(INPUT.dos_emin_ev,-15);
         EXPECT_DOUBLE_EQ(INPUT.dos_emax_ev,15);
@@ -404,7 +416,12 @@ TEST_F(InputTest, Read)
         EXPECT_FALSE(INPUT.towannier90);
         EXPECT_EQ(INPUT.nnkpfile,"seedname.nnkp");
         EXPECT_EQ(INPUT.wannier_spin,"up");
-        EXPECT_DOUBLE_EQ(INPUT.kspacing[0],0.0);
+		EXPECT_TRUE(INPUT.out_wannier_amn);
+		EXPECT_TRUE(INPUT.out_wannier_mmn);
+		EXPECT_TRUE(INPUT.out_wannier_unk);
+		EXPECT_TRUE(INPUT.out_wannier_eig);
+        EXPECT_TRUE(INPUT.out_wannier_wvfn_formatted);
+        EXPECT_DOUBLE_EQ(INPUT.kspacing[0], 0.0);
         EXPECT_DOUBLE_EQ(INPUT.kspacing[1],0.0);
         EXPECT_DOUBLE_EQ(INPUT.kspacing[2],0.0);
         EXPECT_DOUBLE_EQ(INPUT.min_dist_coef,0.2);
@@ -419,7 +436,8 @@ TEST_F(InputTest, Read)
         EXPECT_TRUE(INPUT.search_pbc);
         EXPECT_EQ(INPUT.symmetry,"1");
         EXPECT_FALSE(INPUT.init_vel);
-        EXPECT_DOUBLE_EQ(INPUT.symmetry_prec,1.0e-5);
+        EXPECT_DOUBLE_EQ(INPUT.symmetry_prec, 1.0e-5);
+        EXPECT_FALSE(INPUT.symmetry_autoclose);
         EXPECT_EQ(INPUT.cal_force, 0);
         EXPECT_NEAR(INPUT.force_thr,1.0e-3,1.0e-7);
         EXPECT_DOUBLE_EQ(INPUT.force_thr_ev2,0);
@@ -446,7 +464,10 @@ TEST_F(InputTest, Read)
         EXPECT_TRUE(INPUT.gamma_only);
         EXPECT_TRUE(INPUT.gamma_only_local);
         EXPECT_DOUBLE_EQ(INPUT.ecutwfc,20.0);
-        EXPECT_DOUBLE_EQ(INPUT.ecutrho,80.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_ecut, 20.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_height, 20.0);
+        EXPECT_DOUBLE_EQ(INPUT.erf_sigma, 4.0);
+        EXPECT_DOUBLE_EQ(INPUT.ecutrho, 0.0);
         EXPECT_EQ(INPUT.ncx,0);
         EXPECT_EQ(INPUT.ncy,0);
         EXPECT_EQ(INPUT.ncz,0);
@@ -456,6 +477,9 @@ TEST_F(InputTest, Read)
         EXPECT_EQ(INPUT.bx,2);
         EXPECT_EQ(INPUT.by,2);
         EXPECT_EQ(INPUT.bz,2);
+        EXPECT_EQ(INPUT.nsx, 0);
+        EXPECT_EQ(INPUT.nsy, 0);
+        EXPECT_EQ(INPUT.nsz, 0);
         EXPECT_EQ(INPUT.diago_proc,4);
         EXPECT_EQ(INPUT.pw_diag_nmax,50);
         EXPECT_EQ(INPUT.diago_cg_prec,1);
@@ -478,7 +502,7 @@ TEST_F(InputTest, Read)
         EXPECT_EQ(INPUT.occupations,"smearing");
         EXPECT_EQ(INPUT.smearing_method,"gauss");
         EXPECT_DOUBLE_EQ(INPUT.smearing_sigma,0.002);
-        EXPECT_EQ(INPUT.mixing_mode,"pulay");
+        EXPECT_EQ(INPUT.mixing_mode,"broyden");
         EXPECT_DOUBLE_EQ(INPUT.mixing_beta,0.7);
         EXPECT_EQ(INPUT.mixing_ndim,8);
         EXPECT_DOUBLE_EQ(INPUT.mixing_gg0,0.00);
@@ -656,8 +680,7 @@ TEST_F(InputTest, Read)
         EXPECT_EQ(INPUT.of_full_pw_dim,0);
         EXPECT_FALSE(INPUT.of_read_kernel);
         EXPECT_EQ(INPUT.of_kernel_file,"WTkernel.txt");
-        EXPECT_EQ(INPUT.device,"cpu");
-        EXPECT_DOUBLE_EQ(INPUT.ecutrho,80.0);
+        EXPECT_EQ(INPUT.device, "cpu");
         EXPECT_EQ(INPUT.ncx,0);
         EXPECT_EQ(INPUT.ncy,0);
         EXPECT_EQ(INPUT.ncz,0);
@@ -683,7 +706,7 @@ TEST_F(InputTest, Read)
 	EXPECT_EQ(INPUT.mdp.md_restart,0);
 	EXPECT_EQ(INPUT.mdp.md_restartfreq,5);
 	EXPECT_EQ(INPUT.mdp.md_seed,-1);
-    EXPECT_EQ(INPUT.mdp.md_prec_level,1);
+    EXPECT_EQ(INPUT.mdp.md_prec_level, 2);
     EXPECT_DOUBLE_EQ(INPUT.ref_cell_factor,1.2);
 	EXPECT_EQ(INPUT.mdp.md_tchain,1);
 	EXPECT_DOUBLE_EQ(INPUT.mdp.md_tfirst,-1);
@@ -732,14 +755,18 @@ TEST_F(InputTest, Default_2)
 	INPUT.lcao_ecut = 0;
 	INPUT.scf_thr = -1.0;
 	INPUT.scf_thr_type = -1;
-        EXPECT_DOUBLE_EQ(INPUT.ecutwfc,20.0);
-	INPUT.nbndsto_str = "all";
-	// the 1st calling
-	INPUT.Default_2();
-	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.vdw_s6,"0.75");
-        EXPECT_EQ(INPUT.vdw_cutoff_radius,"56.6918");
-	EXPECT_EQ(INPUT.bndpar,1);
+    EXPECT_DOUBLE_EQ(INPUT.ecutwfc, 20.0);
+    EXPECT_DOUBLE_EQ(INPUT.erf_ecut, 20.0);
+    EXPECT_DOUBLE_EQ(INPUT.erf_height, 20.0);
+    EXPECT_DOUBLE_EQ(INPUT.erf_sigma, 4.0);
+    INPUT.nbndsto_str = "all";
+    // the 1st calling
+    INPUT.Default_2();
+    // ^^^^^^^^^^^^^^
+    EXPECT_DOUBLE_EQ(INPUT.ecutrho, 80.0);
+    EXPECT_EQ(INPUT.vdw_s6, "0.75");
+    EXPECT_EQ(INPUT.vdw_cutoff_radius, "56.6918");
+    EXPECT_EQ(INPUT.bndpar,1);
 	EXPECT_EQ(INPUT.method_sto,2);
 	EXPECT_TRUE(INPUT.of_hold_rho0);
         EXPECT_EQ(INPUT.of_full_pw_dim,0);
@@ -777,10 +804,11 @@ TEST_F(InputTest, Default_2)
         INPUT.exx_ccp_rmesh_times = "default";
 	INPUT.diago_proc = 0;
 	INPUT.calculation = "relax";
-	INPUT.relax_nmax = 0;
-	INPUT.basis_type = "pw";
-	INPUT.ks_solver = "default";
-	INPUT.gamma_only_local = 1;
+    INPUT.chg_extrap = "default";
+    INPUT.relax_nmax = 0;
+    INPUT.basis_type = "pw";
+    INPUT.ks_solver = "default";
+    INPUT.gamma_only_local = 1;
 	INPUT.scf_thr = -1.0;
 	INPUT.scf_thr_type = -1;
     INPUT.nbndsto_str = "0";
@@ -788,10 +816,11 @@ TEST_F(InputTest, Default_2)
     // the 2nd calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.vdw_s6,"1.0");
-	EXPECT_EQ(INPUT.vdw_s8,"0.722");
-	EXPECT_EQ(INPUT.vdw_a1,"1.217");
-	EXPECT_EQ(INPUT.vdw_a2,"1.0");
+    EXPECT_EQ(INPUT.chg_extrap, "first-order");
+    EXPECT_EQ(INPUT.vdw_s6, "1.0");
+    EXPECT_EQ(INPUT.vdw_s8, "0.722");
+    EXPECT_EQ(INPUT.vdw_a1, "1.217");
+    EXPECT_EQ(INPUT.vdw_a2,"1.0");
 	EXPECT_EQ(INPUT.vdw_cutoff_radius,"95");
 	EXPECT_EQ(INPUT.exx_hybrid_alpha,"1");
 	EXPECT_EQ(INPUT.exx_cam_alpha,"0.25");
@@ -819,9 +848,10 @@ TEST_F(InputTest, Default_2)
 	INPUT.vdw_a2 = "default";
 	INPUT.vdw_cutoff_radius = "default";
 	INPUT.calculation = "get_S";
-	INPUT.basis_type = "pw";
-	INPUT.pw_diag_thr = 1.0e-2;
-	INPUT.cal_force = 1;
+    INPUT.chg_extrap = "default";
+    INPUT.basis_type = "pw";
+    INPUT.pw_diag_thr = 1.0e-2;
+    INPUT.cal_force = 1;
 	INPUT.init_chg = "atomic";
 	INPUT.basis_type = "pw";
 	INPUT.ks_solver = "cg";
@@ -830,9 +860,10 @@ TEST_F(InputTest, Default_2)
 	// the 3rd calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.vdw_s6,"1.0");
-	EXPECT_EQ(INPUT.vdw_s8,"0.7875");
-	EXPECT_EQ(INPUT.vdw_a1,"0.4289");
+    EXPECT_EQ(INPUT.chg_extrap, "atomic");
+    EXPECT_EQ(INPUT.vdw_s6, "1.0");
+    EXPECT_EQ(INPUT.vdw_s8, "0.7875");
+    EXPECT_EQ(INPUT.vdw_a1,"0.4289");
 	EXPECT_EQ(INPUT.vdw_a2,"4.4407");
 	EXPECT_EQ(INPUT.vdw_cutoff_radius,"95");
 	EXPECT_EQ(GlobalV::CALCULATION,"nscf");
@@ -845,6 +876,7 @@ TEST_F(InputTest, Default_2)
 	//==================================================
 	// prepare default parameters for the 4th calling
 	INPUT.calculation = "get_pchg";
+    INPUT.chg_extrap = "default";
     INPUT.symmetry = "default";
 	// the 4th calling
 	INPUT.Default_2();
@@ -867,9 +899,10 @@ TEST_F(InputTest, Default_2)
 	// prepare default parameters for the 5th calling
 	INPUT.calculation = "get_wf";
     INPUT.symmetry = "default";
-	// the 5th calling
-	INPUT.Default_2();
-	// ^^^^^^^^^^^^^^
+    INPUT.chg_extrap = "default";
+    // the 5th calling
+    INPUT.Default_2();
+    // ^^^^^^^^^^^^^^
 	EXPECT_EQ(GlobalV::CALCULATION,"get_wf");
     EXPECT_EQ(INPUT.relax_nmax, 1);
     EXPECT_EQ(INPUT.symmetry, "0");
@@ -887,7 +920,8 @@ TEST_F(InputTest, Default_2)
 	//==================================================
 	// prepare default parameters for the 6th calling
 	INPUT.calculation = "md";
-	INPUT.mdp.md_nstep = 0;
+    INPUT.chg_extrap = "default";
+    INPUT.mdp.md_nstep = 0;
 	INPUT.out_md_control = 0;
 	INPUT.mdp.md_tlast = -1.0;
 	INPUT.mdp.md_plast = -1.0;
@@ -900,47 +934,55 @@ TEST_F(InputTest, Default_2)
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
 	EXPECT_EQ(GlobalV::CALCULATION,"md");
-	EXPECT_EQ(INPUT.symmetry,"0");
-	EXPECT_EQ(INPUT.cal_force,1);
-	EXPECT_EQ(INPUT.mdp.md_nstep,50);
-	EXPECT_EQ(INPUT.out_level,"m");
-	EXPECT_DOUBLE_EQ(INPUT.mdp.md_tlast,INPUT.mdp.md_tfirst);
-	EXPECT_DOUBLE_EQ(INPUT.mdp.md_plast,INPUT.mdp.md_pfirst);
-	EXPECT_DOUBLE_EQ(INPUT.mdp.md_tfreq,1.0/40/INPUT.mdp.md_dt);
+    EXPECT_EQ(INPUT.chg_extrap, "second-order");
+    EXPECT_EQ(INPUT.symmetry, "0");
+    EXPECT_EQ(INPUT.cal_force, 1);
+    EXPECT_EQ(INPUT.mdp.md_nstep,50);
+    EXPECT_EQ(INPUT.out_level, "m");
+    EXPECT_DOUBLE_EQ(INPUT.mdp.md_plast, INPUT.mdp.md_pfirst);
+    EXPECT_DOUBLE_EQ(INPUT.mdp.md_tfreq,1.0/40/INPUT.mdp.md_dt);
 	EXPECT_DOUBLE_EQ(INPUT.mdp.md_pfreq,1.0/400/INPUT.mdp.md_dt);
 	EXPECT_EQ(INPUT.init_vel,1);
 	EXPECT_EQ(INPUT.cal_stress,1);
 	//==================================================
 	// prepare default parameters for the 7th calling
 	INPUT.calculation = "cell-relax";
-	INPUT.relax_nmax = 0;
-	// the 7th calling
+    INPUT.chg_extrap = "default";
+    INPUT.relax_nmax = 0;
+    // the 7th calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.cal_force,1);
-	EXPECT_EQ(INPUT.cal_stress,1);
+    EXPECT_EQ(INPUT.chg_extrap, "first-order");
+    EXPECT_EQ(INPUT.cal_force, 1);
+    EXPECT_EQ(INPUT.cal_stress,1);
 	EXPECT_EQ(INPUT.relax_nmax,50);
 	//==================================================
 	// prepare default parameters for the 8th calling
 	INPUT.calculation = "test_memory";
-	// the 8th calling
+    INPUT.chg_extrap = "default";
+    // the 8th calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.relax_nmax,1);
+    EXPECT_EQ(INPUT.chg_extrap, "atomic");
+    EXPECT_EQ(INPUT.relax_nmax,1);
 	//==================================================
 	// prepare default parameters for the 9th calling
 	INPUT.calculation = "test_neighbour";
-	// the 9th calling
+    INPUT.chg_extrap = "default";
+    // the 9th calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.relax_nmax,1);
+    EXPECT_EQ(INPUT.chg_extrap, "atomic");
+    EXPECT_EQ(INPUT.relax_nmax,1);
 	//==================================================
 	// prepare default parameters for the 10th calling
 	INPUT.calculation = "gen_bessel";
-	// the 10th calling
+    INPUT.chg_extrap = "default";
+    // the 10th calling
 	INPUT.Default_2();
 	// ^^^^^^^^^^^^^^
-	EXPECT_EQ(INPUT.relax_nmax,1);
+    EXPECT_EQ(INPUT.chg_extrap, "atomic");
+    EXPECT_EQ(INPUT.relax_nmax,1);
 	//==================================================
 	remove("INPUT");
 	remove("STRU");
@@ -948,9 +990,21 @@ TEST_F(InputTest, Default_2)
 
 TEST_F(InputTest, Check)
 {
-	INPUT.nbands = -1;
-	testing::internal::CaptureStdout();
-	EXPECT_EXIT(INPUT.Check(),::testing::ExitedWithCode(0), "");
+    INPUT.ecutwfc = 20.0;
+    INPUT.ecutrho = 10;
+    testing::internal::CaptureStdout();
+    EXPECT_EXIT(INPUT.Check(), ::testing::ExitedWithCode(0), "");
+    output = testing::internal::GetCapturedStdout();
+    EXPECT_THAT(output, testing::HasSubstr("ecutrho must > ecutwfc"));
+    INPUT.ecutrho = 30;
+    testing::internal::CaptureStdout();
+    INPUT.Check();
+    output = testing::internal::GetCapturedStdout();
+    EXPECT_THAT(output, testing::HasSubstr("ecutrho < 4*ecutwfc, not recommended"));
+    //
+    INPUT.nbands = -1;
+    testing::internal::CaptureStdout();
+    EXPECT_EXIT(INPUT.Check(),::testing::ExitedWithCode(0), "");
 	output = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output,testing::HasSubstr("NBANDS must >= 0"));
 	INPUT.nbands = 2;
@@ -1041,16 +1095,8 @@ TEST_F(InputTest, Check)
 	output = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output,testing::HasSubstr("time interval of MD calculation should be set!"));
 	INPUT.mdp.md_dt = 1.0;
-	//
-	INPUT.mdp.md_tfirst = -1.0;
-	INPUT.esolver_type = "sdft";
-	testing::internal::CaptureStdout();
-	EXPECT_EXIT(INPUT.Check(),::testing::ExitedWithCode(0), "");
-	output = testing::internal::GetCapturedStdout();
-	EXPECT_THAT(output,testing::HasSubstr("temperature of MD calculation should be set!"));
-	INPUT.mdp.md_tfirst = 1.0;
-	//
-	INPUT.mdp.md_type = "npt";
+    //
+    INPUT.mdp.md_type = "npt";
 	INPUT.mdp.md_pmode = "iso";
 	INPUT.mdp.md_pfirst = -1.0;
 	testing::internal::CaptureStdout();
@@ -1260,6 +1306,14 @@ TEST_F(InputTest, Check)
 	output = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output,testing::HasSubstr("kpar > 1 has not been supported for lcao calculation."));
 	INPUT.kpar = 1;
+	//
+	INPUT.basis_type = "lcao";
+	INPUT.out_wfc_lcao = 3;
+	testing::internal::CaptureStdout();
+	EXPECT_EXIT(INPUT.Check(),::testing::ExitedWithCode(0), "");
+	output = testing::internal::GetCapturedStdout();
+	EXPECT_THAT(output,testing::HasSubstr("out_wfc_lcao must be 0, 1, or 2"));
+	INPUT.out_wfc_lcao = 0;
 	//
 	INPUT.basis_type = "lcao_in_pw";
 	INPUT.ks_solver = "arbitrary";

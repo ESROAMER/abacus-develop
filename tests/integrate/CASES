@@ -3,6 +3,7 @@
 101_PW_15_pseudopots
 101_PW_15_pseudopots_LDA
 101_PW_15_pseudopots_LibxcLDA
+101_PW_15_paw
 101_PW_blps_pseudopots
 101_PW_OU_pseudopots
 101_PW_upf100_Al_pseudopots
@@ -13,6 +14,9 @@
 101_PW_upf201_upf100_pseudopots
 101_PW_VW_pseudopots
 102_PW_DA_davidson
+102_PW_BPCG
+102_PW_PINT_RKS
+102_PW_PINT_UKS
 103_PW_15_CF_CS_S1_smallg
 103_PW_15_CF_CS_S2_smallg
 103_PW_15_CS_CF
@@ -34,6 +38,7 @@
 106_PW_PK_chargemixing
 106_PW_PL_chargemixing
 106_PW_PU_chargemixing
+107_PW_CHG_mismatch
 107_PW_OBOD_MemSaver
 107_PW_OB_outputbands
 107_PW_OD_outputdos
@@ -45,6 +50,7 @@
 108_PW_RE_MB
 108_PW_RE_MG
 108_PW_RE_NEW
+108_PW_RE_PINT_RKS
 109_PW_CR
 109_PW_CR_fix_a
 109_PW_CR_fix_ab
@@ -56,6 +62,8 @@
 109_PW_CR_moveatoms
 110_PW_SY
 110_PW_SY_symmetry
+110_PW_SY_symmetry_12K
+110_PW_SY_symmetry_LiRh
 111_PW_elec_add
 111_PW_elec_minus
 111_PW_S2_elec_add
@@ -309,3 +317,4 @@
 906_OF_LibxcPBE
 920_OF_MD_LDA
 920_OF_MD_LibxcPBE
+921_OF_CR_LDA

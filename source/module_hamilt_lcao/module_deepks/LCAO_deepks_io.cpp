@@ -22,35 +22,37 @@
 #include "LCAO_deepks.h"
 #include "npy.hpp"
 
-void LCAO_Deepks::print_dm(const ModuleBase::matrix &dm)
+void LCAO_Deepks::print_dm(const std::vector<double> &dm)
 {
-    ofstream ofs("dm");
+    std::ofstream ofs("dm");
     ofs << std::setprecision(15);
     for (int mu=0;mu<GlobalV::NLOCAL;mu++)
     {
         for (int nu=0;nu<GlobalV::NLOCAL;nu++)
         {
-            ofs << dm(mu,nu) << " ";
+            //ofs << dm(mu,nu) << " ";
+            ofs << dm[mu * this->pv->nrow + nu] << " ";
         }
         ofs << std::endl;
     }
 }
 
-void LCAO_Deepks::print_dm_k(const int nks, const std::vector<ModuleBase::ComplexMatrix>& dm)
+void LCAO_Deepks::print_dm_k(const int nks, const std::vector<std::vector<std::complex<double>>>& dm)
 {
-    stringstream ss;
+    std::stringstream ss;
     for(int ik=0;ik<nks;ik++)
     {
         ss.str("");
         ss<<"dm_"<<ik;
-        ofstream ofs(ss.str().c_str());
+        std::ofstream ofs(ss.str().c_str());
         ofs << std::setprecision(15);
 
         for (int mu=0;mu<GlobalV::NLOCAL;mu++)
         {
             for (int nu=0;nu<GlobalV::NLOCAL;nu++)
             {
-                ofs << dm[ik](mu,nu) << " ";
+                //ofs << dm[ik](mu,nu) << " ";
+                ofs << dm[ik][mu * this->pv->nrow + nu] << " ";
             }
             ofs << std::endl;
         }

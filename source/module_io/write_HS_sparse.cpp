@@ -96,10 +96,10 @@ void ModuleIO::save_HSR_sparse(
         count++;
     }
 
-    Parallel_Reduce::reduce_int_all(S_nonzero_num, total_R_num);
+    Parallel_Reduce::reduce_all(S_nonzero_num, total_R_num);
     for (int ispin = 0; ispin < spin_loop; ++ispin)
     {
-        Parallel_Reduce::reduce_int_all(H_nonzero_num[ispin], total_R_num);
+        Parallel_Reduce::reduce_all(H_nonzero_num[ispin], total_R_num);
     }
 
     if (GlobalV::NSPIN == 2)
@@ -148,11 +148,11 @@ void ModuleIO::save_HSR_sparse(
             {
                 if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
                 {
-                    g1[ispin].open(ssh[ispin].str().c_str(), ios::binary | ios::app);
+                    g1[ispin].open(ssh[ispin].str().c_str(), std::ios::binary | std::ios::app);
                 }
                 else
                 {
-                    g1[ispin].open(ssh[ispin].str().c_str(), ios::binary);
+                    g1[ispin].open(ssh[ispin].str().c_str(), std::ios::binary);
                 }
                 g1[ispin].write(reinterpret_cast<char *>(&step), sizeof(int));
                 g1[ispin].write(reinterpret_cast<char *>(&GlobalV::NLOCAL), sizeof(int));
@@ -161,11 +161,11 @@ void ModuleIO::save_HSR_sparse(
 
             if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
             {
-                g2.open(sss.str().c_str(), ios::binary | ios::app);
+                g2.open(sss.str().c_str(), std::ios::binary | std::ios::app);
             }
             else
             {
-                g2.open(sss.str().c_str(), ios::binary);
+                g2.open(sss.str().c_str(), std::ios::binary);
             }
             g2.write(reinterpret_cast<char *>(&step), sizeof(int));
             g2.write(reinterpret_cast<char *>(&GlobalV::NLOCAL), sizeof(int));
@@ -177,7 +177,7 @@ void ModuleIO::save_HSR_sparse(
             {
                 if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
                 {
-                    g1[ispin].open(ssh[ispin].str().c_str(), ios::app);
+                    g1[ispin].open(ssh[ispin].str().c_str(), std::ios::app);
                 }
                 else
                 {
@@ -190,7 +190,7 @@ void ModuleIO::save_HSR_sparse(
 
             if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
             {
-                g2.open(sss.str().c_str(), ios::app);
+                g2.open(sss.str().c_str(), std::ios::app);
             }
             else
             {
@@ -388,7 +388,7 @@ void ModuleIO::save_SR_sparse(
         count++;
     }
 
-    Parallel_Reduce::reduce_int_all(S_nonzero_num, total_R_num);
+    Parallel_Reduce::reduce_all(S_nonzero_num, total_R_num);
 
     for (int index = 0; index < total_R_num; ++index)
     {
@@ -406,7 +406,7 @@ void ModuleIO::save_SR_sparse(
     {
         if (binary)
         {
-            g2.open(sss.str().c_str(), ios::binary);
+            g2.open(sss.str().c_str(), std::ios::binary);
             g2.write(reinterpret_cast<char *>(0), sizeof(int));
             g2.write(reinterpret_cast<char *>(&GlobalV::NLOCAL), sizeof(int));
             g2.write(reinterpret_cast<char *>(&output_R_number), sizeof(int));
@@ -525,7 +525,7 @@ void ModuleIO::save_TR_sparse(
         count++;
     }
 
-    Parallel_Reduce::reduce_int_all(T_nonzero_num, total_R_num);
+    Parallel_Reduce::reduce_all(T_nonzero_num, total_R_num);
 
     for (int index = 0; index < total_R_num; ++index)
     {
@@ -545,11 +545,11 @@ void ModuleIO::save_TR_sparse(
         {
             if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
             {
-                g2.open(sss.str().c_str(), ios::binary | ios::app);
+                g2.open(sss.str().c_str(), std::ios::binary | std::ios::app);
             }
             else
             {
-                g2.open(sss.str().c_str(), ios::binary);
+                g2.open(sss.str().c_str(), std::ios::binary);
             }
             g2.write(reinterpret_cast<char *>(&step), sizeof(int));
             g2.write(reinterpret_cast<char *>(&GlobalV::NLOCAL), sizeof(int));
@@ -559,7 +559,7 @@ void ModuleIO::save_TR_sparse(
         {
             if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
             {
-                g2.open(sss.str().c_str(), ios::app);
+                g2.open(sss.str().c_str(), std::ios::app);
             }
             else
             {
@@ -718,9 +718,9 @@ void ModuleIO::save_dH_sparse(
 
     for (int ispin = 0; ispin < spin_loop; ++ispin)
     {
-        Parallel_Reduce::reduce_int_all(dHx_nonzero_num[ispin], total_R_num);
-        Parallel_Reduce::reduce_int_all(dHy_nonzero_num[ispin], total_R_num);
-        Parallel_Reduce::reduce_int_all(dHz_nonzero_num[ispin], total_R_num); 
+        Parallel_Reduce::reduce_all(dHx_nonzero_num[ispin], total_R_num);
+        Parallel_Reduce::reduce_all(dHy_nonzero_num[ispin], total_R_num);
+        Parallel_Reduce::reduce_all(dHz_nonzero_num[ispin], total_R_num);
     }
 
     if (GlobalV::NSPIN == 2)
@@ -779,15 +779,15 @@ void ModuleIO::save_dH_sparse(
             {
                 if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
                 {
-                    g1x[ispin].open(sshx[ispin].str().c_str(), ios::binary | ios::app);
-                    g1y[ispin].open(sshy[ispin].str().c_str(), ios::binary | ios::app);
-                    g1z[ispin].open(sshz[ispin].str().c_str(), ios::binary | ios::app);
+                    g1x[ispin].open(sshx[ispin].str().c_str(), std::ios::binary | std::ios::app);
+                    g1y[ispin].open(sshy[ispin].str().c_str(), std::ios::binary | std::ios::app);
+                    g1z[ispin].open(sshz[ispin].str().c_str(), std::ios::binary | std::ios::app);
                 }
                 else
                 {
-                    g1x[ispin].open(sshx[ispin].str().c_str(), ios::binary);
-                    g1y[ispin].open(sshy[ispin].str().c_str(), ios::binary);
-                    g1z[ispin].open(sshz[ispin].str().c_str(), ios::binary);
+                    g1x[ispin].open(sshx[ispin].str().c_str(), std::ios::binary);
+                    g1y[ispin].open(sshy[ispin].str().c_str(), std::ios::binary);
+                    g1z[ispin].open(sshz[ispin].str().c_str(), std::ios::binary);
                 }
 
                 g1x[ispin].write(reinterpret_cast<char *>(&step), sizeof(int));
@@ -809,9 +809,9 @@ void ModuleIO::save_dH_sparse(
             {
                 if(GlobalV::CALCULATION == "md" && GlobalV::out_app_flag && step)
                 {
-                    g1x[ispin].open(sshx[ispin].str().c_str(), ios::app);
-                    g1y[ispin].open(sshy[ispin].str().c_str(), ios::app);
-                    g1z[ispin].open(sshz[ispin].str().c_str(), ios::app);
+                    g1x[ispin].open(sshx[ispin].str().c_str(), std::ios::app);
+                    g1y[ispin].open(sshy[ispin].str().c_str(), std::ios::app);
+                    g1z[ispin].open(sshz[ispin].str().c_str(), std::ios::app);
                 }
                 else
                 {

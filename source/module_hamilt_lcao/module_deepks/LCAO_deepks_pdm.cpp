@@ -25,12 +25,10 @@
 
 //this subroutine performs the calculation of projected density matrices
 //pdm_m,m'=\sum_{mu,nu} rho_{mu,nu} <chi_mu|alpha_m><alpha_m'|chi_nu>
-void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm, 
+void LCAO_Deepks::cal_projected_DM(const std::vector<std::vector<double>>& dm, 
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col)
+    Grid_Driver& GridD)
 {
     ModuleBase::TITLE("LCAO_Deepks", "cal_projected_DM");
     ModuleBase::timer::tick("LCAO_Deepks","cal_projected_DM");
@@ -38,7 +36,7 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
     const int pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
     if (GlobalV::init_chg == "file" && !this->init_pdm) //for DeePKS NSCF calculation 
     {
-        ifstream ifs("pdm.dat");
+        std::ifstream ifs("pdm.dat");
         if (!ifs)
         {
             ModuleBase::WARNING_QUIT("LCAO_Deepks::cal_projected_DM", "Can not find the file pdm.dat . Please do DeePKS SCF calculation first.");
@@ -56,7 +54,7 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
         return;
     }
 
-    if(dm.nr == 0 && dm.nc ==0)
+    if(dm.size() == 0 || dm[0].size() == 0)
     {
         return;
     }
@@ -67,7 +65,7 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
     }
 
     const double Rcut_Alpha = orb.Alpha[0].getRcut();
-
+    int nrow = this->pv->nrow;
     for (int T0 = 0; T0 < ucell.ntype; T0++)
     {
 		Atom* atom0 = &ucell.atoms[T0]; 
@@ -109,14 +107,14 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
 					for (int iw1=0; iw1<nw1_tot; ++iw1)
 					{
 						const int iw1_all = start1 + iw1;
-						const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
 						if(iw1_local < 0)continue;
 						const int iw1_0 = iw1/GlobalV::NPOL;
 
 						for (int iw2=0; iw2<nw2_tot; ++iw2)
 						{
 							const int iw2_all = start2 + iw2;
-							const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
 							if(iw2_local < 0)continue;
 							const int iw2_0 = iw2/GlobalV::NPOL;
 
@@ -136,7 +134,11 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
                                         for (int m2 = 0; m2 < 2 * L0 + 1; ++m2)
                                         {
                                             int ind = m1*nm + m2;
-                                            pdm[inl][ind] += dm(iw1_local, iw2_local)*nlm1[ib+m1]*nlm2[ib+m2];
+                                            for(int is = 0; is < dm.size(); ++is)
+                                            {
+                                                //pdm[inl][ind] += dm[is](iw1_local, iw2_local)*nlm1[ib+m1]*nlm2[ib+m2];
+                                                pdm[inl][ind] += dm[is][iw1_local * nrow + iw2_local]*nlm1[ib+m1]*nlm2[ib+m2];
+                                            }
                                         }
                                     }
                                     ib+=nm;
@@ -157,12 +159,10 @@ void LCAO_Deepks::cal_projected_DM(const ModuleBase::matrix &dm,
     return;
 }
 
-void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
+void LCAO_Deepks::cal_projected_DM_k(const std::vector<std::vector<std::complex<double>>>& dm,
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col,
+    Grid_Driver& GridD,
     const int nks,
     const std::vector<ModuleBase::Vector3<double>> &kvec_d)
 {
@@ -170,7 +170,7 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
 
     if (GlobalV::init_chg == "file" && !this->init_pdm) //for DeePKS NSCF calculation 
     {
-        ifstream ifs("pdm.dat");
+        std::ifstream ifs("pdm.dat");
         if (!ifs)
         {
             ModuleBase::WARNING_QUIT("LCAO_Deepks::cal_projected_DM_k","Can not find the file pdm.dat . Please do DeePKS SCF calculation first.");
@@ -189,7 +189,7 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
     }
 
     //check for skipping
-    if(dm[0].nr == 0 && dm[0].nc ==0)
+    if(dm.size() == 0 || dm[0].size() == 0)
     {
         ModuleBase::timer::tick("LCAO_Deepks","cal_projected_DM_k");
         return;
@@ -202,7 +202,7 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
     }
 
     const double Rcut_Alpha = orb.Alpha[0].getRcut();
-
+    int nrow = this->pv->nrow;
     for (int T0 = 0; T0 < ucell.ntype; T0++)
     {
 		Atom* atom0 = &ucell.atoms[T0]; 
@@ -249,13 +249,13 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
 					for (int iw1=0; iw1<nw1_tot; ++iw1)
 					{
 						const int iw1_all = start1 + iw1;
-						const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
 						if(iw1_local < 0)continue;
 						const int iw1_0 = iw1/GlobalV::NPOL;
 						for (int iw2=0; iw2<nw2_tot; ++iw2)
 						{
 							const int iw2_all = start2 + iw2;
-							const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
 							if(iw2_local < 0)continue;
 							const int iw2_0 = iw2/GlobalV::NPOL;
  
@@ -265,7 +265,8 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
                             {
                                 const double arg = ( kvec_d[ik] * (dR1-dR2) ) * ModuleBase::TWO_PI;
                                 const std::complex<double> kphase = std::complex <double> ( cos(arg),  sin(arg) );
-                                tmp += dm[ik](iw1_local,iw2_local)*kphase;
+                                //tmp += dm[ik](iw1_local,iw2_local)*kphase;
+                                tmp += dm[ik][iw1_local * nrow + iw2_local]*kphase;
                             }
                             dm_current=tmp.real();
 
@@ -311,7 +312,7 @@ void LCAO_Deepks::cal_projected_DM_k(const std::vector<ModuleBase::ComplexMatrix
 
 void LCAO_Deepks::check_projected_dm(void)
 {
-    ofstream ofs("pdm.dat");
+    std::ofstream ofs("pdm.dat");
     const int pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
     ofs<<std::setprecision(10);
     for(int inl=0;inl<inlmax;inl++)
@@ -330,12 +331,10 @@ void LCAO_Deepks::check_projected_dm(void)
 //be calculated: 
 //gdm_epsl = d/d\epsilon_{ab} * 
 //           sum_{mu,nu} rho_{mu,nu} <chi_mu|alpha_m><alpha_m'|chi_nu>
-void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
+void LCAO_Deepks::cal_gdmx(const std::vector<double>& dm,
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col,
+    Grid_Driver& GridD,
     const bool isstress)
 {
     ModuleBase::TITLE("LCAO_Deepks", "cal_gdmx");
@@ -343,6 +342,7 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
     //get DS_alpha_mu and S_nu_beta
 
     int size = (2 * lmaxd + 1) * (2 * lmaxd + 1);
+    int nrow = this->pv->nrow;
     for (int iat = 0;iat < ucell.nat;iat++)
     {
         for (int inl = 0;inl < inlmax;inl++)
@@ -422,13 +422,13 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
 					for (int iw1=0; iw1<nw1_tot; ++iw1)
 					{
 						const int iw1_all = start1 + iw1;
-						const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
 						if(iw1_local < 0)continue;
 						const int iw1_0 = iw1/GlobalV::NPOL;
 						for (int iw2=0; iw2<nw2_tot; ++iw2)
 						{
 							const int iw2_all = start2 + iw2;
-							const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
 							if(iw2_local < 0)continue;
 							const int iw2_0 = iw2/GlobalV::NPOL;
                             
@@ -449,24 +449,24 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
                                         for (int m2 = 0; m2 <nm; ++m2)
                                         {
                                             //(<d/dX chi_mu|alpha_m>)<chi_nu|alpha_m'>
-                                            gdmx[iat][inl][m1*nm+m2] += nlm2[1][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
-                                            gdmy[iat][inl][m1*nm+m2] += nlm2[2][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
-                                            gdmz[iat][inl][m1*nm+m2] += nlm2[3][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
+                                            gdmx[iat][inl][m1*nm+m2] += nlm2[1][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
+                                            gdmy[iat][inl][m1*nm+m2] += nlm2[2][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
+                                            gdmz[iat][inl][m1*nm+m2] += nlm2[3][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
 
                                             //(<d/dX chi_nu|alpha_m'>)<chi_mu|alpha_m>
-                                            gdmx[iat][inl][m2*nm+m1] += nlm2[1][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
-                                            gdmy[iat][inl][m2*nm+m1] += nlm2[2][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
-                                            gdmz[iat][inl][m2*nm+m1] += nlm2[3][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                            
+                                            gdmx[iat][inl][m2*nm+m1] += nlm2[1][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
+                                            gdmy[iat][inl][m2*nm+m1] += nlm2[2][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
+                                            gdmz[iat][inl][m2*nm+m1] += nlm2[3][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                            
 
                                             //(<chi_mu|d/dX alpha_m>)<chi_nu|alpha_m'> = -(<d/dX chi_mu|alpha_m>)<chi_nu|alpha_m'>
-                                            gdmx[ibt2][inl][m1*nm+m2] -= nlm2[1][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                               
-                                            gdmy[ibt2][inl][m1*nm+m2] -= nlm2[2][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                               
-                                            gdmz[ibt2][inl][m1*nm+m2] -= nlm2[3][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);
+                                            gdmx[ibt2][inl][m1*nm+m2] -= nlm2[1][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                               
+                                            gdmy[ibt2][inl][m1*nm+m2] -= nlm2[2][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                               
+                                            gdmz[ibt2][inl][m1*nm+m2] -= nlm2[3][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);
 
                                             //(<chi_nu|d/dX alpha_m'>)<chi_mu|alpha_m> = -(<d/dX chi_nu|alpha_m'>)<chi_mu|alpha_m>
-                                            gdmx[ibt2][inl][m2*nm+m1] -= nlm2[1][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                               
-                                            gdmy[ibt2][inl][m2*nm+m1] -= nlm2[2][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                               
-                                            gdmz[ibt2][inl][m2*nm+m1] -= nlm2[3][ib+m2] * nlm1[ib+m1] * dm(iw1_local,iw2_local);                                            
+                                            gdmx[ibt2][inl][m2*nm+m1] -= nlm2[1][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                               
+                                            gdmy[ibt2][inl][m2*nm+m1] -= nlm2[2][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                               
+                                            gdmz[ibt2][inl][m2*nm+m1] -= nlm2[3][ib+m2] * nlm1[ib+m1] * dm[iw1_local*nrow+iw2_local]; //dm(iw1_local,iw2_local);                                            
 
                                             if (isstress)
                                             {
@@ -475,7 +475,8 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
                                                 {
                                                     for(int jpol=ipol;jpol<3;jpol++)
                                                     {
-                                                        gdm_epsl[mm][inl][m2*nm+m1] += ucell.lat0 * dm(iw1_local, iw2_local) * (nlm2[jpol+1][ib+m2] * nlm1[ib+m1] * r0[ipol]);
+                                                        //gdm_epsl[mm][inl][m2*nm+m1] += ucell.lat0 * dm(iw1_local, iw2_local) * (nlm2[jpol+1][ib+m2] * nlm1[ib+m1] * r0[ipol]);
+                                                        gdm_epsl[mm][inl][m2*nm+m1] += ucell.lat0 * dm[iw1_local*nrow+iw2_local] * (nlm2[jpol+1][ib+m2] * nlm1[ib+m1] * r0[ipol]);
                                                         mm++;
                                                     }
                                                 }
@@ -508,7 +509,7 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
                                                 {
                                                     for(int jpol=ipol;jpol<3;jpol++)
                                                     {
-                                                        gdm_epsl[mm][inl][m2*nm+m1]  += ucell.lat0 * dm(iw1_local, iw2_local) * (nlm1[ib+m1] * nlm2[jpol+1][ib+m2] * r1[ipol]);
+                                                        gdm_epsl[mm][inl][m2*nm+m1]  += ucell.lat0 * dm[iw1_local*nrow+iw2_local] * (nlm1[ib+m1] * nlm2[jpol+1][ib+m2] * r1[ipol]);
                                                         mm++;
                                                     }
                                                 }
@@ -544,12 +545,10 @@ void LCAO_Deepks::cal_gdmx(const ModuleBase::matrix &dm,
     return;
 }
 
-void LCAO_Deepks::cal_gdmx_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
+void LCAO_Deepks::cal_gdmx_k(const std::vector<std::vector<std::complex<double>>>& dm,
     const UnitCell &ucell,
     const LCAO_Orbitals &orb,
-    Grid_Driver &GridD,
-    const int* trace_loc_row,
-    const int* trace_loc_col,
+    Grid_Driver& GridD,
     const int nks,
     const std::vector<ModuleBase::Vector3<double>> &kvec_d,
     const bool isstress)
@@ -581,7 +580,7 @@ void LCAO_Deepks::cal_gdmx_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
     }
 
     const double Rcut_Alpha = orb.Alpha[0].getRcut();
-
+    int nrow = this->pv->nrow;
     for (int T0 = 0; T0 < ucell.ntype; T0++)
     {
 		Atom* atom0 = &ucell.atoms[T0]; 
@@ -642,13 +641,13 @@ void LCAO_Deepks::cal_gdmx_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
 					for (int iw1=0; iw1<nw1_tot; ++iw1)
 					{
 						const int iw1_all = start1 + iw1;
-						const int iw1_local = trace_loc_col[iw1_all];
+                        const int iw1_local = pv->global2local_col(iw1_all);
 						if(iw1_local < 0)continue;
 						const int iw1_0 = iw1/GlobalV::NPOL;
 						for (int iw2=0; iw2<nw2_tot; ++iw2)
 						{
 							const int iw2_all = start2 + iw2;
-							const int iw2_local = trace_loc_row[iw2_all];
+                            const int iw2_local = pv->global2local_row(iw2_all);
 							if(iw2_local < 0)continue;
 							const int iw2_0 = iw2/GlobalV::NPOL;
 
@@ -658,7 +657,8 @@ void LCAO_Deepks::cal_gdmx_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
                             {
                                 const double arg = - ( kvec_d[ik] * (dR2-dR1) ) * ModuleBase::TWO_PI;
                                 const std::complex<double> kphase = std::complex <double> ( cos(arg),  sin(arg) );
-                                tmp += dm[ik](iw1_local,iw2_local)*kphase;
+                                //tmp += dm[ik](iw1_local,iw2_local)*kphase;
+                                tmp += dm[ik][iw1_local*nrow+iw2_local]*kphase;
                             }
                             dm_current=tmp.real();
 
@@ -782,9 +782,9 @@ void LCAO_Deepks::cal_gdmx_k(const std::vector<ModuleBase::ComplexMatrix>& dm,
 void LCAO_Deepks::check_gdmx(const int nat)
 {
     std::stringstream ss;
-    ofstream ofs_x;
-    ofstream ofs_y;
-    ofstream ofs_z;
+    std::ofstream ofs_x;
+    std::ofstream ofs_y;
+    std::ofstream ofs_z;
 
     ofs_x<<std::setprecision(10);
     ofs_y<<std::setprecision(10);

@@ -78,6 +78,7 @@ void FIRE::write_restart(const std::string& global_out_dir)
         std::ofstream file(ssc.str().c_str());
 
         file << step_ + step_rst_ << std::endl;
+        file << mdp.md_tfirst << std::endl;
         file << alpha << std::endl;
         file << negative_count << std::endl;
         file << dt_max << std::endl;
@@ -106,7 +107,7 @@ void FIRE::restart(const std::string& global_readin_dir)
 
         if (ok)
         {
-            file >> step_rst_ >> alpha >> negative_count >> dt_max >> mdp.md_dt;
+            file >> step_rst_ >> mdp.md_tfirst >> alpha >> negative_count >> dt_max >> mdp.md_dt;
             file.close();
         }
     }
@@ -122,6 +123,7 @@ void FIRE::restart(const std::string& global_readin_dir)
 
 #ifdef __MPI
     MPI_Bcast(&step_rst_, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&mdp.md_tfirst, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&alpha, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&negative_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&dt_max, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -137,9 +139,9 @@ void FIRE::check_force()
     {
         for (int j = 0; j < 3; ++j)
         {
-            if (max < abs(force[i][j]))
+            if (max < std::abs(force[i][j]))
             {
-                max = abs(force[i][j]);
+                max = std::abs(force[i][j]);
             }
         }
     }
@@ -183,7 +185,7 @@ void FIRE::check_fire()
         negative_count++;
         if (negative_count >= n_min)
         {
-            mdp.md_dt = min(mdp.md_dt * finc, dt_max);
+            mdp.md_dt = std::min(mdp.md_dt * finc, dt_max);
             alpha *= f_alpha;
         }
     }

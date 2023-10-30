@@ -2,11 +2,8 @@
 
 #include <algorithm>
 #include <cstring>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <iterator>
 #include <limits>
+#include <memory>
 #include <numeric>
 
 #include "module_base/constants.h"
@@ -16,33 +13,20 @@
 
 using ModuleBase::PI;
 
-NumericalRadial::NumericalRadial()
+NumericalRadial::NumericalRadial(const NumericalRadial& other) :
+    symbol_(other.symbol_),
+    itype_(other.itype_),
+    l_(other.l_),
+    izeta_(other.izeta_),
+    nr_(other.nr_),
+    nk_(other.nk_),
+    is_fft_compliant_(other.is_fft_compliant_),
+    pr_(other.pr_),
+    pk_(other.pk_),
+    sbt_(other.sbt_)
 {
-    if (use_internal_transformer_)
-    {
-        sbt_ = new ModuleBase::SphericalBesselTransformer;
-    }
-}
-
-NumericalRadial::NumericalRadial(const NumericalRadial& other)
-{
-    symbol_ = other.symbol_;
-    itype_ = other.itype_;
-    izeta_ = other.izeta_;
-    l_ = other.l_;
-
-    nr_ = other.nr_;
-    nk_ = other.nk_;
-
-    is_fft_compliant_ = other.is_fft_compliant_;
-
-    pr_ = other.pr_;
-    pk_ = other.pk_;
-
-    use_internal_transformer_ = other.use_internal_transformer_;
-
     // deep copy
-    if (other.ptr_rgrid())
+    if (other.rgrid())
     {
         rgrid_ = new double[nr_];
         rvalue_ = new double[nr_];
@@ -50,21 +34,12 @@ NumericalRadial::NumericalRadial(const NumericalRadial& other)
         std::memcpy(rvalue_, other.rvalue_, nr_ * sizeof(double));
     }
 
-    if (other.ptr_kgrid())
+    if (other.kgrid())
     {
         kgrid_ = new double[nk_];
         kvalue_ = new double[nk_];
         std::memcpy(kgrid_, other.kgrid_, nk_ * sizeof(double));
         std::memcpy(kvalue_, other.kvalue_, nk_ * sizeof(double));
-    }
-
-    if (use_internal_transformer_)
-    {
-        sbt_ = new ModuleBase::SphericalBesselTransformer;
-    }
-    else
-    {
-        sbt_ = other.sbt_;
     }
 }
 
@@ -74,6 +49,9 @@ NumericalRadial& NumericalRadial::operator=(const NumericalRadial& rhs)
     {
         return *this;
     }
+
+    // wipe off r & k space data
+    wipe(true, true);
 
     symbol_ = rhs.symbol_;
     itype_ = rhs.itype_;
@@ -88,17 +66,10 @@ NumericalRadial& NumericalRadial::operator=(const NumericalRadial& rhs)
     pr_ = rhs.pr_;
     pk_ = rhs.pk_;
 
-    delete[] rgrid_;
-    delete[] rvalue_;
-    delete[] kgrid_;
-    delete[] kvalue_;
-    rgrid_ = nullptr;
-    kgrid_ = nullptr;
-    rvalue_ = nullptr;
-    kvalue_ = nullptr;
+    sbt_ = rhs.sbt_;
 
     // deep copy
-    if (rhs.ptr_rgrid())
+    if (rhs.rgrid())
     {
         rgrid_ = new double[nr_];
         rvalue_ = new double[nr_];
@@ -106,30 +77,13 @@ NumericalRadial& NumericalRadial::operator=(const NumericalRadial& rhs)
         std::memcpy(rvalue_, rhs.rvalue_, nr_ * sizeof(double));
     }
 
-    if (rhs.ptr_kgrid())
+    if (rhs.kgrid())
     {
         kgrid_ = new double[nk_];
         kvalue_ = new double[nk_];
         std::memcpy(kgrid_, rhs.kgrid_, nk_ * sizeof(double));
         std::memcpy(kvalue_, rhs.kvalue_, nk_ * sizeof(double));
     }
-
-    if (rhs.use_internal_transformer_)
-    {
-        if (!use_internal_transformer_)
-        {
-            sbt_ = new ModuleBase::SphericalBesselTransformer;
-        }
-    }
-    else
-    {
-        if (use_internal_transformer_)
-        {
-            delete sbt_;
-        }
-        sbt_ = rhs.sbt_;
-    }
-    use_internal_transformer_ = rhs.use_internal_transformer_;
 
     return *this;
 }
@@ -140,11 +94,6 @@ NumericalRadial::~NumericalRadial()
     delete[] kgrid_;
     delete[] rvalue_;
     delete[] kvalue_;
-
-    if (use_internal_transformer_)
-    {
-        delete sbt_;
-    }
 }
 
 void NumericalRadial::build(const int l,
@@ -155,29 +104,28 @@ void NumericalRadial::build(const int l,
                             const int p,
                             const int izeta,
                             const std::string symbol,
-                            const int itype)
+                            const int itype,
+                            const bool init_sbt)
 {
+#ifdef __DEBUG
     assert(l >= 0);
     assert(ngrid > 1);
     assert(grid && value);
 
     // grid must be strictly increasing and every element must be non-negative
-    assert(std::is_sorted(grid, grid + ngrid, std::less_equal<double>())); // std::less<>() would allow equal values
+    assert(std::is_sorted(grid, grid + ngrid, std::less_equal<double>())); // using less_equal forbids equal values
     assert(grid[0] >= 0.0);
+#endif
+
+    // wipe off any existing r & k space data
+    wipe(true, true);
 
     symbol_ = symbol;
     itype_ = itype;
     izeta_ = izeta;
     l_ = l;
 
-    delete[] rgrid_;
-    delete[] kgrid_;
-    delete[] rvalue_;
-    delete[] kvalue_;
-    rgrid_ = nullptr;
-    kgrid_ = nullptr;
-    rvalue_ = nullptr;
-    kvalue_ = nullptr;
+    if (init_sbt) sbt_.init();
 
     if (for_r_space)
     {
@@ -197,34 +145,16 @@ void NumericalRadial::build(const int l,
         std::memcpy(kgrid_, grid, nk_ * sizeof(double));
         std::memcpy(kvalue_, value, nk_ * sizeof(double));
     }
+
 }
 
-void NumericalRadial::set_transformer(ModuleBase::SphericalBesselTransformer* sbt, int update)
+void NumericalRadial::set_transformer(ModuleBase::SphericalBesselTransformer sbt, int update)
 {
+    sbt_ = sbt;
 
+#ifdef __DEBUG
     assert(update == 0 || update == 1 || update == -1);
-
-    if (sbt)
-    {
-        //! if an external transformer is provided, delete the internal one if any
-        if (use_internal_transformer_)
-        {
-            delete sbt_;
-            use_internal_transformer_ = false;
-        }
-        sbt_ = sbt;
-    }
-    else
-    {
-        // if no external transformer is provided, use an internal one
-        if (!use_internal_transformer_)
-        {
-            sbt_ = new ModuleBase::SphericalBesselTransformer;
-            use_internal_transformer_ = true;
-        }
-        // do nothing if an internal one is already in use
-    }
-
+#endif
     switch (update)
     {
     case 1:
@@ -233,18 +163,20 @@ void NumericalRadial::set_transformer(ModuleBase::SphericalBesselTransformer* sb
     case -1:
         transform(false); // backward transform k -> r
         break;
-    default:;
+    default:; // do nothing
     }
 }
 
 void NumericalRadial::set_grid(const bool for_r_space, const int ngrid, const double* const grid, const char mode)
 {
+#ifdef __DEBUG
     assert(mode == 'i' || mode == 't');
     assert(ngrid > 1);
 
     // grid must be strictly increasing and every element must be non-negative
-    assert(std::is_sorted(grid, grid + ngrid, std::less_equal<double>())); // std::less<>() would allow equal values
+    assert(std::is_sorted(grid, grid + ngrid, std::less_equal<double>())); // using less_equal forbids equal values
     assert(grid[0] >= 0.0);
+#endif
 
     // tbu stands for "to be updated"
     double*& grid_tbu = (for_r_space ? rgrid_ : kgrid_);
@@ -254,7 +186,9 @@ void NumericalRadial::set_grid(const bool for_r_space, const int ngrid, const do
     if (mode == 't')
     { // obtain new values by a transform from the other space
         // make sure a transform from the other space is available
+#ifdef __DEBUG
         assert(for_r_space ? (kgrid_ && kvalue_) : (rgrid_ && rvalue_));
+#endif
 
         delete[] grid_tbu;
         delete[] value_tbu;
@@ -263,13 +197,15 @@ void NumericalRadial::set_grid(const bool for_r_space, const int ngrid, const do
         ngrid_tbu = ngrid;
         std::memcpy(grid_tbu, grid, ngrid * sizeof(double));
 
-        check_fft_compliancy();
+        is_fft_compliant_ = is_fft_compliant(nr_, rgrid_, nk_, kgrid_);
         transform(!for_r_space); // transform(true): r -> k; transform(false): k -> r
     }
     else
     { // obtain new values by interpolation in the current space
         // make sure an interpolation in the current space is available
+#ifdef __DEBUG
         assert(grid_tbu && value_tbu);
+#endif
 
         // cubic spline interpolation
         ModuleBase::CubicSpline cubspl;
@@ -290,7 +226,7 @@ void NumericalRadial::set_grid(const bool for_r_space, const int ngrid, const do
         // grid_end is the first grid point that is strictly greater than grid_tbu[ngrid_tbu-1]
         double* grid_end = std::upper_bound(grid_new, grid_new + ngrid, grid_tbu[ngrid_tbu - 1]);
 
-        cubspl.get(std::distance(grid_start, grid_end), grid_start, value_new + std::distance(grid_new, grid_start));
+        cubspl.eval(std::distance(grid_start, grid_end), grid_start, value_new + std::distance(grid_new, grid_start));
 
         delete[] grid_tbu;
         delete[] value_tbu;
@@ -299,7 +235,7 @@ void NumericalRadial::set_grid(const bool for_r_space, const int ngrid, const do
         value_tbu = value_new;
         ngrid_tbu = ngrid;
 
-        check_fft_compliancy();
+        is_fft_compliant_ = is_fft_compliant(nr_, rgrid_, nk_, kgrid_);
         transform(for_r_space); // transform(true): r -> k; transform(false): k -> r
     }
 }
@@ -318,38 +254,40 @@ void NumericalRadial::set_uniform_grid(const bool for_r_space,
     }
 
     set_grid(for_r_space, ngrid, grid, mode);
+    delete[] grid;
 
     if (enable_fft)
     {
         set_uniform_grid(!for_r_space, ngrid, PI / dx, 't', false);
-        is_fft_compliant_ = true;
     }
-
-    delete[] grid;
 }
 
 void NumericalRadial::set_value(const bool for_r_space, const double* const value, const int p)
 {
+#ifdef __DEBUG
+    assert(for_r_space ? rvalue_ : kvalue_);
+#endif
     if (for_r_space)
     {
-        assert(rvalue_);
         std::memcpy(rvalue_, value, nr_ * sizeof(double));
         pr_ = p;
         transform(true);
     }
     else
     {
-        assert(kvalue_);
         std::memcpy(kvalue_, value, nk_ * sizeof(double));
         pk_ = p;
         transform(false);
     }
 }
 
-void NumericalRadial::wipe(const bool r_space)
+void NumericalRadial::wipe(const bool r_space, const bool k_space)
 {
-    // wipe the grid and value in the given space
-    // if r_space is true, wipe r space; otherwise wipe k space
+#ifdef __DEBUG
+    assert(r_space || k_space);
+#endif
+
+    // wipe the grid and value in r/k space
     if (r_space)
     {
         delete[] rgrid_;
@@ -359,7 +297,8 @@ void NumericalRadial::wipe(const bool r_space)
         nr_ = 0;
         pr_ = 0;
     }
-    else
+    
+    if (k_space)
     {
         delete[] kgrid_;
         delete[] kvalue_;
@@ -371,64 +310,36 @@ void NumericalRadial::wipe(const bool r_space)
     is_fft_compliant_ = false;
 }
 
-// TODO file format to be determined
-// void NumericalRadial::save(std::string file) const {
-//    if (file.empty()) {
-//        file = symbol_ + "-" + std::to_string(l_) + "-" + std::to_string(izeta_) + ".dat";
-//    }
-//    std::ofstream ofs(file);
-//    if (ofs.is_open()) {
-//        ofs << "symbol " << symbol_ << std::endl;
-//        ofs << "l " << l_ << std::endl;
-//        ofs << "itype " << itype_ << std::endl;
-//        ofs << "izeta " << izeta_ << std::endl;
-//        ofs << "nr " << nr_ << std::endl;
-//        ofs << "nk " << nk_ << std::endl;
-//        ofs << "pr " << pr_ << std::endl;
-//        ofs << "pk " << pk_ << std::endl;
-//        ofs << "is_fft_compliant " << is_fft_compliant_ << std::endl;
-//
-//        if (rgrid_ && rvalue_) {
-//            ofs << "rgrid " << "rvalue ";
-//            for (int ir = 0; ir != nr_; ++ir) {
-//                ofs << std::setw(20) << std::setprecision(15)
-//                    << rgrid_[ir] << " "
-//                    << rvalue_[ir] << std::endl;
-//            }
-//        }
-//
-//        ofs << std::endl;
-//
-//        if (kgrid_ && kvalue_) {
-//            ofs << "kgrid " << "kvalue ";
-//            for (int ik = 0; ik != nk_; ++ik) {
-//                ofs << std::setw(20) << std::setprecision(15)
-//                    << kgrid_[ik] << " " << kvalue_[ik] << std::endl;
-//            }
-//        }
-//    }
-//
-//    ofs.close();
-//
-//}
-
 void NumericalRadial::radtab(const char op,
                              const NumericalRadial& ket,
                              const int l,
                              double* const table,
-                             const bool deriv)
+                             const int nr_tab,
+                             const double rmax_tab,
+                             const bool deriv) const
 {
+#ifdef __DEBUG
     assert(op == 'S' || op == 'I' || op == 'T' || op == 'U');
     assert(l >= 0);
+    assert(rmax_tab > 0 && nr_tab > 0);
 
-    // currently only FFT-compliant grids are supported!
-    // FFT-based transform requires that two NumericalRadial objects have exactly the same grid
-    assert(is_fft_compliant_ && ket.is_fft_compliant_);
-    assert(nr_ == ket.nr_);
-    assert(rcut() == ket.rcut());
+    // radtab requires that two NumericalRadial objects have exactly the same (non-null) kgrid_
+    assert(nk_ > 0 && nk_ == ket.nk_);
+    assert(std::equal(kgrid_, kgrid_ + nk_, ket.kgrid_));
+#endif
 
-    double* ktmp = new double[nk_];
-    std::transform(kvalue_, kvalue_ + nk_, ket.kvalue_, ktmp, std::multiplies<double>());
+    double* rgrid_tab = new double[nr_tab];
+    double dr = rmax_tab / (nr_tab - 1);
+    std::for_each(rgrid_tab, rgrid_tab + nr_tab, [dr,&rgrid_tab](double& r) { r = dr * (&r - rgrid_tab); });
+
+    bool use_radrfft = is_fft_compliant(nr_tab, rgrid_tab, nk_, kgrid_);
+
+    // function to undergo a spherical Bessel transform:
+    // overlap: chi1(k) * chi2(k)
+    // kinetic: k^2 * chi1(k) * chi2(k)
+    // Coulomb: k^(-2) * chi1(k) * chi2(k)
+    double* fk = new double[nk_];
+    std::transform(kvalue_, kvalue_ + nk_, ket.kvalue_, fk, std::multiplies<double>());
 
     int op_pk = 0;
     switch (op)
@@ -442,30 +353,22 @@ void NumericalRadial::radtab(const char op,
     default:; // for overlap integral op_pk = 0
     }
 
-    if (deriv)
-    { // derivative of the radial table
-        if (l == 0)
-        { // j'_0(x) = -j_1(x)
-            sbt_->radrfft(1, nk_, kcut(), ktmp, table, pk_ + ket.pk_ + op_pk - 1);
-            std::for_each(table, table + nr_, [](double& x) { x *= -1; });
-        }
-        else
-        { // (2*l+1) * j'_l(x) = l * j_{l-1}(x) - (l+1) * j_{l+1}(x)
-            double* rtmp = new double[nr_];
-            sbt_->radrfft(l + 1, nk_, kcut(), ktmp, table, pk_ + ket.pk_ + op_pk - 1);
-            sbt_->radrfft(l - 1, nk_, kcut(), ktmp, rtmp, pk_ + ket.pk_ + op_pk - 1);
-            std::transform(table, table + nr_, rtmp, table, [l](double x, double y) {
-                return (l * y - (l + 1) * x) / (2 * l + 1);
-            });
-            delete[] rtmp;
-        }
+    if (use_radrfft)
+    {
+        sbt_.radrfft(l, nk_, kcut(), fk, table, pk_ + ket.pk_ + op_pk, deriv);
     }
     else
-    { // radial table
-        sbt_->radrfft(l, nk_, kcut(), ktmp, table, pk_ + ket.pk_ + op_pk);
+    {
+        sbt_.direct(l, nk_, kgrid_, fk, nr_tab, rgrid_tab, table, pk_ + ket.pk_ + op_pk, deriv);
     }
 
-    delete[] ktmp;
+    delete[] fk;
+    delete[] rgrid_tab;
+
+    // spherical Bessel transform has a prefactor of sqrt(2/pi) while the prefactor for the radial table
+    // of two-center integrals is 4*pi
+    double pref = ModuleBase::FOUR_PI * std::sqrt(ModuleBase::PI / 2.0);
+    std::for_each(table, table + nr_tab, [pref](double& x) { x *= pref; });
 }
 
 void NumericalRadial::normalize(bool for_r_space)
@@ -484,57 +387,69 @@ void NumericalRadial::normalize(bool for_r_space)
     std::transform(value_tbu, value_tbu + ngrid, grid_tbu, integrand, std::multiplies<double>());
     std::for_each(integrand, integrand + ngrid, [](double& x) { x *= x; });
 
-    // FIXME Simpson_Integral should use only ngrid-1 rab points!
-    rab[ngrid - 1] = rab[ngrid - 2];
-    ModuleBase::Integral::Simpson_Integral(ngrid, integrand, rab, factor);
+    factor = ModuleBase::Integral::simpson(ngrid, integrand, &rab[1]);
     factor = 1. / std::sqrt(factor);
 
     std::for_each(value_tbu, value_tbu + ngrid, [factor](double& x) { x *= factor; });
     transform(for_r_space);
     delete[] rab;
     delete[] integrand;
-    // unit test TBD!
 }
 
 void NumericalRadial::transform(const bool forward)
 {
+#ifdef __DEBUG
+    // grid & value must exist in the initial space
     assert(forward ? (rgrid_ && rvalue_) : (kgrid_ && kvalue_));
+#endif
+
+    // do nothing if there is no grid in the destination space
     if ((forward && !kgrid_) || (!forward && !rgrid_))
     {
         return;
     }
 
-    // currently only FFT-compliant grid is supported!
-    assert(is_fft_compliant_);
-
-    // value array must be pre-allocated
     if (forward)
     { // r -> k
-        sbt_->radrfft(l_, nr_, rgrid_[nr_ - 1], rvalue_, kvalue_, pr_);
+        if (is_fft_compliant_)
+        {
+            sbt_.radrfft(l_, nr_, rgrid_[nr_ - 1], rvalue_, kvalue_, pr_);
+        }
+        else
+        {
+            sbt_.direct(l_, nr_, rgrid_, rvalue_, nk_, kgrid_, kvalue_, pr_);
+        }
         pk_ = 0;
     }
     else
     { // k -> r
-        sbt_->radrfft(l_, nk_, kgrid_[nk_ - 1], kvalue_, rvalue_, pk_);
+        if (is_fft_compliant_)
+        {
+            sbt_.radrfft(l_, nk_, kgrid_[nk_ - 1], kvalue_, rvalue_, pk_);
+        }
+        else
+        {
+            sbt_.direct(l_, nk_, kgrid_, kvalue_, nr_, rgrid_, rvalue_, pk_);
+        }
         pr_ = 0;
     }
 }
 
-void NumericalRadial::check_fft_compliancy()
+bool NumericalRadial::is_fft_compliant(const int nr,
+                                       const double* const rgrid,
+                                       const int nk,
+                                       const double* const kgrid) const
 {
-    is_fft_compliant_ = rgrid_ && kgrid_ && nr_ == nk_ && nr_ >= 2;
-    if (!is_fft_compliant_)
+    if (!rgrid || !kgrid || nr != nk || nr < 2)
     {
-        return;
+        return false;
     }
 
-    double dr = rgrid_[nr_ - 1] / (nr_ - 1);
-    double dk = kgrid_[nk_ - 1] / (nk_ - 1);
+    double dr = rgrid[nr - 1] / (nr - 1);
+    double dk = kgrid[nk - 1] / (nk - 1);
     double tol = 4.0 * std::numeric_limits<double>::epsilon();
 
-    is_fft_compliant_ = std::abs(dr * dk - PI / (nr_ - 1)) < tol
-                        && std::all_of(rgrid_, rgrid_ + nr_,
-                                [&](double& r) { return std::abs(r - std::distance(rgrid_, &r) * dr) < tol; })
-                        && std::all_of(kgrid_, kgrid_ + nk_, 
-                                [&](double& k) { return std::abs(k - std::distance(kgrid_, &k) * dk) < tol; });
+    return std::abs(dr * dk - PI / (nr - 1)) < tol
+           && std::all_of(rgrid, rgrid + nr, [&](const double& r) { return std::abs(r - (&r - rgrid) * dr) < tol; })
+           && std::all_of(kgrid, kgrid + nk, [&](const double& k) { return std::abs(k - (&k - kgrid) * dk) < tol; });
 }
