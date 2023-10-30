@@ -398,7 +398,9 @@ void Input::Default(void)
     // exx										//Peize Lin add 2018-06-20
     //----------------------------------------------------------
     exx_hybrid_alpha = "default";
-    exx_hse_omega = 0.11;
+    exx_cam_alpha = "default";
+    exx_cam_beta = "default";
+    exx_hse_omega = "default";
 
     exx_separate_loop = true;
     exx_hybrid_step = 100;
@@ -1885,6 +1887,14 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_hybrid_alpha);
         }
+        else if (strcmp("exx_cam_alpha", word) == 0)
+        {
+            read_value(ifs, exx_cam_alpha);
+        }
+        else if (strcmp("exx_cam_beta", word) == 0)
+        {
+            read_value(ifs, exx_cam_beta);
+        }
         else if (strcmp("exx_hse_omega", word) == 0)
         {
             read_value(ifs, exx_hse_omega);
@@ -2576,6 +2586,47 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             exx_hybrid_alpha = "1";
         else if (dft_functional_lower == "pbe0" || dft_functional_lower == "hse" || dft_functional_lower == "scan0")
             exx_hybrid_alpha = "0.25";
+        else 
+            exx_hybrid_alpha = "0.0";
+    }
+    if (exx_cam_alpha == "default")
+    {
+        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
+            exx_cam_alpha = "1";
+        else if (dft_functional == "cam_pbeh")
+            exx_cam_alpha = "0.2";
+        else 
+            exx_cam_alpha = "0.0";
+    }
+    if (exx_cam_beta == "default")
+    {
+        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe")
+            exx_cam_beta = "-1";
+        else if (dft_functional == "lrc_wpbeh")
+            exx_cam_beta = "-0.8";
+        else if (dft_functional == "cam_pbeh")
+            exx_cam_beta = "0.8";
+        else 
+            exx_cam_beta = "0.0";
+    }
+    if (exx_hse_omega == "default")
+    {
+        if (dft_functional == "hse")
+            exx_hse_omega = "0.11";
+        else if (dft_functional == "lc_pbe")
+            exx_hse_omega = "0.33";
+        else if (dft_functional == "lc_wpbe")
+            exx_hse_omega = "0.4";
+        else if (dft_functional == "lrc_wpbe")
+            exx_hse_omega = "0.3";
+        else if (dft_functional == "lrc_wpbeh")
+            exx_hse_omega = "0.2";
+        else if (dft_functional == "cam_pbeh")
+            exx_hse_omega = "0.7";
+        else 
+            exx_hse_omega = "0.0";
     }
     if (exx_real_number == "default")
     {
@@ -2588,10 +2639,14 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     {
         std::string dft_functional_lower = dft_functional;
         std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
-        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
+        if (dft_functional == "hf" || dft_functional == "pbe0" || dft_functional == "scan0" ||
+            dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
+            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
             exx_ccp_rmesh_times = "5";
         else if (dft_functional_lower == "hse")
             exx_ccp_rmesh_times = "1.5";
+        else if (dft_functional == "cam_pbeh")
+            exx_ccp_rmesh_times = "3";
     }
     if (symmetry == "default")
     {   //deal with no-forced default value
@@ -3228,7 +3283,9 @@ void Input::Bcast()
 
     // Peize Lin add 2018-06-20
     Parallel_Common::bcast_string(exx_hybrid_alpha);
-    Parallel_Common::bcast_double(exx_hse_omega);
+    Parallel_Common::bcast_string(exx_cam_alpha);
+    Parallel_Common::bcast_string(exx_cam_beta);
+    Parallel_Common::bcast_string(exx_hse_omega);
     Parallel_Common::bcast_bool(exx_separate_loop);
     Parallel_Common::bcast_int(exx_hybrid_step);
     Parallel_Common::bcast_double(exx_lambda);

@@ -30,8 +30,8 @@ namespace ModuleESolver
 
   protected:
     virtual void hamilt2density(const int istep, const int iter, const double ethr) override;
-    virtual void updatepot(const int istep, const int iter) override;
     virtual void afterscf(const int istep) override;
+    virtual bool do_after_converge(const int istep, int &iter) override;
     void cal_edm_tddft();
 };
 

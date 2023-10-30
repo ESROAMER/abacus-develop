@@ -364,6 +364,8 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
 
     ofs << "\n#Parameters (14.exx)" << std::endl;
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_alpha", exx_hybrid_alpha, "fraction of Fock exchange in hybrid functionals");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_cam_alpha", exx_cam_alpha, "fraction of the full-range parts of Fock exchange in range-separated hybrid funtionals");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_cam_beta", exx_cam_beta, "fraction of the short-range parts of Fock exchange in range-separated hybrid funtionals");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hse_omega", exx_hse_omega, "range-separation parameter in HSE functional");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_separate_loop", exx_separate_loop, "if 1, a two-step method is employed, else it will start with a GGA-Loop, and then Hybrid-Loop");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_step", exx_hybrid_step, "the maximal electronic iteration number in the evaluation of Fock exchange");

@@ -13,10 +13,14 @@ std::vector<int> XC_Functional::func_id(1);
 int XC_Functional::func_type = 0;
 bool XC_Functional::use_libxc = true;
 double XC_Functional::hybrid_alpha = 0.25;
+double XC_Functional::cam_alpha = 0.0;
+double XC_Functional::cam_beta = 0.25;
 
-void XC_Functional::get_hybrid_alpha(const double alpha_in)
+void XC_Functional::get_hybrid_mixing(const double alpha_in, const double cam_alpha_in, const double cam_beta_in)
 {
     hybrid_alpha = alpha_in;
+    cam_alpha = cam_alpha_in;
+    cam_beta = cam_beta_in;
 }
 
 int XC_Functional::get_func_type()
@@ -175,6 +179,36 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
         func_type = 4;
         use_libxc = true;
     }
+    else if( xc_func == "LC_PBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LC_PBEOP);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LC_WPBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LC_WPBE);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LRC_WPBE")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LRC_WPBE);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "LRC_WPBEH")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_LRC_WPBEH);
+        func_type = 4;
+        use_libxc = true;
+    }
+    else if( xc_func == "CAM_PBEH")
+    {
+        func_id.push_back(XC_HYB_GGA_XC_CAM_PBEH);
+        func_type = 4;
+        use_libxc = true;
+    }
 #endif
     else
     {
@@ -213,9 +247,11 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
 #endif
 
 #ifndef USE_LIBXC
-    if(xc_func == "SCAN" || xc_func == "HSE" || xc_func == "SCAN0")
+    if(xc_func == "SCAN" || xc_func == "HSE" || xc_func == "SCAN0" ||
+        xc_func == "LC_PBE" || xc_func == "LC_WPBE" || xc_func == "LRC_WPBE" ||
+        xc_func == "LRC_PBEH" || xc_func == "CAM_PBEH")
     {
-        ModuleBase::WARNING_QUIT("set_xc_type","to use SCAN, SCAN0, or HSE, LIBXC is required");
+        ModuleBase::WARNING_QUIT("set_xc_type","to use SCAN, SCAN0, HSE, long-range corrected (LC_PBE, LC_WPBE...) or CAM_PBEH LIBXC is required");
     }
     use_libxc = false;
 #endif
@@ -294,6 +330,61 @@ std::vector<xc_func_type> XC_Functional::init_func(const int xc_polarized)
 			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha, 
 				GlobalC::exx_info.info_global.hse_omega, 
 				GlobalC::exx_info.info_global.hse_omega };
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+
+        // Long-range corrected functionals:
+        else if( id == XC_HYB_GGA_XC_LC_PBEOP ) // LC version of PBE
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.330,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_LC_PBEOP );
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.33
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LC_WPBE ) // Long-range corrected PBE (LC-wPBE) by Vydrov and Scuseria
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.400,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_LC_WPBE );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.4
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LRC_WPBE ) // Long-range corrected PBE (LRC-wPBE) by by Rohrdanz, Martins and Herbert
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.300,
+            // and  0.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_LRC_WPBE );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -1.0
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.3
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_LRC_WPBEH ) // Long-range corrected short-range hybrid PBE (LRC-wPBEh) by Rohrdanz, Martins and Herbert
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.200,
+            // and 20.0% short-range and 100.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_LRC_WPBEH );	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 1.0
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: -0.8
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.2
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
+		}
+        else if( id == XC_HYB_GGA_XC_CAM_PBEH ) // CAM hybrid screened exchange PBE version
+		{
+            // This is a range-separated hybrid functional with range-separation constant  0.700,
+            // and 100.0% short-range and 20.0% long-range exact exchange,
+            // using the error function kernel.
+			add_func( XC_HYB_GGA_XC_CAM_PBEH);	
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.cam_alpha,  //Fraction of Hartree-Fock exchange: 0.2
+				GlobalC::exx_info.info_global.cam_beta,  //Fraction of short-range exact exchange: 0.8
+				GlobalC::exx_info.info_global.hse_omega }; //Range separation constant: 0.7
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
 #endif

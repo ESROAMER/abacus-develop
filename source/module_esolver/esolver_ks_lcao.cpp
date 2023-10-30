@@ -145,7 +145,9 @@ namespace ModuleESolver
             /* In the special "two-level" calculation case,
             first scf iteration only calculate the functional without exact exchange.
             but in "nscf" calculation, there is no need of "two-level" method. */
-            if (ucell.atoms[0].ncpp.xc_func == "HF" || ucell.atoms[0].ncpp.xc_func == "PBE0" || ucell.atoms[0].ncpp.xc_func == "HSE")
+            if (ucell.atoms[0].ncpp.xc_func == "HSE" || ucell.atoms[0].ncpp.xc_func == "PBE0" ||
+                ucell.atoms[0].ncpp.xc_func == "LC_PBE" || ucell.atoms[0].ncpp.xc_func == "LC_WPBE" ||
+                ucell.atoms[0].ncpp.xc_func == "LRC_WPBEH" || ucell.atoms[0].ncpp.xc_func == "CAM_PBEH")
             {
                 XC_Functional::set_xc_type("pbe");
             }
@@ -866,6 +868,7 @@ namespace ModuleESolver
         RA.delete_grid();
     }
 }
+
 
     template <typename TK, typename TR>
     bool ESolver_KS_LCAO<TK, TR>::do_after_converge(int& iter)

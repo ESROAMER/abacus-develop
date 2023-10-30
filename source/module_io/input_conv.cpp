@@ -484,8 +484,11 @@ void Input_Conv::Convert(void)
         std::transform(INPUT.dft_functional.begin(), INPUT.dft_functional.end(), dft_functional_lower.begin(), tolower);
         GlobalC::restart.folder = GlobalV::global_readin_dir + "restart/";
         ModuleBase::GlobalFunc::MAKE_DIR(GlobalC::restart.folder);
-        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "hse"
-            || dft_functional_lower == "opt_orb" || dft_functional_lower == "scan0")
+        if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
+            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
+            || INPUT.dft_functional == "cam_pbeh"
+            )
         {
             GlobalC::restart.info_save.save_charge = true;
             GlobalC::restart.info_save.save_H = true;
@@ -500,8 +503,10 @@ void Input_Conv::Convert(void)
         std::string dft_functional_lower = INPUT.dft_functional;
         std::transform(INPUT.dft_functional.begin(), INPUT.dft_functional.end(), dft_functional_lower.begin(), tolower);
         GlobalC::restart.folder = GlobalV::global_readin_dir + "restart/";
-        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "hse"
-            || dft_functional_lower == "opt_orb" || dft_functional_lower == "scan0")
+        if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
+            || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
+            || INPUT.dft_functional == "cam_pbeh")
         {
             GlobalC::restart.info_load.load_charge = true;
         }
@@ -544,6 +549,13 @@ void Input_Conv::Convert(void)
     {
         GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
+    else if (INPUT.dft_functional == "lc_pbe" || INPUT.dft_functional == "lc_wpbe" ||
+            INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh" ||
+            INPUT.dft_functional == "cam_pbeh" )
+    {
+        GlobalC::exx_info.info_global.cal_exx = true;
+        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
+    }
     else
     {
         GlobalC::exx_info.info_global.cal_exx = false;
@@ -554,8 +566,10 @@ void Input_Conv::Convert(void)
         // EXX case, convert all EXX related variables
         // GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(INPUT.exx_hybrid_alpha);
-        XC_Functional::get_hybrid_alpha(std::stod(INPUT.exx_hybrid_alpha));
-        GlobalC::exx_info.info_global.hse_omega = INPUT.exx_hse_omega;
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
+        GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
+        XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha), std::stod(INPUT.exx_cam_alpha), std::stod(INPUT.exx_cam_beta));
+        GlobalC::exx_info.info_global.hse_omega = std::stod(INPUT.exx_hse_omega);
         GlobalC::exx_info.info_global.separate_loop = INPUT.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = INPUT.exx_hybrid_step;
         GlobalC::exx_info.info_global.mixing_beta_for_loop1 = INPUT.exx_mixing_beta;

@@ -96,6 +96,38 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
     this->LM.divide_HS_in_frag(GlobalV::GAMMA_ONLY_LOCAL, orb_con.ParaV, kv.nks);
     //------------------init Hamilt_lcao----------------------
 
+#ifdef __EXX
+    // PLEASE simplify the Exx_Global interface
+    // mohan add 2021-03-25
+    // Peize Lin 2016-12-03
+    if (GlobalV::CALCULATION == "scf" || GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax"
+        || GlobalV::CALCULATION == "md")
+    {
+        if (GlobalC::exx_info.info_global.cal_exx)
+        {
+            /* In the special "two-level" calculation case,
+            first scf iteration only calculate the functional without exact exchange.
+            but in "nscf" calculation, there is no need of "two-level" method. */
+            if (ucell.atoms[0].ncpp.xc_func == "HSE" || ucell.atoms[0].ncpp.xc_func == "PBE0" ||
+                ucell.atoms[0].ncpp.xc_func == "LC_PBE" || ucell.atoms[0].ncpp.xc_func == "LC_WPBE" ||
+                ucell.atoms[0].ncpp.xc_func == "LRC_WPBEH" || ucell.atoms[0].ncpp.xc_func == "CAM_PBEH")
+            {
+                XC_Functional::set_xc_type("pbe");
+            }
+            else if (ucell.atoms[0].ncpp.xc_func == "SCAN0")
+            {
+                XC_Functional::set_xc_type("scan");
+            }
+
+            // GlobalC::exx_lcao.init();
+            if (GlobalC::exx_info.info_ri.real_number)
+                this->exx_lri_double->init(MPI_COMM_WORLD, kv);
+            else
+                this->exx_lri_complex->init(MPI_COMM_WORLD, kv);
+        }
+    }
+#endif
+
     // pass Hamilt-pointer to Operator
     this->UHM.genH.LM = this->UHM.LM = &this->LM;
     // pass basis-pointer to EState and Psi
@@ -213,6 +245,13 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
         this->pelec_td->print_band(ik, INPUT.printe, iter);
     }
 
+#ifdef __EXX
+    if (GlobalC::exx_info.info_ri.real_number)
+        this->exd->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
+    else
+        this->exc->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
+#endif
+
     // using new charge density.
     this->pelec->cal_energies(1);
 
@@ -236,7 +275,7 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
     this->pelec->f_en.deband = this->pelec->cal_delta_eband();
 }
 
-void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
+bool ESolver_KS_LCAO_TDDFT::do_after_converge(const int istep, int &iter)
 {
     // print Hamiltonian and Overlap matrix
     if (this->conv_elec)
@@ -269,7 +308,7 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
         }
     }
 
-    if (this->conv_elec)
+    if (stop)
     {
         if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao)
         {
@@ -301,27 +340,28 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
     }
 
     // store wfc and Hk laststep
-    if (istep >= (wf.init_wfc == "file" ? 0 : 1) && this->conv_elec)
-    {
-        if (this->psi_laststep == nullptr)
+        if (istep >= (wf.init_wfc == "file" ? 0 : 1) && this->conv_elec)
+        {
+            if (this->psi_laststep == nullptr)
 #ifdef __MPI
-            this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks,
-                                                                    this->LOWF.ParaV->ncol_bands,
-                                                                    this->LOWF.ParaV->nrow,
-                                                                    nullptr);
+                this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks,
+                                                                        this->LOWF.ParaV->ncol_bands,
+                                                                        this->LOWF.ParaV->nrow,
+                                                                        nullptr);
 #else
-            this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks, GlobalV::NBANDS, GlobalV::NLOCAL, nullptr);
+                this->psi_laststep = new psi::Psi<std::complex<double>>(kv.nks, GlobalV::NBANDS, GlobalV::NLOCAL, nullptr);
 #endif
 
-        if (td_htype == 1)
-        {
-            if (this->Hk_laststep == nullptr)
+            if (td_htype == 1)
             {
-                this->Hk_laststep = new std::complex<double>*[kv.nks];
-                for (int ik = 0; ik < kv.nks; ++ik)
+                if (this->Hk_laststep == nullptr)
                 {
-                    this->Hk_laststep[ik] = new std::complex<double>[this->LOC.ParaV->nloc];
-                    ModuleBase::GlobalFunc::ZEROS(Hk_laststep[ik], this->LOC.ParaV->nloc);
+                    this->Hk_laststep = new std::complex<double>*[kv.nks];
+                    for (int ik = 0; ik < kv.nks; ++ik)
+                    {
+                        this->Hk_laststep[ik] = new std::complex<double>[this->LOC.ParaV->nloc];
+                        ModuleBase::GlobalFunc::ZEROS(Hk_laststep[ik], this->LOC.ParaV->nloc);
+                    }
                 }
             }
             if (this->Sk_laststep == nullptr)
@@ -343,8 +383,7 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
             for (int index = 0; index < size0; ++index)
                 psi_laststep[0].get_pointer()[index] = psi[0].get_pointer()[index];
 
-            // store Hamiltonian
-            if (td_htype == 1)
+            for (int ik = 0; ik < kv.nks; ++ik)
             {
                 this->p_hamilt->updateHk(ik);
                 hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
@@ -352,7 +391,6 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
                 BlasConnector::copy(this->LOC.ParaV->nloc, h_mat.p, 1, Hk_laststep[ik], 1);
                 BlasConnector::copy(this->LOC.ParaV->nloc, s_mat.p, 1, Sk_laststep[ik], 1);
             }
-        }
 
         // calculate energy density matrix for tddft
         if (istep >= (wf.init_wfc == "file" ? 0 : 2) && module_tddft::Evolve_elec::td_edm == 0)
@@ -373,18 +411,32 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
         GlobalV::ofs_running << std::setiosflags(std::ios::showpoint);
         for (int ik = 0; ik < kv.nks; ik++)
         {
-            for (int ib = 0; ib < GlobalV::NBANDS; ib++)
+            GlobalV::ofs_running
+                << "------------------------------------------------------------------------------------------------"
+                << endl;
+            GlobalV::ofs_running << "Eii : " << endl;
+            GlobalV::ofs_running << "ik  iband    Eii (eV)" << endl;
+            GlobalV::ofs_running << std::setprecision(6);
+            GlobalV::ofs_running << std::setiosflags(ios::showpoint);
+            for (int ik = 0; ik < kv.nks; ik++)
             {
                 GlobalV::ofs_running << ik + 1 << "     " << ib + 1 << "      "
                                      << this->pelec_td->ekb(ik, ib) * ModuleBase::Ry_to_eV << std::endl;
             }
+            GlobalV::ofs_running << endl;
+            GlobalV::ofs_running
+                << "------------------------------------------------------------------------------------------------"
+                << endl;
         }
         GlobalV::ofs_running << std::endl;
         GlobalV::ofs_running
             << "------------------------------------------------------------------------------------------------"
             << std::endl;
     }
+    
+    return stop;
 }
+
 
 void ESolver_KS_LCAO_TDDFT::afterscf(const int istep)
 {

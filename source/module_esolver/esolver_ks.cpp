@@ -426,7 +426,7 @@ namespace ModuleESolver
                 if (this->conv_elec)
                 {
                     this->niter = iter;
-                    bool stop = this->do_after_converge(iter);
+                    bool stop = this->do_after_converge(istep, iter);
                     if(stop) break;
                 }
             }

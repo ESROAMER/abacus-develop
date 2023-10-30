@@ -74,6 +74,8 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 				return {};
 			case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
 				return {{"hse_omega", this->info.hse_omega}};
+			case Conv_Coulomb_Pot_K::Ccp_Type::Cam:
+				return {{"hse_omega", this->info.hse_omega}, {"cam_alpha", this->info.cam_alpha}, {"cam_beta", this->info.cam_beta}};
 			default:
 				throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
 		}

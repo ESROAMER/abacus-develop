@@ -319,7 +319,7 @@ double berryphase::stringPhase(int index_str,
 			std::complex<double> det(1.0,0.0);
 			int info = 0;
 			int *ipiv = new int[nbands];
-			LapackConnector::zgetrf(nbands, nbands, mat, nbands, ipiv, &info);				
+			LapackConnector::getrf(nbands, nbands, mat, nbands, ipiv, &info);				
 			for (int ib = 0; ib < nbands; ib++)
 			{
 				if (ipiv[ib] != (ib+1)) det = -det * mat(ib,ib);
@@ -361,7 +361,7 @@ double berryphase::stringPhase(int index_str,
 			std::complex<double> det(1.0,0.0);
 			int info = 0;
 			int *ipiv = new int[nbands];
-			LapackConnector::zgetrf(nbands, nbands, mat, nbands, ipiv, &info);				
+			LapackConnector::getrf(nbands, nbands, mat, nbands, ipiv, &info);				
 			for (int ib = 0; ib < nbands; ib++)
 			{
 				if (ipiv[ib] != (ib+1)) det = -det * mat(ib,ib);
