@@ -148,7 +148,40 @@ void Wavefunc_in_pw::make_table_q(
 		}// L
 	}// T
 
+	this->write_table_local(table_local);
+	// if(GlobalV::MY_RANK==0)
+	// {
+	// 	for(int it=0; it<GlobalC::ucell.ntype; it++)
+	// 	{
+	// 		std::stringstream ss;
+	// 		ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << "/LOCAL_G.dat";
+	// 		std::ofstream ofs(ss.str().c_str());
+	// 		for(int iq=0; iq<GlobalV::NQX; iq++)
+	// 		{
+	// 			int ic=0;
+	// 			double energy_q = pow((double)iq*GlobalV::DQ,2);
+	// 			ofs << energy_q; // unit (Ry)
+	// 			for(int L=0; L<GlobalC::ucell.atoms[it].nwl+1; L++)
+	// 			{
+	// 				for(int N=0; N<GlobalC::ucell.atoms[it].l_nchi[L]; N++)
+	// 				{
+	// 					ofs << " " << table_local(it,ic,iq);
+	// 					++ic;
+	// 				}
+	// 			}
+	// 			ofs << std::endl;
+	// 		}
+	// 		ofs.close();
+	// 	}
+	// }
 
+	return;
+}
+
+void Wavefunc_in_pw::write_table_local(
+	const ModuleBase::realArray &table_local
+)
+{
 	if(GlobalV::MY_RANK==0)
 	{
 		for(int it=0; it<GlobalC::ucell.ntype; it++)
@@ -174,9 +207,45 @@ void Wavefunc_in_pw::make_table_q(
 			ofs.close();
 		}
 	}
-
-	return;
 }
+
+void Wavefunc_in_pw::make_table_q(
+	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in,
+	ModuleBase::realArray &table_local
+)
+{
+	ModuleBase::TITLE("Wavefunc_in_pw","make_table_q");
+
+	table_local.zero_out();
+	for(size_t T=0; T!=orb_in.size(); ++T)
+	{
+		int ic=0;
+		for(size_t L=0; L!=orb_in[T].size(); ++L)
+		{
+			for(size_t N=0; N!=N_size[L]; ++N )
+			{
+				const auto &orb_origin = orbs_in[T][L][N];
+				const int meshr = orb_origin.getNr();
+				const double* rab = orb_origin.getRab();
+				const double* radial = orb_origin.getRadial();
+				const double* psir = orb_origin.getPsi_r();
+
+				double* table = new double[GlobalV::NQX];
+				Wavefunc_in_pw::integral(meshr, psir, radial, rab, L, table);
+				for(int iq=0; iq<GlobalV::NQX; iq++)
+					table_local(T, ic, iq) = table[iq];
+
+				delete[] table;
+				delete[] radial;
+				delete[] rab;
+				delete[] psir;
+				++ic;
+			}
+		}
+	}
+	this->write_table_local(table_local);
+}
+
 
 double Wavefunc_in_pw::smearing(const double &energy_x,
                                const double &ecut,
