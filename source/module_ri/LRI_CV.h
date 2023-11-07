@@ -39,6 +39,7 @@ public:
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
 		const double &kmesh_times,
 		const double &ccp_rmesh_times_in);
+
 	inline std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
 	cal_Vs(
 		const std::vector<TA> &list_A0,
@@ -123,6 +124,11 @@ private:
 		pthread_rwlock_t &rwlock_o11,
 		std::map<int,std::map<int,std::map<Abfs::Vector3_Order<double>,To11>>> &o11ws,
 		const Tfunc &func_cal_o11);
+
+	inline RI::Tensor<Tdata>
+	DPcal_V_lcq();
+
+	int get_nmax_total(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in);
 };
 
 #include "LRI_CV.hpp"

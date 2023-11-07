@@ -148,7 +148,8 @@ void Wavefunc_in_pw::make_table_q(
 		}// L
 	}// T
 
-	this->write_table_local(table_local);
+	std::string filename = "/LOCAL_G.dat";
+	this->write_table_local(table_local, filename);
 	// if(GlobalV::MY_RANK==0)
 	// {
 	// 	for(int it=0; it<GlobalC::ucell.ntype; it++)
@@ -179,7 +180,8 @@ void Wavefunc_in_pw::make_table_q(
 }
 
 void Wavefunc_in_pw::write_table_local(
-	const ModuleBase::realArray &table_local
+	const ModuleBase::realArray &table_local,
+	std:string filename,
 )
 {
 	if(GlobalV::MY_RANK==0)
@@ -187,7 +189,7 @@ void Wavefunc_in_pw::write_table_local(
 		for(int it=0; it<GlobalC::ucell.ntype; it++)
 		{
 			std::stringstream ss;
-			ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << "/LOCAL_G.dat";
+			ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << filename;
 			std::ofstream ofs(ss.str().c_str());
 			for(int iq=0; iq<GlobalV::NQX; iq++)
 			{
@@ -222,7 +224,7 @@ void Wavefunc_in_pw::make_table_q(
 		int ic=0;
 		for(size_t L=0; L!=orb_in[T].size(); ++L)
 		{
-			for(size_t N=0; N!=N_size[L]; ++N )
+			for(size_t N=0; N!=orb_in[T][L].size(); ++N )
 			{
 				const auto &orb_origin = orbs_in[T][L][N];
 				const int meshr = orb_origin.getNr();
@@ -243,7 +245,6 @@ void Wavefunc_in_pw::make_table_q(
 			}
 		}
 	}
-	this->write_table_local(table_local);
 }
 
 
