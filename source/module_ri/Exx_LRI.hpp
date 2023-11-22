@@ -132,10 +132,11 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 	const double frac = GlobalC::ucell.omega / ModuleBase::TWO_PI / ModuleBase::TWO_PI / ModuleBase::TWO_PI;
 	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
 		Vq2 = this->cv.cal_Vq2(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vs, frac);
-	this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq2);
+	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>> 
+		Vs_test = this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq2);
 
-	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
-	this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
+	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs_test);
+	this->exx_lri.set_Vs(std::move(Vs_test), this->info.V_threshold);
 
 	if(GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
 	{
