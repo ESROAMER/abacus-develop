@@ -130,7 +130,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
 	// test Vq2
 	const double frac = GlobalC::ucell.omega / ModuleBase::TWO_PI / ModuleBase::TWO_PI / ModuleBase::TWO_PI;
-	std::map<TA,std::map<TA,RI::Tensor<Tdata>>>
+	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
 		Vq2 = this->cv.cal_Vq2(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vs, frac);
 	this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq2);
 

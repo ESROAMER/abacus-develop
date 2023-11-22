@@ -149,7 +149,7 @@ void Wavefunc_in_pw::make_table_q(
 	}// T
 
 	std::string filename = "/LOCAL_G.dat";
-	this->write_table_local(table_local, filename);
+	write_table_local(table_local, filename);
 	// if(GlobalV::MY_RANK==0)
 	// {
 	// 	for(int it=0; it<GlobalC::ucell.ntype; it++)
@@ -181,7 +181,7 @@ void Wavefunc_in_pw::make_table_q(
 
 void Wavefunc_in_pw::write_table_local(
 	const ModuleBase::realArray &table_local,
-	std:string filename,
+	std::string &filename
 )
 {
 	if(GlobalV::MY_RANK==0)
@@ -226,7 +226,7 @@ void Wavefunc_in_pw::make_table_q(
 		{
 			for(size_t N=0; N!=orb_in[T][L].size(); ++N )
 			{
-				const auto &orb_origin = orbs_in[T][L][N];
+				const auto &orb_origin = orb_in[T][L][N];
 				const int meshr = orb_origin.getNr();
 				const double* rab = orb_origin.getRab();
 				const double* radial = orb_origin.getRadial();
@@ -264,8 +264,9 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int ik,
 	{
 		for(const auto &value : out_vec)
 		{
-			if(value > lmax) 
-				lmax = value;
+			int temp = value.size(); 
+			if(temp > lmax) 
+				lmax = temp;
 		}
 	}
 
@@ -280,7 +281,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int ik,
 	int iwall=0;
 	for(size_t T=0; T!=orb_in.size(); ++T)
 	{
-		for (size_t A = 0; A ! GlobalC::ucell.atoms[T].na; ++A) 
+		for (size_t A = 0; A!=GlobalC::ucell.atoms[T].na; ++A) 
 		{
 			std::complex<double>* sk = sf.get_sk(ik, T, A, wfc_basis);
 			int ic = 0;
@@ -301,7 +302,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int ik,
 						const int lm = L * L + m;
 						for(size_t ig = 0; ig != npw; ++ig)
 							psi(iwall, ig) = lphase * sk[ig] * ylm(lm, ig) * flq[ig];
-						++iwall
+						++iwall;
 					}
 
 					++ic;

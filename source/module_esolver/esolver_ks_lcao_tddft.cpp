@@ -277,69 +277,74 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
 
 bool ESolver_KS_LCAO_TDDFT::do_after_converge(const int istep, int &iter)
 {
-    // print Hamiltonian and Overlap matrix
-    if (this->conv_elec)
-    {
-        if (!GlobalV::GAMMA_ONLY_LOCAL)
-        {
-            this->UHM.GK.renew(true);
-        }
-        for (int ik = 0; ik < kv.nks; ++ik)
-        {
-            if (hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs)
-            {
-                this->p_hamilt->updateHk(ik);
-            }
-            bool bit = false; // LiuXh, 2017-03-21
-            // if set bit = true, there would be error in soc-multi-core calculation, noted by zhengdy-soc
-            if (this->psi != nullptr && (istep % GlobalV::out_interval == 0))
-            {
-                hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
-                this->p_hamilt->matrix(h_mat, s_mat);
-                ModuleIO::saving_HS(istep,
-                                    h_mat.p,
-                                    s_mat.p,
-                                    bit,
-                    hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs,
-                                    "data-" + std::to_string(ik),
-                                    this->LOWF.ParaV[0],
-                                    1); // LiuXh, 2017-03-21
-            }
-        }
-    }
 
-    if (stop)
+    bool stop = ESolver_KS_LCAO::do_after_converge(istep, iter);
+
+    if(stop)
     {
-        if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao)
+        // print Hamiltonian and Overlap matrix
+        if (this->conv_elec)
         {
-            elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_flag 
-            = elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao;
-        }
-        for (int ik = 0; ik < kv.nks; ik++)
-        {
-            if (istep % GlobalV::out_interval == 0)
+            if (!GlobalV::GAMMA_ONLY_LOCAL)
             {
-                    this->psi[0].fix_k(ik);
-                    this->pelec->print_psi(this->psi[0], istep);
+                this->UHM.GK.renew(true);
+            }
+            for (int ik = 0; ik < kv.nks; ++ik)
+            {
+                if (hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs)
+                {
+                    this->p_hamilt->updateHk(ik);
+                }
+                bool bit = false; // LiuXh, 2017-03-21
+                // if set bit = true, there would be error in soc-multi-core calculation, noted by zhengdy-soc
+                if (this->psi != nullptr && (istep % GlobalV::out_interval == 0))
+                {
+                    hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
+                    this->p_hamilt->matrix(h_mat, s_mat);
+                    ModuleIO::saving_HS(istep,
+                                        h_mat.p,
+                                        s_mat.p,
+                                        bit,
+                        hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs,
+                                        "data-" + std::to_string(ik),
+                                        this->LOWF.ParaV[0],
+                                        1); // LiuXh, 2017-03-21
+                }
             }
         }
-        elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_flag = 0;
-    }
 
-    // Calculate new potential according to new Charge Density
-    if (!this->conv_elec)
-    {
-        if (GlobalV::NSPIN == 4)
-            GlobalC::ucell.cal_ux();
-        this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
-        this->pelec->f_en.descf = this->pelec->cal_delta_escf();
-    }
-    else
-    {
-        this->pelec->cal_converged();
-    }
+        if (this->conv_elec)
+        {
+            if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao)
+            {
+                elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_flag 
+                = elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao;
+            }
+            for (int ik = 0; ik < kv.nks; ik++)
+            {
+                if (istep % GlobalV::out_interval == 0)
+                {
+                        this->psi[0].fix_k(ik);
+                        this->pelec->print_psi(this->psi[0], istep);
+                }
+            }
+            elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_flag = 0;
+        }
 
-    // store wfc and Hk laststep
+        // Calculate new potential according to new Charge Density
+        if (!this->conv_elec)
+        {
+            if (GlobalV::NSPIN == 4)
+                GlobalC::ucell.cal_ux();
+            this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
+            this->pelec->f_en.descf = this->pelec->cal_delta_escf();
+        }
+        else
+        {
+            this->pelec->cal_converged();
+        }
+
+        // store wfc and Hk laststep
         if (istep >= (wf.init_wfc == "file" ? 0 : 1) && this->conv_elec)
         {
             if (this->psi_laststep == nullptr)
@@ -363,75 +368,66 @@ bool ESolver_KS_LCAO_TDDFT::do_after_converge(const int istep, int &iter)
                         ModuleBase::GlobalFunc::ZEROS(Hk_laststep[ik], this->LOC.ParaV->nloc);
                     }
                 }
-            }
-            if (this->Sk_laststep == nullptr)
-            {
-                this->Sk_laststep = new std::complex<double>*[kv.nks];
-                for (int ik = 0; ik < kv.nks; ++ik)
+                if (this->Sk_laststep == nullptr)
                 {
-                    this->Sk_laststep[ik] = new std::complex<double>[this->LOC.ParaV->nloc];
-                    ModuleBase::GlobalFunc::ZEROS(Sk_laststep[ik], this->LOC.ParaV->nloc);
+                    this->Sk_laststep = new std::complex<double>*[kv.nks];
+                    for (int ik = 0; ik < kv.nks; ++ik)
+                    {
+                        this->Sk_laststep[ik] = new std::complex<double>[this->LOC.ParaV->nloc];
+                        ModuleBase::GlobalFunc::ZEROS(Sk_laststep[ik], this->LOC.ParaV->nloc);
+                    }
                 }
-            }
-        }
-
-        for (int ik = 0; ik < kv.nks; ++ik)
-        {
-            this->psi->fix_k(ik);
-            this->psi_laststep->fix_k(ik);
-            int size0 = psi->get_nbands() * psi->get_nbasis();
-            for (int index = 0; index < size0; ++index)
-                psi_laststep[0].get_pointer()[index] = psi[0].get_pointer()[index];
+            }    
 
             for (int ik = 0; ik < kv.nks; ++ik)
             {
-                this->p_hamilt->updateHk(ik);
-                hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
-                this->p_hamilt->matrix(h_mat, s_mat);
-                BlasConnector::copy(this->LOC.ParaV->nloc, h_mat.p, 1, Hk_laststep[ik], 1);
-                BlasConnector::copy(this->LOC.ParaV->nloc, s_mat.p, 1, Sk_laststep[ik], 1);
+                this->psi->fix_k(ik);
+                this->psi_laststep->fix_k(ik);
+                int size0 = psi->get_nbands() * psi->get_nbasis();
+                for (int index = 0; index < size0; ++index)
+                    psi_laststep[0].get_pointer()[index] = psi[0].get_pointer()[index];
+
+                // store Hamiltonian
+                if (td_htype == 1)
+                {
+                    this->p_hamilt->updateHk(ik);
+                    hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
+                    this->p_hamilt->matrix(h_mat, s_mat);
+                    BlasConnector::copy(this->LOC.ParaV->nloc, h_mat.p, 1, Hk_laststep[ik], 1);
+                    BlasConnector::copy(this->LOC.ParaV->nloc, s_mat.p, 1, Sk_laststep[ik], 1);
+                }
             }
 
-        // calculate energy density matrix for tddft
-        if (istep >= (wf.init_wfc == "file" ? 0 : 2) && module_tddft::Evolve_elec::td_edm == 0)
-        {
-            this->cal_edm_tddft();
-        }
-    }
+            // calculate energy density matrix for tddft
+            if (istep >= (wf.init_wfc == "file" ? 0 : 2) && module_tddft::Evolve_elec::td_edm == 0)
+            {
+                this->cal_edm_tddft();
+            }
+        }    
 
-    // print "eigen value" for tddft
-    if (this->conv_elec)
-    {
-        GlobalV::ofs_running
-            << "------------------------------------------------------------------------------------------------"
-            << std::endl;
-        GlobalV::ofs_running << "Eii : " << std::endl;
-        GlobalV::ofs_running << "ik  iband    Eii (eV)" << std::endl;
-        GlobalV::ofs_running << std::setprecision(6);
-        GlobalV::ofs_running << std::setiosflags(std::ios::showpoint);
-        for (int ik = 0; ik < kv.nks; ik++)
+        // print "eigen value" for tddft
+        if (this->conv_elec)
         {
             GlobalV::ofs_running
                 << "------------------------------------------------------------------------------------------------"
-                << endl;
-            GlobalV::ofs_running << "Eii : " << endl;
-            GlobalV::ofs_running << "ik  iband    Eii (eV)" << endl;
+                << std::endl;
+            GlobalV::ofs_running << "Eii : " << std::endl;
+            GlobalV::ofs_running << "ik  iband    Eii (eV)" << std::endl;
             GlobalV::ofs_running << std::setprecision(6);
-            GlobalV::ofs_running << std::setiosflags(ios::showpoint);
+            GlobalV::ofs_running << std::setiosflags(std::ios::showpoint);
             for (int ik = 0; ik < kv.nks; ik++)
             {
-                GlobalV::ofs_running << ik + 1 << "     " << ib + 1 << "      "
-                                     << this->pelec_td->ekb(ik, ib) * ModuleBase::Ry_to_eV << std::endl;
+                for (int ib = 0; ib < GlobalV::NBANDS; ib++)
+                {
+                    GlobalV::ofs_running << ik + 1 << "     " << ib + 1 << "      "
+                                         << this->pelec_td->ekb(ik, ib) * ModuleBase::Ry_to_eV << std::endl;
+                }
             }
-            GlobalV::ofs_running << endl;
+            GlobalV::ofs_running << std::endl;
             GlobalV::ofs_running
                 << "------------------------------------------------------------------------------------------------"
-                << endl;
+                << std::endl;
         }
-        GlobalV::ofs_running << std::endl;
-        GlobalV::ofs_running
-            << "------------------------------------------------------------------------------------------------"
-            << std::endl;
     }
     
     return stop;

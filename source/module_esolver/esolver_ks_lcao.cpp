@@ -871,7 +871,7 @@ namespace ModuleESolver
 
 
     template <typename TK, typename TR>
-    bool ESolver_KS_LCAO<TK, TR>::do_after_converge(int& iter)
+    bool ESolver_KS_LCAO<TK, TR>::do_after_converge(const int istep, int& iter)
 {
 #ifdef __EXX
     if (GlobalC::exx_info.info_ri.real_number)
