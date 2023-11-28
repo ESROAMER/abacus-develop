@@ -18,12 +18,19 @@
 #include <string>
 #include <stdexcept>
 
-inline RI::Tensor<double> tensor_conj(const RI::Tensor<double>& t) { return t; }
-inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::complex<double>>& t)
+// inline RI::Tensor<double> tensor_conj(const RI::Tensor<double>& t) { return t; }
+// inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::complex<double>>& t)
+// {
+//     RI::Tensor<std::complex<double>> r(t.shape);
+//     for (int i = 0;i < t.data->size();++i)(*r.data)[i] = std::conj((*t.data)[i]);
+//     return r;
+// }
+inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
+inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
 {
-    RI::Tensor<std::complex<double>> r(t.shape);
-    for (int i = 0;i < t.data->size();++i)(*r.data)[i] = std::conj((*t.data)[i]);
-    return r;
+	RI::Tensor<std::complex<double>> r(t.shape);
+	for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
+	return r;
 }
 template<typename Tdata, typename Tmatrix>
 auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tmatrix*> &mks_2D, const Parallel_Orbitals &pv)
@@ -56,8 +63,10 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tma
                     else
                         mR_2D = mR_2D + RI::Global_Func::convert<Tdata>(mk_frac);
                     };
-                if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
-                    set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5)));
+                // if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
+                //     set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5)));
+				if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
+					set_mR_2D(tensor_real(mk_2D * frac));
                 else set_mR_2D(mk_2D * frac);
 			}
 
