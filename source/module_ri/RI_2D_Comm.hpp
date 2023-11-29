@@ -25,13 +25,14 @@
 //     for (int i = 0;i < t.data->size();++i)(*r.data)[i] = std::conj((*t.data)[i]);
 //     return r;
 // }
-inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
-inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
-{
-	RI::Tensor<std::complex<double>> r(t.shape);
-	for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
-	return r;
-}
+// inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
+// inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
+// {
+// 	RI::Tensor<std::complex<double>> r(t.shape);
+// 	for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
+// 	return r;
+// }
+
 template<typename Tdata, typename Tmatrix>
 auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors &kv, const std::vector<const Tmatrix*> &mks_2D, const Parallel_Orbitals &pv)
 -> std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>>

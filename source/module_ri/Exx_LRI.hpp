@@ -133,7 +133,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 		Vq2 = this->cv.cal_Vq2(this->p_kv, Vs_ori);
 	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>> 
 		Vs = this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq2);
-	// this->cv.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs_ori, Vs);
+	this->cv.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs_ori, Vs);
 	//end test vq2
 
 	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);

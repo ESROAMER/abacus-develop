@@ -58,6 +58,14 @@ namespace RI_2D_Comm
 		const double mixing_beta,
 		const std::string mixing_mode);
 
+	inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
+	inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
+	{
+		RI::Tensor<std::complex<double>> r(t.shape);
+		for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
+		return r;
+	}
+
 //private:
 	extern std::vector<int> get_ik_list(const K_Vectors &kv, const int is_k);
 	extern inline std::tuple<int,int,int> get_iat_iw_is_block(const int iwt);
