@@ -424,8 +424,7 @@ auto LRI_CV<Tdata>::cal_Vq1(const K_Vectors* kv,
 						const ModulePW::PW_Basis_K* wfc_basis,
 						const Structure_Factor& sf,
 						const std::vector<TA> &list_A0,
-						const std::vector<TAC> &list_A1,
-						const double &frac)
+						const std::vector<TAC> &list_A1)
 -> std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
 {
 	ModuleBase::TITLE("LRI_CV","cal_Vq1");
@@ -434,25 +433,40 @@ auto LRI_CV<Tdata>::cal_Vq1(const K_Vectors* kv,
 	const int nks0 = kv->nks/nspin0;
 	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>> datas;
 	datas.resize(nks0);
+	const size_t nabfs = Exx_Abfs::Construct_Orbs::get_norb(this->abfs);
+	const size_t nabfs_ccp = Exx_Abfs::Construct_Orbs::get_norb(this->abfs_ccp);
+	std::vector<ModuleBase::ComplexMatrix> abfs_in_G = this->get_orb_q(kv, wfc_basis, sf, this->abfs);
+	std::vector<ModuleBase::ComplexMatrix> abfs_ccp_in_G = this->get_orb_q(kv, wfc_basis, sf, this->abfs_ccp);
+	std::map<int, int> abfs_nw = Exx_Abfs::Construct_Orbs::get_nw(this->abfs);
+	std::map<int, int> abfs_ccp_nw = Exx_Abfs::Construct_Orbs::get_nw(this->abfs_ccp);
+
+	// for (int i = 0; i < GlobalC::ucell.nat; i++)
+	// {
+	// 	int a = GlobalC::ucell.iat2ia[i];
+    //     int t = GlobalC::ucell.iat2it[i];
+    //     for(int j = 0; j < GlobalC::ucell.atoms[t].nw; ++j)
+	// 	{
+	// 		std::cout<<"norb1:\t"<<GlobalC::ucell.itiaiw2iwt(t, a, j)<<"norb2:\t"<<Exx_Abfs::Construct_Orbs::get_itiaiw2iwt(this->lcaos, t, a, j)<<std::endl;
+	// 	}
+	// }
+
+	std::set<TA> unique_set_A1;
+	for(const auto& pair : list_A1)
+		unique_set_A1.insert(pair.first);
+	std::vector<TA> unique_list_A1(unique_set_A1.begin(), unique_set_A1.end());
 
 	for(size_t ik=0; ik!=nks0; ++ik)
 	{
 		const int npw = wfc_basis->npwk[ik];
-		std::vector<ModuleBase::ComplexMatrix> abfs_in_G = this->get_orb_q(kv, wfc_basis, sf, this->abfs);
-		std::vector<ModuleBase::ComplexMatrix> abfs_ccp_in_G = this->get_orb_q(kv, wfc_basis, sf, this->abfs_ccp);
-		std::map<int, int> abfs_nw = Exx_Abfs::Construct_Orbs::get_nw(this->abfs);
-		std::map<int, int> abfs_ccp_nw = Exx_Abfs::Construct_Orbs::get_nw(this->abfs_ccp);
-		// const int nabfs = Exx_Abfs::Construct_Orbs::get_norb(this->abfs);
-		// const int nabfs_ccp = Exx_Abfs::Construct_Orbs::get_norb(this->abfs_ccp);
 
 		//#pragma omp parallel
 		for(size_t i0=0; i0!=list_A0.size(); ++i0)
 		{
 			//#pragma omp for schedule(dynamic) nowait
-			for(size_t i1=0; i1!=list_A1.size(); ++i1)
+			for(size_t i1=0; i1!=unique_list_A1.size(); ++i1)
 			{
 				const TA iat0 = list_A0[i0];
-				const TA iat1 = list_A1[i1].first;
+				const TA iat1 = unique_list_A1[i1];
 				const int it0 = GlobalC::ucell.iat2it[iat0];
 				const int ia0 = GlobalC::ucell.iat2ia[iat0];
 				const int it1 = GlobalC::ucell.iat2it[iat1];
@@ -461,7 +475,7 @@ auto LRI_CV<Tdata>::cal_Vq1(const K_Vectors* kv,
 				const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
 				int abfs_nw_t = abfs_nw[it0];
 				int abfs_ccp_nw_t = abfs_nw[it0];
-				RI::Tensor<Tdata> data;//(nabfs, nabfs_ccp);
+				RI::Tensor<std::complex<double>> data({nabfs, nabfs_ccp});
 
 				for(size_t j0=0; j0!=abfs_nw_t; ++j0)
 				{
@@ -472,14 +486,13 @@ auto LRI_CV<Tdata>::cal_Vq1(const K_Vectors* kv,
 						for(size_t ig=0; ig!=npw; ++ig)
 						{
 							ModuleBase::Vector3<double> gk = wfc_basis->getgcar(ik, ig) - kv->kvec_c[ik];
-							std::complex<double> phase = std::exp(ModuleBase::IMAG_UNIT*(gk*(-tau0+tau1)));
+							std::complex<double> phase = std::exp(ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT*(gk*(-tau0+tau1)));
 							data(iw0, iw1) += std::conj(abfs_in_G[ik](iw0, ig)) * abfs_ccp_in_G[ik](iw1, ig) * phase;
 						}
 					}
 				}
-
-				datas[ik][iat0][iat1] = data * frac;
-				//#pragma omp critical(LRI_CV_cal_datas)
+				//#pragma omp critical(LRI_CV_cal_Vq1)
+				datas[ik][iat0][iat1] = data;
 			}	
 		}
 	}
@@ -575,6 +588,8 @@ auto LRI_CV<Tdata>::cal_Vs_ewald(const K_Vectors* kv,
 
 	return datas;
 }
+
+
 template<typename Tdata>
 bool 
 LRI_CV<Tdata>::check_Vs(

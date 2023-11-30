@@ -255,6 +255,8 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int ik,
                                                ModuleBase::ComplexMatrix& psi,
                                                const ModuleBase::realArray& table_local)
 {
+	ModuleBase::TITLE("Wavefunc_in_pw","produce_local_basis_in_pw");
+
 	const int npw = gk.size();
 	assert(npw == wfc_basis->npwk[ik]);
 	assert(orb_in.size() == GlobalC::ucell.ntype);
