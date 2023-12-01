@@ -129,13 +129,14 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis, const S
 			{{"writable_Vws",true}});
 
 	// test Vq
-	// std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
-	// 	Vq2 = this->cv.cal_Vq2(this->p_kv, Vs_ori);
+	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
+		Vq2 = this->cv.cal_Vq2(this->p_kv, Vs_ori);
 	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
 		Vq1 = this->cv.cal_Vq1(this->p_kv, wfc_basis, sf, list_As_Vs.first, list_As_Vs.second[0]);
+	this->cv.check_Vq(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq1, Vq2);
 	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>> 
 		Vs = this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq1);
-	this->cv.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs_ori, Vs);
+	// this->cv.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs_ori, Vs);
 	//end test Vq
 
 	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
