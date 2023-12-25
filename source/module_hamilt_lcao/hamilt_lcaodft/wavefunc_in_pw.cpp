@@ -247,72 +247,6 @@ void Wavefunc_in_pw::make_table_q(
 	}
 }
 
-void Wavefunc_in_pw::produce_local_basis_in_pw(const int ik,
-											   std::vector<ModuleBase::Vector3<double>>& gk,
-											   const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in,
-                                               const ModulePW::PW_Basis_K* wfc_basis,
-                                               const Structure_Factor& sf,
-                                               ModuleBase::ComplexMatrix& psi,
-                                               const ModuleBase::realArray& table_local)
-{
-	const int npw = gk.size();
-	assert(npw == wfc_basis->npwk[ik]);
-	assert(orb_in.size() == GlobalC::ucell.ntype);
-
-	int lmax = std::numeric_limits<int>::min();
-	for(const auto &out_vec: orb_in)
-	{
-		for(const auto &value : out_vec)
-		{
-			int temp = value.size(); 
-			if(temp > lmax) 
-				lmax = temp;
-		}
-	}
-
-	const int total_lm = (lmax + 1) * (lmax + 1);
-	ModuleBase::matrix ylm(total_lm, npw);
-	std::complex<double> *aux = new std::complex<double>[npw];
-	double *chiaux = nullptr;
-
-	ModuleBase::YlmReal::Ylm_Real(total_lm, npw, ModuleBase::GlobalFunc::VECTOR_TO_PTR(gk), ylm);
-
-	std::vector<double> flq(npw);
-	int iwall=0;
-	for(size_t T=0; T!=orb_in.size(); ++T)
-	{
-		for (size_t A = 0; A!=GlobalC::ucell.atoms[T].na; ++A) 
-		{
-			std::complex<double>* sk = sf.get_sk(ik, T, A, wfc_basis);
-			int ic = 0;
-			for(size_t L=0; L!=orb_in[T].size(); ++L)
-			{
-				std::complex<double> lphase = pow(ModuleBase::NEG_IMAG_UNIT, L);
-				for(size_t N=0; N!=orb_in[T][L].size(); ++N )
-				{
-					for(size_t ig = 0; ig != npw; ++ig)
-						flq[ig] = ModuleBase::PolyInt::Polynomial_Interpolation(table_local,
-                                                                                T,
-                                                                                ic,
-                                                                                GlobalV::NQX,
-                                                                                GlobalV::DQ,
-                                                                                gk[ig].norm() * GlobalC::ucell.tpiba);
-					for(size_t m=0; m!=2*L+1; ++m)
-					{
-						const int lm = L * L + m;
-						for(size_t ig = 0; ig != npw; ++ig)
-							psi(iwall, ig) = lphase * sk[ig] * ylm(lm, ig) * flq[ig];
-						++iwall;
-					}
-
-					++ic;
-				} // end for N
-			} // end for L
-			delete[] sk;
-		} // end for A
-	} // end for T
-}
-
 double Wavefunc_in_pw::smearing(const double &energy_x,
                                const double &ecut,
                                const double &beta)
@@ -439,7 +373,6 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 								{//atomic_wfc_so
 									for(int m=0; m<2*L+1; m++)
 									{
-										std::cout<<"iwall: "<<iwall<<std::endl;
 										const int lm = L*L+m;
 										for(int ig=0; ig<npw; ig++)
 										{

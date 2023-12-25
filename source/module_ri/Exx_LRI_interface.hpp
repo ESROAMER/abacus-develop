@@ -26,7 +26,7 @@ void Exx_LRI_Interface<T, Tdata>::read_Hexxs(const std::string& file_name)
 	ModuleBase::timer::tick("Exx_LRI", "read_Hexxs");
 }
 template<typename T, typename Tdata>
-void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charge_Mixing& chgmix)
+void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charge_Mixing& chgmix, const ModulePW::PW_Basis_K* wfc_basis)
 {
 #ifdef __MPI
 		if ( GlobalC::exx_info.info_global.cal_exx )
@@ -43,7 +43,7 @@ void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charg
                 XC_Functional::set_xc_type("scan");
             }
 
-			exx_lri->cal_exx_ions();
+			exx_lri->cal_exx_ions(wfc_basis);
 		}
 
 		if (Exx_Abfs::Jle::generate_matrix)

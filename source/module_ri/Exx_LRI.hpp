@@ -94,7 +94,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 }
 
 template<typename Tdata>
-void Exx_LRI<Tdata>::cal_exx_ions()
+void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 {
 	ModuleBase::TITLE("Exx_LRI","cal_exx_ions");
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
@@ -124,17 +124,21 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 		list_As_Vs = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, period_Vs, 2, false);
 
 	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
-		Vs_ori = this->cv.cal_Vs(
+		Vs = this->cv.cal_Vs(
 			list_As_Vs.first, list_As_Vs.second[0],
 			{{"writable_Vws",true}});
 
-	// test Vq2
+	// test Vq
+	const double gk_ecut = 150;
 	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
-		Vq2 = this->cv.cal_Vq2(this->p_kv, Vs_ori);
-	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>> 
-		Vs = this->cv.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq2);
-	this->cv.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs_ori, Vs);
-	//end test vq2
+		Vq2 = this->evq.cal_Vq2(this->p_kv, Vs);
+	std::vector<std::map<TA,std::map<TA,RI::Tensor<std::complex<double>>>>>
+		Vq1 = this->evq.cal_Vq1(this->abfs, this->abfs_ccp, this->p_kv, wfc_basis, list_As_Vs.first, list_As_Vs.second[0], gk_ecut);
+	this->evq.check_Vq(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq1, Vq2);
+	// std::map<TA,std::map<TAC,RI::Tensor<Tdata>>> 
+	// 	Vs_test = this->evq.cal_Vs_ewald(this->p_kv, list_As_Vs.first, list_As_Vs.second[0], Vq1, this->info.ccp_rmesh_times);
+	// this->evq.check_Vs(list_As_Vs.first, list_As_Vs.second[0], Vs, Vs_test, this->info.ccp_rmesh_times);
+	//end test Vq
 
 	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
 	this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);

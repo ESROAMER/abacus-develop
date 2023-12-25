@@ -847,7 +847,7 @@ namespace ModuleESolver
         // rpa_interface.rpa_exx_lcao().info.files_abfs = GlobalV::rpa_orbitals;
         // rpa_interface.out_for_RPA(*(this->LOWF.ParaV), *(this->psi), this->LOC, this->pelec);
         RPA_LRI<TK, double> rpa_lri_double(GlobalC::exx_info.info_ri);
-        rpa_lri_double.cal_postSCF_exx(*dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(), MPI_COMM_WORLD, this->kv);
+        rpa_lri_double.cal_postSCF_exx(*dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(), MPI_COMM_WORLD, this->kv, this->pw_wfc);
         rpa_lri_double.init(MPI_COMM_WORLD, this->kv);
         rpa_lri_double.out_for_RPA(*(this->LOWF.ParaV), *(this->psi), this->pelec);
     }

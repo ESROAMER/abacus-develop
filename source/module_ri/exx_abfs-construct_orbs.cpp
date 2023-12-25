@@ -493,7 +493,10 @@ std::map<int, int> Exx_Abfs::Construct_Orbs::get_nw(const std::vector<std::vecto
 		for(size_t L=0; L!=orb_in[T].size(); ++L)
 		{
 			for(size_t N=0; N!=orb_in[T][L].size(); ++N)
-				++num;
+			{
+				for(size_t m=0; m!=2*L+1; ++m)
+					++num;
+			}	
 		}
 		data[T] = num;
 	}
@@ -514,35 +517,4 @@ int Exx_Abfs::Construct_Orbs::get_nmax_total(const std::vector<std::vector<std::
 	int nmax_total = *max_element(nmax_vec.begin(), nmax_vec.end());
 	
 	return nmax_total;
-}
-
-int Exx_Abfs::Construct_Orbs::get_norb(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in)
-{
-	int num = 0;
-	for(size_t T=0; T!=orb_in.size(); ++T)
-	{
-		for(size_t L=0; L!=orb_in[T].size(); ++L)
-		{
-			for(size_t N=0; N!=orb_in[T][L].size(); ++N)
-				++num;
-		}
-	}
-	return num;
-}
-
-std::vector<int> Exx_Abfs::Construct_Orbs::get_iat2iwt(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in)
-{
-	std::vector<int> iat2iwt(GlobalC::ucell.nat);
-	int iat=0;
-	int iwt=0;
-	for(size_t it=0; it!=orb_in.size(); ++it)
-	{
-		for(int ia=0; ia<GlobalC::ucell.atoms[it].na; ia++)
-		{
-			iat2iwt[iat] = iwt;
-			iwt += get_nw(orb_in)[it];
-			++iat;
-		}	
-	}
-	return iat2iwt;
 }
