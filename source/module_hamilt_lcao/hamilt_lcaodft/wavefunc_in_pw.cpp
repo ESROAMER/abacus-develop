@@ -373,7 +373,6 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 								{//atomic_wfc_so
 									for(int m=0; m<2*L+1; m++)
 									{
-										std::cout<<"iwall: "<<iwall<<std::endl;
 										const int lm = L*L+m;
 										for(int ig=0; ig<npw; ig++)
 										{
