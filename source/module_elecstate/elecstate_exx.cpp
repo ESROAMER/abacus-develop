@@ -13,7 +13,8 @@ void ElecState::set_exx(const double& Eexx)
 
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        this->f_en.exx = GlobalC::exx_info.info_global.hybrid_alpha * Eexx;
+        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+        this->f_en.exx = coeff * Eexx;
     }
     return;
 }

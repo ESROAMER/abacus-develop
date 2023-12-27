@@ -15,8 +15,8 @@ class Conv_Coulomb_Pot_K
         Ccp, //
         Hf,  //
         Hse, //  	"hse_omega"
-        Cam
-    }; //  	"hse_omega", "cam_alpha", "cam_beta"
+        Cam  //  	"hse_omega", "cam_alpha", "cam_beta"
+    }; 
 
     template<typename T> 
     static T cal_orbs_ccp(const T &orbs,

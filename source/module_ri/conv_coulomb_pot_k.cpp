@@ -28,38 +28,6 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hf(const int& nks,
     return psik2_ccp;
 }
 
-// std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hf(const K_Vectors& kv,
-//                                                    const std::vector<double>& psif,
-//                                                    const std::vector<double>& k_radial,
-//                                                    const double omega = 0)
-// {
-//     double bvk_a1 = GlobalC::ucell.a1.norm() * kv.nmp[0];
-//     double bvk_a2 = GlobalC::ucell.a2.norm() * kv.nmp[1];
-//     double bvk_a3 = GlobalC::ucell.a3.norm() * kv.nmp[2];
-
-//     double min_len = bvk_a1 < bvk_a2 ? bvk_a1 : bvk_a2;
-//     min_len = min_len < bvk_a3 ? min_len : bvk_a3;
-//     double Rcut = 0.5 * min_len;
-//     double Rw = 1.092 * Rcut;
-//     double gamma = 5.0 / Rcut;
-
-//     double dr = 0.01;
-//     int nr = 5 * Rcut / dr;
-//     std::vector<double> psik2_ccp(psif.size());
-//     for (size_t ik = 0; ik < psif.size(); ++ik)
-//     {
-//         double sum_r = 0;
-//         for (size_t ir = 0; ir != nr; ++ir)
-//         {
-//             double r = dr * ir;
-//             sum_r += (std::erfc(gamma * r)
-//                       + 0.5 * std::erfc((std::log(r) - std::log(Rcut)) / std::log(1.092)) * std::erf(gamma * r))
-//                      * std::sin(r * k_radial[ik]);
-//         }
-//         psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * dr * sum_r * k_radial[ik];
-//     }
-//     return psik2_ccp;
-// }
 
 std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hse(const std::vector<double>& psif,
                                                     const std::vector<double>& k_radial,
