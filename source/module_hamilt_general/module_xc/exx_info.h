@@ -16,6 +16,7 @@ struct Exx_Info
 		double cam_beta = 0.25;
 		double hse_omega = 0.11;
 		double mixing_beta_for_loop1 = 1.0;
+		bool use_ewald = false;
 		
 		bool separate_loop = true;
 		size_t hybrid_step = 1;
@@ -48,6 +49,7 @@ struct Exx_Info
 		const double &hse_omega;
 		const double &cam_alpha;
 		const double &cam_beta;
+		const bool &use_ewald;
 		
 		bool real_number = false;
 		
@@ -71,7 +73,8 @@ struct Exx_Info
 			:ccp_type(info_global.ccp_type),
 			 hse_omega(info_global.hse_omega),
 			 cam_alpha(info_global.cam_alpha),
-			 cam_beta(info_global.cam_beta){}
+			 cam_beta(info_global.cam_beta),
+			 use_ewald(info_global.use_ewald){}
 	};
 	Exx_Info_RI info_ri;
 
