@@ -3,12 +3,14 @@
 
 #include "xc_functional.h"
 #include "module_ri/conv_coulomb_pot_k.h"
+#include "ewald_Vq.h"
 
 struct Exx_Info
 {
 	struct Exx_Info_Global
 	{
 		bool cal_exx = false;
+		bool use_ewald = false;
 
 		Conv_Coulomb_Pot_K::Ccp_Type ccp_type;
 		double hybrid_alpha = 0.25;
@@ -16,7 +18,6 @@ struct Exx_Info
 		double cam_beta = 0.25;
 		double hse_omega = 0.11;
 		double mixing_beta_for_loop1 = 1.0;
-		bool use_ewald = false;
 		
 		bool separate_loop = true;
 		size_t hybrid_step = 1;
@@ -29,18 +30,26 @@ struct Exx_Info
 	{
 		const Conv_Coulomb_Pot_K::Ccp_Type &ccp_type;
 		const double &hse_omega;
-		const double &cam_alpha;
-		const double &cam_beta;
 		double lambda;
 
 		Exx_Info_Lip( const Exx_Info::Exx_Info_Global &info_global )
 			:ccp_type(info_global.ccp_type),
-			 hse_omega(info_global.hse_omega),
-			 cam_alpha(info_global.cam_alpha),
-			 cam_beta(info_global.cam_beta){}
+			 hse_omega(info_global.hse_omega){}
 	};
-	Exx_Info_Lip info_lip;	
+	Exx_Info_Lip info_lip;
 
+
+	struct Exx_Info_Ewald
+	{
+		Ewald_Vq::Ewald_Type ewald_type;
+		double ewald_ecut = 150;
+		double ewald_qdiv = 2;
+		double ewald_lambda = 1;
+		double ewald_niter = 100;
+		double ewald_eps = 1e-6;
+		double ewald_arate = 3;
+	};
+	Exx_Info_Lip info_ewald;
 
 
 	struct Exx_Info_RI
@@ -49,7 +58,6 @@ struct Exx_Info
 		const double &hse_omega;
 		const double &cam_alpha;
 		const double &cam_beta;
-		const bool &use_ewald;
 		
 		bool real_number = false;
 		
@@ -73,8 +81,7 @@ struct Exx_Info
 			:ccp_type(info_global.ccp_type),
 			 hse_omega(info_global.hse_omega),
 			 cam_alpha(info_global.cam_alpha),
-			 cam_beta(info_global.cam_beta),
-			 use_ewald(info_global.use_ewald){}
+			 cam_beta(info_global.cam_beta){}
 	};
 	Exx_Info_RI info_ri;
 
