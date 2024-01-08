@@ -159,8 +159,8 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 			}
 		};
 		std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>>
-			Vq_lr = this->evq.cal_Vq1(this->info_ewald.ewald_type, this->abfs, this->p_kv, wfc_basis, list_As_Vs.first, list_As_Vs.second[0], get_ewald_parameter());
-		
+			Vq_full = this->evq.cal_Vq_q(this->info_ewald.ewald_type, this->abfs, this->p_kv, wfc_basis, list_As_Vs.first, list_As_Vs.second[0], get_ewald_parameter());
+		this->cal_Vs_ewald(this->p_kv, Vs, Vq_full, this->info.cam_alpha, this->info.cam_beta);
 	}
 
 	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
