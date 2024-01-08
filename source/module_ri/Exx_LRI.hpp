@@ -66,12 +66,13 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 
 	if(this->info_ewald.use_ewald)
 	{
-		assert(this->info.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Hse);
 		assert(this->info_ewald.ewald_type.ker_type == Kernal_Type::Hf);
-		auto get_ccp_parameter = [this]() -> std::map<std::string,double>
+		if(this->info.cam_alpha)
 		{
-			return {{"hse_omega", this->info.hse_omega}};
-		};
+			assert(this->info.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Hse);
+			std::map<std::string,double> param = {{"hse_omega", this->info.hse_omega}};
+			this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, this->info.ccp_type, param, this->info.ccp_rmesh_times, p_kv->nkstot_full);
+		}
 	}
 	else
 	{
@@ -91,9 +92,8 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 					throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
 			}
 		};
+		this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, this->info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times, p_kv->nkstot_full);
 	}
-    this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times, p_kv->nkstot_full);
-
 
 	for( size_t T=0; T!=this->abfs.size(); ++T )
 		GlobalC::exx_info.info_ri.abfs_Lmax = std::max( GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size())-1 );

@@ -533,7 +533,14 @@ void Input_Conv::Convert(void)
     if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
+        if(INPUT.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
+        }
+        else
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
     else if (dft_functional_lower == "hse")
     {
