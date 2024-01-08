@@ -238,7 +238,8 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 	ModuleBase::matrix stress_exx;
 	if( GlobalC::exx_info.info_global.cal_exx )
 	{
-		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam ||
+                                GlobalC::exx_info.info_global.use_ewald) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
 		if(isforce)
 		{
 			if(GlobalC::exx_info.info_ri.real_number)

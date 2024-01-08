@@ -13,7 +13,10 @@ void ElecState::set_exx(const double& Eexx)
 
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                              || GlobalC::exx_info.info_global.use_ewald)
+                                 ? 1.0
+                                 : GlobalC::exx_info.info_global.hybrid_alpha;
         this->f_en.exx = coeff * Eexx;
     }
     return;
@@ -24,7 +27,10 @@ void ElecState::set_exx(const std::complex<double>& Eexx)
 
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                              || GlobalC::exx_info.info_global.use_ewald)
+                                 ? 1.0
+                                 : GlobalC::exx_info.info_global.hybrid_alpha;
         this->f_en.exx = coeff * std::real(Eexx);
     }
     return;
@@ -32,4 +38,4 @@ void ElecState::set_exx(const std::complex<double>& Eexx)
 #endif //__LCAO
 #endif //__EXX
 
-}
+} // namespace elecstate

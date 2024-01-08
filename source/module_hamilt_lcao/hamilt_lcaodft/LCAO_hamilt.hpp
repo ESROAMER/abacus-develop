@@ -32,7 +32,8 @@ void LCAO_Hamilt::calculate_HR_exx_sparse(
 	ModuleBase::TITLE("LCAO_Hamilt","calculate_HR_exx_sparse");
 	ModuleBase::timer::tick("LCAO_Hamilt","calculate_HR_exx_sparse");
 
-	const Tdata frac = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
+	const Tdata frac = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam || 
+							GlobalC::exx_info.info_global.use_ewald) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
 
 	std::map<int,std::array<double,3>> atoms_pos;
 	for(int iat=0; iat<GlobalC::ucell.nat; ++iat)
