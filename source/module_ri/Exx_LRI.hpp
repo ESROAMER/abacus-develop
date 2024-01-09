@@ -70,12 +70,12 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 	if(this->info_ewald.use_ewald)
 	{
 		assert(this->info.cam_beta || this->info.cam_alpha);
-		if(this->info.cam_beta)
+		if(this->info.cam_alpha)
 		{
 			assert(this->info_ewald.ewald_type.ker_type == Kernal_Type::Hf);
 			this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, Conv_Coulomb_Pot_K::Ccp_Type::Ccp, {}, this->info.ccp_rmesh_times, p_kv->nkstot_full);
 		}
-		if(this->info.cam_alpha)
+		if(this->info.cam_beta)
 		{
 			std::map<std::string,double> param = {{"hse_omega", this->info.hse_omega}};
 			this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, Conv_Coulomb_Pot_K::Ccp_Type::Hse, param, this->info.ccp_rmesh_times, p_kv->nkstot_full);
@@ -141,7 +141,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 
 	if(this->info_ewald.use_ewald)
 	{
-		if(this->info.cam_alpha)
+		if(this->info.cam_beta)
 		{
 			this->cv.set_orbitals(
 				this->lcaos, this->abfs, this->abfs_ccp_sr,
@@ -153,7 +153,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 					{{"writable_Vws",true}});
 		}
 
-		if(this->info.cam_beta)
+		if(this->info.cam_alpha)
 		{
 			auto get_ewald_parameter = [this]() -> std::map<std::string,double>
 			{
