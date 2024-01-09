@@ -3,7 +3,7 @@
 
 #include "xc_functional.h"
 #include "module_ri/conv_coulomb_pot_k.h"
-#include "ewald_Vq.h"
+#include "module_ri/ewald_Vq.h"
 
 struct Exx_Info
 {
