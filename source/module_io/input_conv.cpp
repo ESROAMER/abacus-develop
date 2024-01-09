@@ -561,7 +561,14 @@ void Input_Conv::Convert(void)
             INPUT.dft_functional == "cam_pbeh" )
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
+        if(INPUT.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
+        }
+        else:
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
     }
     else
     {
@@ -594,6 +601,13 @@ void Input_Conv::Convert(void)
         GlobalC::exx_info.info_ri.cauchy_stress_threshold = INPUT.exx_cauchy_stress_threshold;
         GlobalC::exx_info.info_ri.ccp_threshold = INPUT.exx_ccp_threshold;
         GlobalC::exx_info.info_ri.ccp_rmesh_times = std::stod(INPUT.exx_ccp_rmesh_times);
+
+        GlobalC::exx_info.info_ewald.ewald_ecut = INPUT.exx_ewald_ecut;
+        GlobalC::exx_info.info_ewald.ewald_qdiv = INPUT.exx_ewald_qdiv;
+        GlobalC::exx_info.info_ewald.ewald_lambda = INPUT.exx_lambda;
+        GlobalC::exx_info.info_ewald.ewald_niter = INPUT.exx_ewald_niter;
+        GlobalC::exx_info.info_ewald.ewald_eps = INPUT.exx_ewald_eps;
+        GlobalC::exx_info.info_ewald.ewald_arate = INPUT.exx_ewald_arate;
 
         Exx_Abfs::Jle::Lmax = INPUT.exx_opt_orb_lmax;
         Exx_Abfs::Jle::Ecut_exx = INPUT.exx_opt_orb_ecut;

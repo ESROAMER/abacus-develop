@@ -379,6 +379,14 @@ class Input
     double exx_ccp_threshold;
     std::string exx_ccp_rmesh_times;
 
+    bool exx_use_ewald;
+    int exx_fq_type;
+    double exx_ewald_ecut;
+    double exx_ewald_qdiv;
+    int exx_ewald_niter;
+    double exx_ewald_eps;
+    int exx_ewald_arate;
+
     std::string exx_distribute_type;
 
     int exx_opt_orb_lmax;

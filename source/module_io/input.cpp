@@ -422,6 +422,14 @@ void Input::Default(void)
     exx_ccp_threshold = 1E-8;
     exx_ccp_rmesh_times = "default";
 
+    exx_use_ewald = false;
+    exx_fq_type = 0;
+    exx_ewald_ecut = 150;
+    exx_ewald_qdiv = 2;
+    exx_ewald_niter = 30;
+    exx_ewald_eps = 1E-6;
+    exx_ewald_arate = 3;
+
     exx_distribute_type = "htime";
 
     exx_opt_orb_lmax = 0;
@@ -1983,6 +1991,34 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_opt_orb_tolerence);
         }
+        else if (strcmp("exx_use_ewald", word) == 0)
+        {
+            read_value(ifs, exx_use_ewald);
+        }
+        else if (strcmp("exx_fq_type", word) == 0)
+        {
+            read_value(ifs, exx_fq_type);
+        }
+        else if (strcmp("exx_ewald_ecut", word) == 0)
+        {
+            read_value(ifs, exx_ewald_ecut);
+        }
+        else if (strcmp("exx_ewald_qdiv", word) == 0)
+        {
+            read_value(ifs, exx_ewald_qdiv);
+        }
+        else if (strcmp("exx_ewald_niter", word) == 0)
+        {
+            read_value(ifs, exx_ewald_niter);
+        }
+        else if (strcmp("exx_ewald_eps", word) == 0)
+        {
+            read_value(ifs, exx_ewald_eps);
+        }
+        else if (strcmp("exx_ewald_arate", word) == 0)
+        {
+            read_value(ifs, exx_ewald_arate);
+        }
         else if (strcmp("noncolin", word) == 0)
         {
             read_bool(ifs, noncolin);
@@ -2578,10 +2614,10 @@ void Input::Default_2(void) // jiyy add 2019-08-04
         ModuleBase::WARNING_QUIT("Input", "dft_functional must be set when use_paw is true");
     }
 
+    std::string dft_functional_lower = dft_functional;
+    std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
     if (exx_hybrid_alpha == "default")
     {
-        std::string dft_functional_lower = dft_functional;
-        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
         if (dft_functional_lower == "hf" || rpa)
             exx_hybrid_alpha = "1";
         else if (dft_functional_lower == "pbe0" || dft_functional_lower == "hse" || dft_functional_lower == "scan0")
@@ -2591,39 +2627,44 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_cam_alpha == "default")
     {
-        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
-            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
+        if (dft_functional_lower == "hf" || rpa
+            dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
+            dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
             exx_cam_alpha = "1";
-        else if (dft_functional == "cam_pbeh")
+        else if (dft_functional_lower == "cam_pbeh")
             exx_cam_alpha = "0.2";
+        else if (dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
+            exx_cam_alpha = "0.25";
         else 
             exx_cam_alpha = "0.0";
     }
     if (exx_cam_beta == "default")
     {
-        if (dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
-            dft_functional == "lrc_wpbe")
+        if (dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
+            dft_functional_lower == "lrc_wpbe")
             exx_cam_beta = "-1";
-        else if (dft_functional == "lrc_wpbeh")
+        else if (dft_functional_lower == "lrc_wpbeh")
             exx_cam_beta = "-0.8";
-        else if (dft_functional == "cam_pbeh")
+        else if (dft_functional_lower == "cam_pbeh")
             exx_cam_beta = "0.8";
+        else if (dft_functional_lower == "hse")
+            exx_cam_beta = "0.25";
         else 
             exx_cam_beta = "0.0";
     }
     if (exx_hse_omega == "default")
     {
-        if (dft_functional == "hse")
+        if (dft_functional_lower == "hse")
             exx_hse_omega = "0.11";
-        else if (dft_functional == "lc_pbe")
+        else if (dft_functional_lower == "lc_pbe")
             exx_hse_omega = "0.33";
-        else if (dft_functional == "lc_wpbe")
+        else if (dft_functional_lower == "lc_wpbe")
             exx_hse_omega = "0.4";
-        else if (dft_functional == "lrc_wpbe")
+        else if (dft_functional_lower == "lrc_wpbe")
             exx_hse_omega = "0.3";
-        else if (dft_functional == "lrc_wpbeh")
+        else if (dft_functional_lower == "lrc_wpbeh")
             exx_hse_omega = "0.2";
-        else if (dft_functional == "cam_pbeh")
+        else if (dft_functional_lower == "cam_pbeh")
             exx_hse_omega = "0.7";
         else 
             exx_hse_omega = "0.0";
@@ -2637,15 +2678,13 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_ccp_rmesh_times == "default")
     {
-        std::string dft_functional_lower = dft_functional;
-        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
-        if (dft_functional == "hf" || dft_functional == "pbe0" || dft_functional == "scan0" ||
-            dft_functional == "lc_pbe" || dft_functional == "lc_wpbe" ||
-            dft_functional == "lrc_wpbe" || dft_functional == "lrc_wpbeh")
+        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0" ||
+            dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
+            dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
             exx_ccp_rmesh_times = "5";
         else if (dft_functional_lower == "hse")
             exx_ccp_rmesh_times = "1.5";
-        else if (dft_functional == "cam_pbeh")
+        else if (dft_functional_lower == "cam_pbeh")
             exx_ccp_rmesh_times = "3";
     }
     if (symmetry == "default")
@@ -3307,6 +3346,13 @@ void Input::Bcast()
     Parallel_Common::bcast_int(exx_opt_orb_lmax);
     Parallel_Common::bcast_double(exx_opt_orb_ecut);
     Parallel_Common::bcast_double(exx_opt_orb_tolerence);
+    Parallel_Common::bcast_bool(exx_use_ewald);
+    Parallel_Common::bcast_int(exx_fq_type);
+    Parallel_Common::bcast_double(exx_ewald_ecut);
+    Parallel_Common::bcast_double(exx_ewald_qdiv);
+    Parallel_Common::bcast_int(exx_ewald_niter);
+    Parallel_Common::bcast_double(exx_ewald_eps);
+    Parallel_Common::bcast_int(exx_ewald_arate);
 
     Parallel_Common::bcast_bool(noncolin);
     Parallel_Common::bcast_bool(lspinorb);
@@ -3799,6 +3845,25 @@ void Input::Check(void)
         {
             ModuleBase::WARNING_QUIT("INPUT", "exx_opt_orb_tolerence must >=0");
         }
+    }
+    if (exx_use_ewald)
+    {
+        if (exx_ewald_ecut <= 0)
+            ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_ecut > 0");
+        if (exx_fq_type == 0)
+        {
+            if (exx_ewald_niter <= 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_niter > 0");
+            if (exx_ewald_eps < 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_ecut >= 0");
+            if (exx_ewald_arate < 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_arate >= 0");
+        }
+        else if (exx_fq_type == 1)
+            if (exx_lambda <= 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_lambda > 0");
+        else
+            ModuleBase::WARNING_QUIT("INPUT", "only exx_fq_type=0 or 1 are supported");
     }
 
     if (berry_phase)

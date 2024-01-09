@@ -28,18 +28,20 @@ void OperatorEXX<OperatorLCAO<double, double>>::contributeHk(int ik)
     // Peize Lin add 2016-12-03
     if(XC_Functional::get_func_type()==4 || XC_Functional::get_func_type()==5)
     {
+		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam || 
+								GlobalC::exx_info.info_global.use_ewald) ? 1.0 : GlobalC::exx_info.info_global.hybrid_alpha;
 		if(GlobalC::exx_info.info_ri.real_number)
 			RI_2D_Comm::add_Hexx(
 				kv,
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				*this->LM->Hexxd,
 				*this->LM);
 		else
 			RI_2D_Comm::add_Hexx(
 				kv,
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				*this->LM->Hexxc,
 				*this->LM);
     }

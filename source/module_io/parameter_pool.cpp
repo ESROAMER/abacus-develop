@@ -1240,6 +1240,34 @@ bool input_parameters_set(std::map<std::string, InputParameter> input_parameters
     {
         INPUT.exx_opt_orb_tolerence = *static_cast<double*>(input_parameters["exx_opt_orb_tolerence"].get());
     }
+    else if (input_parameters.count("exx_use_ewald") != 0)
+    {
+        INPUT.exx_use_ewald = *static_cast<bool*>(input_parameters["exx_use_ewald"].get());
+    }
+    else if (input_parameters.count("exx_fq_type") != 0)
+    {
+        INPUT.exx_fq_type = *static_cast<int*>(input_parameters["exx_fq_type"].get());
+    }
+    else if (input_parameters.count("exx_ewald_ecut") != 0)
+    {
+        INPUT.exx_ewald_ecut = *static_cast<double*>(input_parameters["exx_ewald_ecut"].get());
+    }
+    else if (input_parameters.count("exx_ewald_qdiv") != 0)
+    {
+        INPUT.exx_ewald_qdiv = *static_cast<double*>(input_parameters["exx_ewald_qdiv"].get());
+    }
+    else if (input_parameters.count("exx_ewald_niter") != 0)
+    {
+        INPUT.exx_ewald_niter = *static_cast<int*>(input_parameters["exx_ewald_niter"].get());
+    }
+    else if (input_parameters.count("exx_ewald_eps") != 0)
+    {
+        INPUT.exx_ewald_eps = *static_cast<double*>(input_parameters["exx_ewald_eps"].get());
+    }
+    else if (input_parameters.count("exx_ewald_arate") != 0)
+    {
+        INPUT.exx_ewald_arate = *static_cast<int*>(input_parameters["exx_ewald_arate"].get());
+    }
     else if (input_parameters.count("td_force_dt") != 0)
     {
         INPUT.td_force_dt = *static_cast<double*>(input_parameters["td_force_dt"].get());

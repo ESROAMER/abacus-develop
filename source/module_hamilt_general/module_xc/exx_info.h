@@ -42,14 +42,14 @@ struct Exx_Info
 	struct Exx_Info_Ewald
 	{
 		Ewald_Vq::Ewald_Type ewald_type;
-		bool &use_ewald;
+		const bool &use_ewald;
 
 		double ewald_ecut = 150;
 		double ewald_qdiv = 2;
 		double ewald_lambda = 1;
-		double ewald_niter = 100;
+		int ewald_niter = 100;
 		double ewald_eps = 1e-6;
-		double ewald_arate = 3;
+		int ewald_arate = 3;
 
 		Exx_Info_Lip( const Exx_Info::Exx_Info_Global &info_global )
 			:use_ewald(info_global.use_ewald){}
