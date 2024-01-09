@@ -64,14 +64,21 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 		this->abfs = Exx_Abfs::IO::construct_abfs( abfs_same_atom, GlobalC::ORB, this->info.files_abfs, this->info.kmesh_times );
 	Exx_Abfs::Construct_Orbs::print_orbs_size(this->abfs, GlobalV::ofs_running);
 
+	for( size_t T=0; T!=this->abfs.size(); ++T )
+		GlobalC::exx_info.info_ri.abfs_Lmax = std::max( GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size())-1 );
+
 	if(this->info_ewald.use_ewald)
 	{
-		assert(this->info_ewald.ewald_type.ker_type == Kernal_Type::Hf);
+		assert(this->info.cam_beta || this->info.cam_alpha);
+		if(this->info.cam_beta)
+		{
+			assert(this->info_ewald.ewald_type.ker_type == Kernal_Type::Hf);
+			this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, Conv_Coulomb_Pot_K::Ccp_Type::Ccp, {}, this->info.ccp_rmesh_times, p_kv->nkstot_full);
+		}
 		if(this->info.cam_alpha)
 		{
-			assert(this->info.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Hse);
 			std::map<std::string,double> param = {{"hse_omega", this->info.hse_omega}};
-			this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, this->info.ccp_type, param, this->info.ccp_rmesh_times, p_kv->nkstot_full);
+			this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, Conv_Coulomb_Pot_K::Ccp_Type::Hse, param, this->info.ccp_rmesh_times, p_kv->nkstot_full);
 		}
 	}
 	else
@@ -93,14 +100,11 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in)
 			}
 		};
 		this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, this->info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times, p_kv->nkstot_full);
+
+		this->cv.set_orbitals(
+			this->lcaos, this->abfs, this->abfs_ccp,
+			this->info.kmesh_times, this->info.ccp_rmesh_times );
 	}
-
-	for( size_t T=0; T!=this->abfs.size(); ++T )
-		GlobalC::exx_info.info_ri.abfs_Lmax = std::max( GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size())-1 );
-
-	this->cv.set_orbitals(
-		this->lcaos, this->abfs, this->abfs_ccp,
-		this->info.kmesh_times, this->info.ccp_rmesh_times );
 
 	ModuleBase::timer::tick("Exx_LRI", "init");
 }
@@ -135,33 +139,52 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 	const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA,std::array<Tcell,Ndim>>>>>
 		list_As_Vs = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, period_Vs, 2, false);
 
-	std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
-		Vs = this->cv.cal_Vs(
-			list_As_Vs.first, list_As_Vs.second[0],
-			{{"writable_Vws",true}});
-
 	if(this->info_ewald.use_ewald)
 	{
-		auto get_ewald_parameter = [this]() -> std::map<std::string,double>
+		if(this->info.cam_alpha)
 		{
-			switch(this->info_ewald.ewald_type.aux_func)
+			this->cv.set_orbitals(
+				this->lcaos, this->abfs, this->abfs_ccp_sr,
+				this->info.kmesh_times, this->info.ccp_rmesh_times );
+
+			std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
+				Vs = this->cv.cal_Vs(
+					list_As_Vs.first, list_As_Vs.second[0],
+					{{"writable_Vws",true}});
+		}
+
+		if(this->info.cam_beta)
+		{
+			auto get_ewald_parameter = [this]() -> std::map<std::string,double>
 			{
-				case Auxiliary_Func::Default:
-					return {};
-				case Auxiliary_Func::Type_1:
-					return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_qdense", this->info_ewald.ewald_qdense},
-							{"ewald_niter", this->info_ewald.ewald_niter}, {"ewald_eps", this->info_ewald.ewald_eps},
-							{"ewald_arate", this->info_ewald.ewald_arate}};
-				case Auxiliary_Func::Type_2:
-					return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_lambda", this->info_ewald.ewald_lambda}};
-				default:
-					throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
-			}
-		};
-		std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>>
-			Vq_full = this->evq.cal_Vq_q(this->info_ewald.ewald_type, this->abfs, this->p_kv, wfc_basis, list_As_Vs.first, list_As_Vs.second[0], get_ewald_parameter());
-		this->cal_Vs_ewald(this->p_kv, Vs, Vq_full, this->info.cam_alpha, this->info.cam_beta);
+				switch(this->info_ewald.ewald_type.aux_func)
+				{
+					case Auxiliary_Func::Default:
+						return {};
+					case Auxiliary_Func::Type_1:
+						return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_qdense", this->info_ewald.ewald_qdense},
+								{"ewald_niter", this->info_ewald.ewald_niter}, {"ewald_eps", this->info_ewald.ewald_eps},
+								{"ewald_arate", this->info_ewald.ewald_arate}};
+					case Auxiliary_Func::Type_2:
+						return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_lambda", this->info_ewald.ewald_lambda}};
+					default:
+						throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
+				}
+			};
+			std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>>
+				Vq_full = this->evq.cal_Vq_q(this->info_ewald.ewald_type, this->abfs, this->p_kv, wfc_basis, list_As_Vs.first, list_As_Vs.second[0], get_ewald_parameter());
+			this->cal_Vs_ewald(this->p_kv, Vs, Vq_full, list_As_Vs.first, list_As_Vs.second[0], this->info.cam_alpha, this->info.cam_beta);
+
+			this->cv.set_orbitals(
+				this->lcaos, this->abfs, this->abfs_ccp,
+				this->info.kmesh_times, this->info.ccp_rmesh_times );
+		}
 	}
+	else
+		std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
+			Vs = this->cv.cal_Vs(
+				list_As_Vs.first, list_As_Vs.second[0],
+				{{"writable_Vws",true}});
 
 	this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
 	this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
