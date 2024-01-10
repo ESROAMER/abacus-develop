@@ -34,7 +34,7 @@
 #include "module_psi/kernels/device.h"
 
 template <typename T>
-void Input_Conv::parse_expression(const std::string &fn, std::vector<T> &vec)
+void Input_Conv::parse_expression(const std::string& fn, std::vector<T>& vec)
 {
     ModuleBase::TITLE("Input_Conv", "parse_expression");
     int count = 0;
@@ -42,10 +42,13 @@ void Input_Conv::parse_expression(const std::string &fn, std::vector<T> &vec)
     std::vector<std::string> str;
     std::stringstream ss(fn);
     std::string section;
-    while (ss >> section) {
+    while (ss >> section)
+    {
         int index = 0;
-        if (str.empty()) {
-            while (index < section.size() && std::isspace(section[index])) {
+        if (str.empty())
+        {
+            while (index < section.size() && std::isspace(section[index]))
+            {
                 index++;
             }
         }
@@ -255,7 +258,7 @@ void Input_Conv::Convert(void)
         GlobalV::fixed_atoms = INPUT.fixed_atoms;
     }
 
-    for(int i=0;i<3;i++)
+    for (int i = 0; i < 3; i++)
     {
         GlobalV::KSPACING[i] = INPUT.kspacing[i];
     }
@@ -397,7 +400,7 @@ void Input_Conv::Convert(void)
             ModuleBase::WARNING_QUIT("input_conv", "force & stress not ready for soc yet!");
         }
 
-        if(INPUT.gamma_only_local)
+        if (INPUT.gamma_only_local)
         {
             ModuleBase::WARNING_QUIT("input_conv", "soc does not support gamma only calculation");
         }
@@ -486,9 +489,8 @@ void Input_Conv::Convert(void)
         ModuleBase::GlobalFunc::MAKE_DIR(GlobalC::restart.folder);
         if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
             || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
-            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
-            || INPUT.dft_functional == "cam_pbeh"
-            )
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe"
+            || INPUT.dft_functional == "lrc_wpbeh" || INPUT.dft_functional == "cam_pbeh")
         {
             GlobalC::restart.info_save.save_charge = true;
             GlobalC::restart.info_save.save_H = true;
@@ -505,8 +507,8 @@ void Input_Conv::Convert(void)
         GlobalC::restart.folder = GlobalV::global_readin_dir + "restart/";
         if (INPUT.dft_functional == "hf" || INPUT.dft_functional == "pbe0" || INPUT.dft_functional == "hse"
             || INPUT.dft_functional == "opt_orb" || INPUT.dft_functional == "scan0" || INPUT.dft_functional == "lc_pbe"
-            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh"
-            || INPUT.dft_functional == "cam_pbeh")
+            || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe"
+            || INPUT.dft_functional == "lrc_wpbeh" || INPUT.dft_functional == "cam_pbeh")
         {
             GlobalC::restart.info_load.load_charge = true;
         }
@@ -533,11 +535,11 @@ void Input_Conv::Convert(void)
     if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        if(INPUT.exx_use_ewald)
+        if (INPUT.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Ewald_Vq::Kernal_Type::Hf;
-            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Ewald_Vq::Fq_type(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
@@ -556,18 +558,17 @@ void Input_Conv::Convert(void)
     {
         GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
-    else if (INPUT.dft_functional == "lc_pbe" || INPUT.dft_functional == "lc_wpbe" ||
-            INPUT.dft_functional == "lrc_wpbe" || INPUT.dft_functional == "lrc_wpbeh" ||
-            INPUT.dft_functional == "cam_pbeh" )
+    else if (INPUT.dft_functional == "lc_pbe" || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe"
+             || INPUT.dft_functional == "lrc_wpbeh" || INPUT.dft_functional == "cam_pbeh")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        if(INPUT.exx_use_ewald)
+        if (INPUT.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Ewald_Vq::Kernal_Type::Hf;
-            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
         }
-        else:
+        else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
     }
     else
@@ -582,7 +583,9 @@ void Input_Conv::Convert(void)
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(INPUT.exx_hybrid_alpha);
         GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
         GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
-        XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha), std::stod(INPUT.exx_cam_alpha), std::stod(INPUT.exx_cam_beta));
+        XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha),
+                                         std::stod(INPUT.exx_cam_alpha),
+                                         std::stod(INPUT.exx_cam_beta));
         GlobalC::exx_info.info_global.hse_omega = std::stod(INPUT.exx_hse_omega);
         GlobalC::exx_info.info_global.separate_loop = INPUT.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = INPUT.exx_hybrid_step;
@@ -617,8 +620,8 @@ void Input_Conv::Convert(void)
         if (INPUT.calculation != "nscf" && INPUT.symmetry == "1")
             ModuleSymmetry::Symmetry::symm_flag = 0;
     }
-#endif // __LCAO
-#endif // __EXX
+#endif                                               // __LCAO
+#endif                                               // __EXX
     GlobalC::ppcell.cell_factor = INPUT.cell_factor; // LiuXh add 20180619
 
     //----------------------------------------------------------
@@ -765,7 +768,7 @@ void Input_Conv::Convert(void)
     GlobalV::MIXING_NDIM = INPUT.mixing_ndim;
     GlobalV::MIXING_GG0 = INPUT.mixing_gg0;
     GlobalV::MIXING_TAU = INPUT.mixing_tau;
-    
+
     ModuleBase::timer::tick("Input_Conv", "Convert");
     return;
 }

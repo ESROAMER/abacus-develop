@@ -2627,7 +2627,7 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_cam_alpha == "default")
     {
-        if (dft_functional_lower == "hf" || rpa
+        if (dft_functional_lower == "hf" || rpa ||
             dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
             dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
             exx_cam_alpha = "1";
