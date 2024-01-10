@@ -1256,6 +1256,10 @@ bool input_parameters_set(std::map<std::string, InputParameter> input_parameters
     {
         INPUT.exx_ewald_qdiv = *static_cast<double*>(input_parameters["exx_ewald_qdiv"].get());
     }
+    else if (input_parameters.count("exx_ewald_qdense") != 0)
+    {
+        INPUT.exx_ewald_qdense = *static_cast<double*>(input_parameters["exx_ewald_qdense"].get());
+    }
     else if (input_parameters.count("exx_ewald_niter") != 0)
     {
         INPUT.exx_ewald_niter = *static_cast<int*>(input_parameters["exx_ewald_niter"].get());

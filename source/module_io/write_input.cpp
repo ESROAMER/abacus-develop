@@ -392,6 +392,7 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_fq_type", exx_fq_type, "auxiliary-function fq used in correction to V(q) at q->0");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_ecut", exx_ewald_ecut, "energy cutoff used in Ewald method");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdiv", exx_ewald_qdiv, "the order of q-divergence in auxiliary function");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdense", exx_ewald_qdense, "the density of q-points related to integral of fq_type=0");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_niter", exx_ewald_niter, "maximal iterations related to integral of fq_type=0");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_eps", exx_ewald_eps, "tolerance of iterations related to integral of fq_type=0");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_arate", exx_ewald_arate, "adaptive rate of iterations related to integral of fq_type=0");

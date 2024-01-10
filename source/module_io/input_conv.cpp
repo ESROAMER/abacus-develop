@@ -607,6 +607,7 @@ void Input_Conv::Convert(void)
 
         GlobalC::exx_info.info_ewald.ewald_ecut = INPUT.exx_ewald_ecut;
         GlobalC::exx_info.info_ewald.ewald_qdiv = INPUT.exx_ewald_qdiv;
+        GlobalC::exx_info.info_ewald.ewald_qdense = INPUT.exx_ewald_qdense;
         GlobalC::exx_info.info_ewald.ewald_lambda = INPUT.exx_lambda;
         GlobalC::exx_info.info_ewald.ewald_niter = INPUT.exx_ewald_niter;
         GlobalC::exx_info.info_ewald.ewald_eps = INPUT.exx_ewald_eps;

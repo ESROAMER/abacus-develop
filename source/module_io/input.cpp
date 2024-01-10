@@ -426,6 +426,7 @@ void Input::Default(void)
     exx_fq_type = 0;
     exx_ewald_ecut = 150;
     exx_ewald_qdiv = 2;
+    exx_ewald_qdense = 2;
     exx_ewald_niter = 30;
     exx_ewald_eps = 1E-6;
     exx_ewald_arate = 3;
@@ -2007,6 +2008,10 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_ewald_qdiv);
         }
+        else if (strcmp("exx_ewald_qdense", word) == 0)
+        {
+            read_value(ifs, exx_ewald_qdense);
+        }
         else if (strcmp("exx_ewald_niter", word) == 0)
         {
             read_value(ifs, exx_ewald_niter);
@@ -3350,6 +3355,7 @@ void Input::Bcast()
     Parallel_Common::bcast_int(exx_fq_type);
     Parallel_Common::bcast_double(exx_ewald_ecut);
     Parallel_Common::bcast_double(exx_ewald_qdiv);
+    Parallel_Common::bcast_double(exx_ewald_qdense);
     Parallel_Common::bcast_int(exx_ewald_niter);
     Parallel_Common::bcast_double(exx_ewald_eps);
     Parallel_Common::bcast_int(exx_ewald_arate);
@@ -3849,7 +3855,9 @@ void Input::Check(void)
     if (exx_use_ewald)
     {
         if (exx_ewald_ecut <= 0)
+        {
             ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_ecut > 0");
+        } 
         if (exx_fq_type == 0)
         {
             if (exx_ewald_niter <= 0)
@@ -3860,10 +3868,14 @@ void Input::Check(void)
                 ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_arate >= 0");
         }
         else if (exx_fq_type == 1)
+        {
             if (exx_lambda <= 0)
                 ModuleBase::WARNING_QUIT("INPUT", "must exx_lambda > 0");
+        }
         else
+        {
             ModuleBase::WARNING_QUIT("INPUT", "only exx_fq_type=0 or 1 are supported");
+        }
     }
 
     if (berry_phase)
