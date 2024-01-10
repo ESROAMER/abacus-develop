@@ -51,8 +51,8 @@ struct Exx_Info
 		double ewald_eps = 1e-6;
 		int ewald_arate = 3;
 
-		Exx_Info_Lip( const Exx_Info::Exx_Info_Global &info_global )
-			:use_ewald(info_global.use_ewald){}
+		Exx_Info_Ewald( const Exx_Info::Exx_Info_Global &info_global )
+			:ewald_type(Ewald_Vq::Kernal_Type::Hf), use_ewald(info_global.use_ewald){}
 	};
 	Exx_Info_Ewald info_ewald;
 
@@ -93,6 +93,7 @@ struct Exx_Info
 
 	Exx_Info()
 		:info_lip(this->info_global),
+		 info_ewald(this->info_global),
 		 info_ri(this->info_global){}
 };
 

@@ -536,7 +536,7 @@ void Input_Conv::Convert(void)
         if(INPUT.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Ewald_Vq::Kernal_Type::Hf;
             GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
         }
         else
@@ -564,7 +564,7 @@ void Input_Conv::Convert(void)
         if(INPUT.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.ewald_type.ker_type = Ewald_Vq::Kernal_Type::Hf;
             GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
         }
         else:
