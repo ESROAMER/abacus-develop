@@ -537,7 +537,7 @@ void Input_Conv::Convert(void)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
             GlobalC::exx_info.info_ewald.ewald_type.ker_type = Ewald_Vq::Kernal_Type::Hf;
-            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Auxiliary_Func(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_ewald.ewald_type.aux_func = Ewald_Vq::Fq_type(INPUT.exx_fq_type);
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;

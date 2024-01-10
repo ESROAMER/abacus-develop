@@ -159,13 +159,13 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 			{
 				switch(this->info_ewald.ewald_type.aux_func)
 				{
-					case Auxiliary_Func::Default:
+					case Fq_type::Default:
 						return {};
-					case Auxiliary_Func::Type_1:
+					case Fq_type::Type_1:
 						return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_qdense", this->info_ewald.ewald_qdense},
 								{"ewald_niter", this->info_ewald.ewald_niter}, {"ewald_eps", this->info_ewald.ewald_eps},
 								{"ewald_arate", this->info_ewald.ewald_arate}};
-					case Auxiliary_Func::Type_2:
+					case Fq_type::Type_2:
 						return {{"ewald_qdiv", this->info_ewald.ewald_qdiv}, {"ewald_lambda", this->info_ewald.ewald_lambda}};
 					default:
 						throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;

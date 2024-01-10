@@ -6,7 +6,7 @@
 #ifndef EWALD_VQ_CPP
 #define EWALD_VQ_CPP
 
-#include "ewald_Vq.h"
+#include "auxiliary_func.h"
 
 #include <algorithm>
 #include <cmath>
@@ -16,7 +16,7 @@
 #include "module_base/tool_title.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 
-std::vector<double> Ewald_Vq::cal_erfc_kernel(const std::vector<ModuleBase::Vector3<double>>& gk, const double& omega)
+std::vector<double> Auxiliary_Func::cal_erfc_kernel(const std::vector<ModuleBase::Vector3<double>>& gk, const double& omega)
 {
     const int npw = gk.size();
     std::vector<double> vg(npw);
@@ -30,7 +30,7 @@ std::vector<double> Ewald_Vq::cal_erfc_kernel(const std::vector<ModuleBase::Vect
     return vg;
 }
 
-std::vector<double> Ewald_Vq::cal_hf_kernel(const std::vector<ModuleBase::Vector3<double>>& gk)
+std::vector<double> Auxiliary_Func::cal_hf_kernel(const std::vector<ModuleBase::Vector3<double>>& gk)
 {
     const int npw = gk.size();
     std::vector<double> vg(npw);
@@ -43,9 +43,9 @@ std::vector<double> Ewald_Vq::cal_hf_kernel(const std::vector<ModuleBase::Vector
 }
 
 // for numerical integral of fq
-double Ewald_Vq::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
+double Auxiliary_Func::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
                            const T_cal_fq_type_0& func_cal_fq,
-                           const TC& nq_arr,
+                           const std::array<int, 3>& nq_arr,
                            const int& niter,
                            const double& eps,
                            const int& a_rate)
@@ -59,7 +59,7 @@ double Ewald_Vq::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
 }
 
 // for analytic integral of fq
-double Ewald_Vq::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
+double Auxiliary_Func::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
                            const T_cal_fq_type_1& func_cal_fq,
                            const double& fq_int)
 {
@@ -75,7 +75,7 @@ double Ewald_Vq::solve_chi(const std::vector<ModuleBase::Vector3<double>>& gk,
     return chi;
 }
 
-double Ewald_Vq::fq_type_0(const ModuleBase::Vector3<double>& qvec,
+double Auxiliary_Func::fq_type_0(const ModuleBase::Vector3<double>& qvec,
                            const int& qdiv,
                            std::vector<ModuleBase::Vector3<double>>& avec,
                            std::vector<ModuleBase::Vector3<double>>& bvec)
@@ -106,7 +106,7 @@ double Ewald_Vq::fq_type_0(const ModuleBase::Vector3<double>& qvec,
     return fq;
 }
 
-double Ewald_Vq::cal_type_0(const std::vector<ModuleBase::Vector3<double>>& gk,
+double Auxiliary_Func::cal_type_0(const std::vector<ModuleBase::Vector3<double>>& gk,
                             const int& qdiv,
                             const double& qdense,
                             const int& niter,
@@ -131,7 +131,7 @@ double Ewald_Vq::cal_type_0(const std::vector<ModuleBase::Vector3<double>>& gk,
     bvec[2].y = GlobalC::ucell.G.e32;
     bvec[2].z = GlobalC::ucell.G.e33;
 
-    TC nq_arr;
+    std::array<int, 3> nq_arr;
     std::transform(bvec.begin(), bvec.end(), nq_arr.begin(), [&qdense](ModuleBase::Vector3<double>& vec) {
         static_cast<int>(vec.norm() * qdense)
     });
@@ -141,7 +141,7 @@ double Ewald_Vq::cal_type_0(const std::vector<ModuleBase::Vector3<double>>& gk,
     return solve_chi(gk, func_cal_fq_type_0, nq_arr, niter, eps, a_rate);
 }
 
-double Ewald_Vq::fq_type_1(const ModuleBase::Vector3<double>& qvec,
+double Auxiliary_Func::fq_type_1(const ModuleBase::Vector3<double>& qvec,
                            const int& qdiv,
                            const ModulePW::PW_Basis_K* wfc_basis,
                            const double& lambda)
@@ -174,7 +174,7 @@ double Ewald_Vq::fq_type_1(const ModuleBase::Vector3<double>& qvec,
     return fq;
 }
 
-double Ewald_Vq::cal_type_1(const std::vector<ModuleBase::Vector3<double>>& gk,
+double Auxiliary_Func::cal_type_1(const std::vector<ModuleBase::Vector3<double>>& gk,
                             const int& qdiv,
                             const ModulePW::PW_Basis_K* wfc_basis,
                             const double& lambda)
@@ -198,8 +198,8 @@ double Ewald_Vq::cal_type_1(const std::vector<ModuleBase::Vector3<double>>& gk,
     return solve_chi(gk, func_cal_fq_type_1, fq_int);
 }
 
-double Ewald_Vq::Iter_Integral(const T_cal_fq_type_0& func_cal_fq,
-                               const TC& nq_arr,
+double Auxiliary_Func::Iter_Integral(const T_cal_fq_type_0& func_cal_fq,
+                               const std::array<int, 3>& nq_arr,
                                const int& niter,
                                const double& eps,
                                const int& a_rate)
@@ -216,7 +216,7 @@ double Ewald_Vq::Iter_Integral(const T_cal_fq_type_0& func_cal_fq,
     const int nqs
         = std::accumulate(nq_arr.begin(), nq_arr.end(), 1, [](int a, int b) { return (2 * a + 1) * (2 * b + 1); });
     std::array<double, 3> qstep{};
-    TC nq_arr_in{};
+    std::array<int, 3> nq_arr_in{};
     int ndim = 0;
     for (size_t i = 0; i != 3; ++i)
     {

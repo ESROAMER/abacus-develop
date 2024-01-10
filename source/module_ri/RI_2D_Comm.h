@@ -49,7 +49,7 @@ namespace RI_2D_Comm
 	{
 		RI::Tensor<std::complex<double>> r(t.shape);
 		for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
-		return r;
+			return r;
 	}
 
 //private:
