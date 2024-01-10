@@ -44,20 +44,6 @@ namespace RI_2D_Comm
 		const std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>> &Hs,
 		LCAO_Matrix &lm);
 
-	template<typename Tdata>
-	extern std::vector<std::vector<Tdata>> Hexxs_to_Hk(
-			const K_Vectors &kv,
-			const Parallel_Orbitals &pv, 
-			const std::vector< std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> &Hexxs,
-			const int ik);
-	template<typename Tdata>
-	std::vector<std::vector<Tdata>> pulay_mixing(
-		const Parallel_Orbitals &pv,
-		std::deque<std::vector<std::vector<Tdata>>> &Hk_seq,
-		const std::vector<std::vector<Tdata>> &Hk_new,
-		const double mixing_beta,
-		const std::string mixing_mode);
-
 	inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
 	inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
 	{

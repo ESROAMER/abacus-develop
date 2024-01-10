@@ -9,12 +9,14 @@
 #include <RI/global/Array_Operator.h>
 #include <RI/global/Global_Func-2.h>
 
+#include "module_cell/klist.h"
+
 #include <array>
 
 namespace RI_Util
 {
 	inline extern std::array<int,3>
-	get_Born_vonKarmen_period();
+	get_Born_vonKarmen_period(const K_Vectors &kv);
 
 	template<typename Tcell, size_t Ndim>
 	extern std::vector<std::array<Tcell,Ndim>>
