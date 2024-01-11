@@ -188,6 +188,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
                 {
                 case Auxiliary_Func::Fq_type::Type_0:
                     return {
+                        {"ewald_ecut",   this->info_ewald.ewald_ecut  },
                         {"ewald_qdiv",   this->info_ewald.ewald_qdiv  },
                         {"ewald_qdense", this->info_ewald.ewald_qdense},
                         {"ewald_niter",  this->info_ewald.ewald_niter },
@@ -196,6 +197,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
                     };
                 case Auxiliary_Func::Fq_type::Type_1:
                     return {
+                        {"ewald_ecut",   this->info_ewald.ewald_ecut  },
                         {"ewald_qdiv",   this->info_ewald.ewald_qdiv  },
                         {"ewald_lambda", this->info_ewald.ewald_lambda}
                     };
