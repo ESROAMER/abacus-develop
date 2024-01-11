@@ -215,13 +215,13 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
                                      list_As_Vs.second[0],
                                      get_ewald_parameter());
             this->evq.cal_Vs_ewald(this->p_kv,
-                               GlobalC::ucell,
-                               Vs,
-                               Vq_full,
-                               list_As_Vs.first,
-                               list_As_Vs.second[0],
-                               this->info.cam_alpha,
-                               this->info.cam_beta);
+                                   GlobalC::ucell,
+                                   Vs,
+                                   Vq_full,
+                                   list_As_Vs.first,
+                                   list_As_Vs.second[0],
+                                   this->info.cam_alpha,
+                                   this->info.cam_beta);
 
             this->cv.set_orbitals(this->lcaos,
                                   this->abfs,
@@ -231,10 +231,10 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
         }
     }
     else
-        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->cv.cal_Vs(list_As_Vs.first,
-                                                                            list_As_Vs.second[0],
-                                                                            {
-                                                                                {"writable_Vws", true}
+        Vs = this->cv.cal_Vs(list_As_Vs.first,
+                             list_As_Vs.second[0],
+                             {
+                                 {"writable_Vws", true}
         });
 
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
