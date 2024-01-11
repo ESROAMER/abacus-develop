@@ -35,9 +35,7 @@ template <typename T, typename Tdata> class RPA_LRI
 
   public:
     RPA_LRI(const Exx_Info::Exx_Info_RI &info_in, const Exx_Info::Exx_Info_Ewald &info_ewald_in)
-        :info(info_in), info_ewald(info_ewald_in){}
-    {
-    }
+        :info(info_in), info_ewald(info_ewald_in){};
     ~RPA_LRI(){};
     void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in);
     void cal_rpa_cv();
