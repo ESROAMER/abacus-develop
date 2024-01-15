@@ -102,7 +102,7 @@ void Matrix_Orbs21::init_radial(
 
 void Matrix_Orbs21::init_radial_table()
 {
-	ModuleBase::TITLE("Matrix_Orbs21","init_radial");
+	ModuleBase::TITLE("Matrix_Orbs21","init_radial_table");
 	ModuleBase::timer::tick("Matrix_Orbs21", "init_radial_table");
 	for( auto &coA : center2_orb21_s )
 		for( auto &coB : coA.second )
