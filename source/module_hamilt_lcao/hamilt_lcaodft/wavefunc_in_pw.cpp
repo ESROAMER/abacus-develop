@@ -227,20 +227,12 @@ void Wavefunc_in_pw::make_table_q(
 			for(size_t N=0; N!=orb_in[T][L].size(); ++N )
 			{
 				const auto &orb_origin = orb_in[T][L][N];
-				const int meshr = orb_origin.getNr();
-				const double* rab = orb_origin.getRab();
-				const double* radial = orb_origin.getRadial();
-				const double* psir = orb_origin.getPsi_r();
-
 				double* table = new double[GlobalV::NQX];
-				Wavefunc_in_pw::integral(meshr, psir, radial, rab, L, table);
+				Wavefunc_in_pw::integral(orb_origin.getNr(), orb_origin.getPsi_r(), orb_origin.getRadial(), orb_origin.getRab(), L, table);
 				for(int iq=0; iq<GlobalV::NQX; iq++)
 					table_local(T, ic, iq) = table[iq];
 
 				delete[] table;
-				delete[] radial;
-				delete[] rab;
-				delete[] psir;
 				++ic;
 			}
 		}
