@@ -74,17 +74,21 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
         assert(this->info.cam_beta || this->info.cam_alpha);
         if (this->info.cam_alpha)
         {
+            std::map<std::string, double> param = {
+                {"cam_alpha", this->info.cam_alpha}
+            };
             assert(this->info_ewald.ker_type == Auxiliary_Func::Kernal_Type::Hf);
             this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs,
                                                               Conv_Coulomb_Pot_K::Ccp_Type::Ccp,
-                                                              {},
+                                                              param,
                                                               this->info.ccp_rmesh_times,
                                                               p_kv->nkstot_full);
         }
         if (this->info.cam_beta)
         {
             std::map<std::string, double> param = {
-                {"hse_omega", this->info.hse_omega}
+                {"hse_omega", this->info.hse_omega},
+                {"cam_beta",  this->info.cam_beta }
             };
             this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs,
                                                                  Conv_Coulomb_Pot_K::Ccp_Type::Hse,
@@ -99,11 +103,16 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
             switch (this->info.ccp_type)
             {
             case Conv_Coulomb_Pot_K::Ccp_Type::Ccp:
-                return {};
+                return {
+                    {"cam_alpha", 1.0}
+                };
             case Conv_Coulomb_Pot_K::Ccp_Type::Hf:
-                return {};
+                return {
+                    {"cam_alpha", 1.0}
+                };
             case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
                 return {
+                    {"cam_beta",  1.0                 },
                     {"hse_omega", this->info.hse_omega}
                 };
             case Conv_Coulomb_Pot_K::Ccp_Type::Cam:

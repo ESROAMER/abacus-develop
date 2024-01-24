@@ -3,13 +3,12 @@
 #include "../module_base/constants.h"
 #include "../module_basis/module_ao/ORB_atomic_lm.h"
 #include "../module_hamilt_pw/hamilt_pwdft/global.h"
-
 #include "Faddeeva.hh"
-std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp(const std::vector<double>& psif)
+std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp(const std::vector<double>& psif, const double cam_alpha)
 {
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik)
-        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik];
+        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * cam_alpha;
     return psik2_ccp;
 }
 
@@ -18,29 +17,29 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp(const std::vector<double>& p
 std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hf(const int& nks,
                                                    const std::vector<double>& psif,
                                                    const std::vector<double>& k_radial,
-                                                   const double omega = 0)
+                                                   const double cam_alpha)
 {
     const int nspin0 = (GlobalV::NSPIN == 2) ? 2 : 1;
     const double Rc = std::pow(0.75 * nks / nspin0 * GlobalC::ucell.omega / (ModuleBase::PI), 1.0 / 3.0);
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik)
-        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1 - std::cos(k_radial[ik] * Rc));
+        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1 - std::cos(k_radial[ik] * Rc)) * cam_alpha;
     return psik2_ccp;
 }
-
 
 std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hse(const std::vector<double>& psif,
                                                     const std::vector<double>& k_radial,
-                                                    const double omega)
+                                                    const double omega,
+                                                    const double cam_beta)
 {
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik)
-        psik2_ccp[ik]
-            = ModuleBase::FOUR_PI * psif[ik] * (1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega)));
+        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik]
+                        * (1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega))) * cam_beta;
     return psik2_ccp;
 }
 
-std::vector<double> Conv_Coulomb_Pot_K::cal_psi_cam(const int& nks, 
+std::vector<double> Conv_Coulomb_Pot_K::cal_psi_cam(const int& nks,
                                                     const std::vector<double>& psif,
                                                     const std::vector<double>& k_radial,
                                                     const double omega,
@@ -54,16 +53,17 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_cam(const int& nks,
     for (size_t ik = 0; ik < psif.size(); ++ik)
     {
         double coulomb_part = 1 - std::cos(k_radial[ik] * Rc);
-        double temp0 = std::cos(k_radial[ik]*Rc)*Faddeeva::erfc(omega*Rc);
+        double temp0 = std::cos(k_radial[ik] * Rc) * Faddeeva::erfc(omega * Rc);
         double temp1 = std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega));
-        std::complex<double> temp2 = std::complex<double>(0,0);
-        std::complex<double> temp3 = std::complex<double>(0,0);
+        std::complex<double> temp2 = std::complex<double>(0, 0);
+        std::complex<double> temp3 = std::complex<double>(0, 0);
         if (temp1 >= eps)
         {
-            temp2 = Faddeeva::erf(0.5*(ModuleBase::IMAG_UNIT*k_radial[ik]+2*omega*omega*Rc)/omega);
-            temp3 = ModuleBase::NEG_IMAG_UNIT*Faddeeva::erfi(0.5*k_radial[ik]/omega+ModuleBase::IMAG_UNIT*omega*Rc);
+            temp2 = Faddeeva::erf(0.5 * (ModuleBase::IMAG_UNIT * k_radial[ik] + 2 * omega * omega * Rc) / omega);
+            temp3 = ModuleBase::NEG_IMAG_UNIT
+                    * Faddeeva::erfi(0.5 * k_radial[ik] / omega + ModuleBase::IMAG_UNIT * omega * Rc);
         }
-        std::complex<double> fock_part = - 0.5 * (-2 + 2 * temp0 + temp1 * (temp2 + temp3));
+        std::complex<double> fock_part = -0.5 * (-2 + 2 * temp0 + temp1 * (temp2 + temp3));
         psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha * coulomb_part + cam_beta * fock_part.real());
     }
     return psik2_ccp;
@@ -81,13 +81,14 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
     switch (ccp_type)
     {
     case Ccp_Type::Ccp:
-        psik2_ccp = cal_psi_ccp(orbs.get_psif());
+        psik2_ccp = cal_psi_ccp(orbs.get_psif(), parameter.at("cam_alpha"));
         break;
     case Ccp_Type::Hf:
-        psik2_ccp = cal_psi_hf(nks, orbs.get_psif(), orbs.get_k_radial());
+        psik2_ccp = cal_psi_hf(nks, orbs.get_psif(), orbs.get_k_radial(), parameter.at("cam_alpha"));
         break;
     case Ccp_Type::Hse:
-        psik2_ccp = cal_psi_hse(orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"));
+        psik2_ccp
+            = cal_psi_hse(orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"), parameter.at("cam_beta"));
         break;
     case Ccp_Type::Cam:
         psik2_ccp = cal_psi_cam(nks,
@@ -102,36 +103,36 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
         break;
     }
 
-	const double dr = orbs.get_rab().back();
-	const int Nr = (static_cast<int>(orbs.getNr()*rmesh_times)) | 1;
-	std::vector<double> rab(Nr);
-	for( size_t ir=0; ir<std::min(orbs.getNr(),Nr); ++ir )
-		rab[ir] = orbs.getRab(ir);
-	for( size_t ir=orbs.getNr(); ir<Nr; ++ir )
-		rab[ir] = dr;
-	std::vector<double> r_radial(Nr);
-	for( size_t ir=0; ir<std::min(orbs.getNr(),Nr); ++ir )
-		r_radial[ir] = orbs.getRadial(ir);
-	for( size_t ir=orbs.getNr(); ir<Nr; ++ir )
+    const double dr = orbs.get_rab().back();
+    const int Nr = (static_cast<int>(orbs.getNr() * rmesh_times)) | 1;
+    std::vector<double> rab(Nr);
+    for (size_t ir = 0; ir < std::min(orbs.getNr(), Nr); ++ir)
+        rab[ir] = orbs.getRab(ir);
+    for (size_t ir = orbs.getNr(); ir < Nr; ++ir)
+        rab[ir] = dr;
+    std::vector<double> r_radial(Nr);
+    for (size_t ir = 0; ir < std::min(orbs.getNr(), Nr); ++ir)
+        r_radial[ir] = orbs.getRadial(ir);
+    for (size_t ir = orbs.getNr(); ir < Nr; ++ir)
         r_radial[ir] = orbs.get_r_radial().back() + (ir - orbs.getNr() + 1) * dr;
-	
-	Numerical_Orbital_Lm orbs_ccp;
-	orbs_ccp.set_orbital_info(
- 		orbs.getLabel(),
-	 	orbs.getType(),
-		orbs.getL(),
-		orbs.getChi(),
-	    Nr,
-		ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
-		ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
-		Numerical_Orbital_Lm::Psi_Type::Psik2,
-		ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
-		orbs.getNk(),
-		orbs.getDk(),
-		orbs.getDruniform(),
-		false,
-		true, GlobalV::CAL_FORCE);
-	return orbs_ccp;
+
+    Numerical_Orbital_Lm orbs_ccp;
+    orbs_ccp.set_orbital_info(orbs.getLabel(),
+                              orbs.getType(),
+                              orbs.getL(),
+                              orbs.getChi(),
+                              Nr,
+                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
+                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
+                              Numerical_Orbital_Lm::Psi_Type::Psik2,
+                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
+                              orbs.getNk(),
+                              orbs.getDk(),
+                              orbs.getDruniform(),
+                              false,
+                              true,
+                              GlobalV::CAL_FORCE);
+    return orbs_ccp;
 }
 
 template <>
