@@ -223,7 +223,8 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
                                    list_As_Vs.first,
                                    list_As_Vs.second[0],
                                    this->info.cam_alpha,
-                                   this->info.cam_beta);
+                                   this->info.cam_beta,
+                                   this->info.ccp_rmesh_times);
 
             this->cv.set_orbitals(this->lcaos,
                                   this->abfs,
