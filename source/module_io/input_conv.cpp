@@ -535,7 +535,8 @@ void Input_Conv::Convert(void)
     if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        if (INPUT.exx_use_ewald)
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
+        if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
             GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
@@ -562,11 +563,13 @@ void Input_Conv::Convert(void)
              || INPUT.dft_functional == "lrc_wpbeh" || INPUT.dft_functional == "cam_pbeh")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        if (INPUT.exx_use_ewald)
-        {
-            GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
-            GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
+        GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
+        if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
+        {   
+                GlobalC::exx_info.info_global.use_ewald = true;
+                GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
+                GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
@@ -581,8 +584,6 @@ void Input_Conv::Convert(void)
         // EXX case, convert all EXX related variables
         // GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(INPUT.exx_hybrid_alpha);
-        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
-        GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
         XC_Functional::get_hybrid_mixing(std::stod(INPUT.exx_hybrid_alpha),
                                          std::stod(INPUT.exx_cam_alpha),
                                          std::stod(INPUT.exx_cam_beta));

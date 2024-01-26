@@ -17,8 +17,7 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp(const std::vector<double>& p
 // Sphere truction -- Spencer
 std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hf(const int& nks,
                                                    const std::vector<double>& psif,
-                                                   const std::vector<double>& k_radial,
-                                                   const double omega = 0)
+                                                   const std::vector<double>& k_radial)
 {
     const int nspin0 = (GlobalV::NSPIN == 2) ? 2 : 1;
     const double Rc = std::pow(0.75 * nks / nspin0 * GlobalC::ucell.omega / (ModuleBase::PI), 1.0 / 3.0);

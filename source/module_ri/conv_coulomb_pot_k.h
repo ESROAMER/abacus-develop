@@ -34,8 +34,7 @@ class Conv_Coulomb_Pot_K
 
     static std::vector<double> cal_psi_hf(const int& nks, 
                                           const std::vector<double>& psif,
-                                          const std::vector<double>& k_radial,
-                                          const double omega);
+                                          const std::vector<double>& k_radial);
 
     static std::vector<double> cal_psi_hse(const std::vector<double>& psif,
                                            const std::vector<double>& k_radial,
