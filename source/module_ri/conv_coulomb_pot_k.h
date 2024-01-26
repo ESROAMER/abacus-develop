@@ -16,12 +16,12 @@ class Conv_Coulomb_Pot_K
         Hf,  //
         Hse, //  	"hse_omega"
         Cam  //  	"hse_omega", "cam_alpha", "cam_beta"
-    }; 
+    };
 
-    template<typename T> 
-    static T cal_orbs_ccp(const T &orbs,
-		                      const Ccp_Type &ccp_type,
-		                      const std::map<std::string,double> &parameter,
+    template <typename T>
+    static T cal_orbs_ccp(const T& orbs,
+                          const Ccp_Type& ccp_type,
+                          const std::map<std::string, double>& parameter,
                           const double rmesh_times,
                           const int& nks);
 
@@ -30,9 +30,11 @@ class Conv_Coulomb_Pot_K
     static double get_rmesh_proportion(const T& orbs, const double psi_threshold);
 
   private:
+    // cam_alpha: Fraction of Hartree-Fock exchange
+    // cam_beta: Fraction of short-range exact exchange
     static std::vector<double> cal_psi_ccp(const std::vector<double>& psif);
 
-    static std::vector<double> cal_psi_hf(const int& nks, 
+    static std::vector<double> cal_psi_hf(const int& nks,
                                           const std::vector<double>& psif,
                                           const std::vector<double>& k_radial);
 
@@ -40,8 +42,6 @@ class Conv_Coulomb_Pot_K
                                            const std::vector<double>& k_radial,
                                            const double omega);
 
-    // cam_alpha: Fraction of Hartree-Fock exchange
-    // cam_beta: Fraction of short-range exact exchange
     static std::vector<double> cal_psi_cam(const int& nks,
                                            const std::vector<double>& psif,
                                            const std::vector<double>& k_radial,
