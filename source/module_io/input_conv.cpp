@@ -539,7 +539,7 @@ void Input_Conv::Convert(void)
         if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
+            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Bare;
             GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
         }
         else
@@ -568,7 +568,7 @@ void Input_Conv::Convert(void)
         if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
         {   
                 GlobalC::exx_info.info_global.use_ewald = true;
-                GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Hf;
+                GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Bare;
                 GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
         }
         else

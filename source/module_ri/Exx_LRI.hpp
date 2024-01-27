@@ -71,7 +71,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
 
     if (this->info_ewald.use_ewald && this->info.cam_alpha != 0)
     {
-        assert(this->info_ewald.ker_type == Auxiliary_Func::Kernal_Type::Hf);
+        assert(this->info_ewald.ker_type == Auxiliary_Func::Kernal_Type::Bare);
         this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs,
                                                           Conv_Coulomb_Pot_K::Ccp_Type::Ccp,
                                                           {},
