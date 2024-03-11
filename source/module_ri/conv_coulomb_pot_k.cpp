@@ -12,6 +12,21 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp(const std::vector<double>& p
     return psik2_ccp;
 }
 
+std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp_cam(const std::vector<double>& psif,
+                                                        const std::vector<double>& k_radial,
+                                                        const double omega,
+                                                        const double cam_alpha,
+                                                        const double cam_beta)
+{
+    std::vector<double> psik2_ccp(psif.size());
+    for (size_t ik = 0; ik < psif.size(); ++ik)
+    {
+        std::complex<double> fock_part = 1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega));
+        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha + cam_beta * fock_part);
+    }
+    return psik2_ccp;
+}
+
 // rongshi add 2022-07-27
 // Sphere truction -- Spencer
 std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hf(const int& nks,
@@ -32,8 +47,8 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_hse(const std::vector<double>& p
 {
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik)
-        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik]
-                        * (1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega)));
+        psik2_ccp[ik]
+            = ModuleBase::FOUR_PI * psif[ik] * (1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega)));
     return psik2_ccp;
 }
 
@@ -85,8 +100,7 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
         psik2_ccp = cal_psi_hf(nks, orbs.get_psif(), orbs.get_k_radial());
         break;
     case Ccp_Type::Hse:
-        psik2_ccp
-            = cal_psi_hse(orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"));
+        psik2_ccp = cal_psi_hse(orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega"));
         break;
     case Ccp_Type::Cam:
         psik2_ccp = cal_psi_cam(nks,
@@ -95,6 +109,13 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
                                 parameter.at("hse_omega"),
                                 parameter.at("cam_alpha"),
                                 parameter.at("cam_beta"));
+        break;
+    case Ccp_Type::Ccp_Cam:
+        psik2_ccp = cal_psi_cam_ccp(orbs.get_psif(),
+                                    orbs.get_k_radial(),
+                                    parameter.at("hse_omega"),
+                                    parameter.at("cam_alpha"),
+                                    parameter.at("cam_beta"));
         break;
     default:
         throw(ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line " + ModuleBase::GlobalFunc::TO_STRING(__LINE__));

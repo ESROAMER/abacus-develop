@@ -11,11 +11,12 @@ class Conv_Coulomb_Pot_K
 {
   public:
     enum class Ccp_Type
-    {        //  parameter:
-        Ccp, //
-        Hf,  //
-        Hse, //  	"hse_omega"
-        Cam  //  	"hse_omega", "cam_alpha", "cam_beta"
+    {           //  parameter:
+        Ccp,    //
+        Hf,     //
+        Hse,    //  	"hse_omega"
+        Cam,    //  	"hse_omega", "cam_alpha", "cam_beta"
+        Ccp_Cam //  	"hse_omega", "cam_alpha", "cam_beta"
     };
 
     template <typename T>
@@ -48,6 +49,12 @@ class Conv_Coulomb_Pot_K
                                            const double omega,
                                            const double cam_alpha,
                                            const double cam_beta);
+
+    static std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
+                                               const std::vector<double>& k_radial,
+                                               const double omega,
+                                               const double cam_alpha,
+                                               const double cam_beta)
 };
 
 #endif
