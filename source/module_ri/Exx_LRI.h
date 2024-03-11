@@ -62,10 +62,7 @@ private:
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp_sr;
-
 	LRI_CV<Tdata> cv;
-	LRI_CV<Tdata> cv_sr;
 	RI::Exx<TA,Tcell,Ndim,Tdata> exx_lri;
 	Ewald_Vq<Tdata> evq;
 
