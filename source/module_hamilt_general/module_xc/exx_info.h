@@ -2,7 +2,6 @@
 #define EXX_INFO_H
 
 #include "module_ri/conv_coulomb_pot_k.h"
-#include "module_ri/ewald_Vq.h"
 #include "module_ri/singular_value.h"
 #include "xc_functional.h"
 

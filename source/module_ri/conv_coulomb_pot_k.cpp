@@ -21,7 +21,7 @@ std::vector<double> Conv_Coulomb_Pot_K::cal_psi_ccp_cam(const std::vector<double
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik)
     {
-        std::complex<double> fock_part = 1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega));
+        double fock_part = 1 - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega));
         psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (cam_alpha + cam_beta * fock_part);
     }
     return psik2_ccp;
@@ -111,7 +111,7 @@ Numerical_Orbital_Lm Conv_Coulomb_Pot_K::cal_orbs_ccp<Numerical_Orbital_Lm>(
                                 parameter.at("cam_beta"));
         break;
     case Ccp_Type::Ccp_Cam:
-        psik2_ccp = cal_psi_cam_ccp(orbs.get_psif(),
+        psik2_ccp = cal_psi_ccp_cam(orbs.get_psif(),
                                     orbs.get_k_radial(),
                                     parameter.at("hse_omega"),
                                     parameter.at("cam_alpha"),

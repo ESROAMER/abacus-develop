@@ -54,7 +54,7 @@ class Conv_Coulomb_Pot_K
                                                const std::vector<double>& k_radial,
                                                const double omega,
                                                const double cam_alpha,
-                                               const double cam_beta)
+                                               const double cam_beta);
 };
 
 #endif
