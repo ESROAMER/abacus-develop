@@ -535,12 +535,11 @@ void Input_Conv::Convert(void)
     if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
-        if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
+        if (INPUT.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
-            GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Bare;
             GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
@@ -557,7 +556,14 @@ void Input_Conv::Convert(void)
     }
     else if (INPUT.rpa)
     {
-        GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
+        if (INPUT.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
+        }
+        else
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
     }
     else if (INPUT.dft_functional == "lc_pbe" || INPUT.dft_functional == "lc_wpbe" || INPUT.dft_functional == "lrc_wpbe"
              || INPUT.dft_functional == "lrc_wpbeh" || INPUT.dft_functional == "cam_pbeh")
@@ -565,11 +571,11 @@ void Input_Conv::Convert(void)
         GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.cam_alpha = std::stod(INPUT.exx_cam_alpha);
         GlobalC::exx_info.info_global.cam_beta = std::stod(INPUT.exx_cam_beta);
-        if (INPUT.exx_use_ewald && GlobalC::exx_info.info_global.cam_alpha != 0)
-        {   
-                GlobalC::exx_info.info_global.use_ewald = true;
-                GlobalC::exx_info.info_ewald.ker_type = Auxiliary_Func::Kernal_Type::Bare;
-                GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
+        if (INPUT.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.fq_type = Auxiliary_Func::Fq_type(INPUT.exx_fq_type);
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam;
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
@@ -606,7 +612,6 @@ void Input_Conv::Convert(void)
         GlobalC::exx_info.info_ri.ccp_threshold = INPUT.exx_ccp_threshold;
         GlobalC::exx_info.info_ri.ccp_rmesh_times = std::stod(INPUT.exx_ccp_rmesh_times);
 
-        GlobalC::exx_info.info_ewald.ewald_ecut = INPUT.exx_ewald_ecut;
         GlobalC::exx_info.info_ewald.ewald_qdiv = INPUT.exx_ewald_qdiv;
         GlobalC::exx_info.info_ewald.ewald_qdense = INPUT.exx_ewald_qdense;
         GlobalC::exx_info.info_ewald.ewald_lambda = INPUT.exx_lambda;

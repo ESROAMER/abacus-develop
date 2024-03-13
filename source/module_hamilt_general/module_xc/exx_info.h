@@ -3,6 +3,7 @@
 
 #include "module_ri/conv_coulomb_pot_k.h"
 #include "module_ri/ewald_Vq.h"
+#include "module_ri/singular_value.h"
 #include "xc_functional.h"
 
 struct Exx_Info
@@ -39,11 +40,9 @@ struct Exx_Info
 
     struct Exx_Info_Ewald
     {
-        Auxiliary_Func::Kernal_Type ker_type;
-        Auxiliary_Func::Fq_type fq_type;
+        Singular_Value::Fq_type fq_type;
         const bool& use_ewald;
 
-        double ewald_ecut = 150;
         double ewald_qdiv = 2;
         double ewald_qdense = 40;
         double ewald_lambda = 1;
