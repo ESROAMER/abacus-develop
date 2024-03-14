@@ -76,7 +76,8 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
         GlobalC::exx_info.info_ri.abfs_Lmax
             = std::max(GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size()) - 1);
 
-    this->evq->init(this->lcaos, this->abfs, this->p_kv);
+    if (this->info_ewald.use_ewald)
+        this->evq->init(this->lcaos, this->abfs, this->p_kv);
 
     auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
         switch (this->info.ccp_type)
@@ -147,14 +148,18 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
     const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, std::array<Tcell, Ndim>>>>> list_As_Vs
         = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, period_Vs, 2, false);
 
-    std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_in = this->cv.cal_Vs(list_As_Vs.first,
-                                                                           list_As_Vs.second[0],
-                                                                           {
-                                                                               {"writable_Vws", true}
+    std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->cv.cal_Vs(list_As_Vs.first,
+                                                                        list_As_Vs.second[0],
+                                                                        {
+                                                                            {"writable_Vws", true}
     });
-    std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>> Vq
-        = this->evq->cal_Vq(Vs_in, list_As_Vs.first, list_As_Vs.second[0], wfc_basis);
-    std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq->cal_Vs(Vq, list_As_Vs.first, list_As_Vs.second[0]);
+    if (this->info_ewald.use_ewald)
+    {
+        std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>> Vq
+            = this->evq->cal_Vq(Vs, list_As_Vs.first, list_As_Vs.second[0], wfc_basis);
+        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs
+            = this->evq->cal_Vs(Vq, list_As_Vs.first, list_As_Vs.second[0]);
+    }
 
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
