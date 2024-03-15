@@ -153,16 +153,15 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
                                                                         {
                                                                             {"writable_Vws", true}
     });
-    if (this->info_ewald.use_ewald)
-    {
-        std::vector<std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>>> Vq
-            = this->evq->cal_Vq(Vs, list_As_Vs.first, list_As_Vs.second[0], wfc_basis);
-        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs
-            = this->evq->cal_Vs(Vq, list_As_Vs.first, list_As_Vs.second[0]);
-    }
 
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
+
+    if (this->info_ewald.use_ewald)
+    {
+        std::vector<std::map<TA, std::map<TAC, RI::Tensor<std::complex<double>>>>> Vq = this->evq->cal_Vq(Vs, wfc_basis);
+        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq->cal_Vs(Vq);
+    }
 
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
     {
