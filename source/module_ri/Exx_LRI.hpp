@@ -159,7 +159,8 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 
     if (this->info_ewald.use_ewald)
     {
-        std::vector<std::map<TA, std::map<TAC, RI::Tensor<std::complex<double>>>>> Vq = this->evq->cal_Vq(Vs, wfc_basis);
+        this->evq->init_atoms_from_Vs(Vs);
+        std::vector<std::map<TA, std::map<TAC, RI::Tensor<std::complex<double>>>>> Vq = this->evq->cal_Vq(wfc_basis);
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq->cal_Vs(Vq);
     }
 
