@@ -42,8 +42,9 @@ class Exx_LRI
     using TatomR = std::array<double, Ndim>; // tmp
 
   public:
-    Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in);
-
+    Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in)
+        : info(info_in), info_ewald(info_ewald_in), evq(info, info_ewald){};
+    
     void init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in);
     void cal_exx_force();
     void cal_exx_stress();
@@ -64,7 +65,7 @@ class Exx_LRI
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
     LRI_CV<Tdata> cv;
     RI::Exx<TA, Tcell, Ndim, Tdata> exx_lri;
-    std::shared_ptr<Ewald_Vq<Tdata>> evq = nullptr;
+    Ewald_Vq<Tdata> evq;
 
     void cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis);
     void cal_exx_elec(const Parallel_Orbitals& pv);

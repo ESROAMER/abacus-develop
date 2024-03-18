@@ -26,13 +26,6 @@
 #include "module_ri/serialization_cereal.h"
 
 template <typename Tdata>
-Exx_LRI<Tdata>::Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in)
-    : info(info_in), info_ewald(info_ewald_in)
-{
-    this->evq = std::make_shared<Ewald_Vq<Tdata>>(this->info, this->info_ewald);
-}
-
-template <typename Tdata>
 void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
 {
     ModuleBase::TITLE("Exx_LRI", "init");
@@ -77,7 +70,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
             = std::max(GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size()) - 1);
 
     if (this->info_ewald.use_ewald)
-        this->evq->init(this->lcaos, this->abfs, this->p_kv);
+        this->evq.init(this->lcaos, this->abfs, this->p_kv);
 
     auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
         switch (this->info.ccp_type)
@@ -159,9 +152,9 @@ void Exx_LRI<Tdata>::cal_exx_ions(const ModulePW::PW_Basis_K* wfc_basis)
 
     if (this->info_ewald.use_ewald)
     {
-        this->evq->init_atoms_from_Vs(Vs);
-        std::vector<std::map<TA, std::map<TAC, RI::Tensor<std::complex<double>>>>> Vq = this->evq->cal_Vq(wfc_basis);
-        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq->cal_Vs(Vq);
+        this->evq.init_atoms_from_Vs(Vs);
+        std::vector<std::map<TA, std::map<TAC, RI::Tensor<std::complex<double>>>>> Vq = this->evq.cal_Vq(wfc_basis);
+        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq.cal_Vs(Vq);
     }
 
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
