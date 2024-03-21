@@ -1248,10 +1248,6 @@ bool input_parameters_set(std::map<std::string, InputParameter> input_parameters
     {
         INPUT.exx_fq_type = *static_cast<int*>(input_parameters["exx_fq_type"].get());
     }
-    else if (input_parameters.count("exx_ewald_ecut") != 0)
-    {
-        INPUT.exx_ewald_ecut = *static_cast<double*>(input_parameters["exx_ewald_ecut"].get());
-    }
     else if (input_parameters.count("exx_ewald_qdiv") != 0)
     {
         INPUT.exx_ewald_qdiv = *static_cast<double*>(input_parameters["exx_ewald_qdiv"].get());

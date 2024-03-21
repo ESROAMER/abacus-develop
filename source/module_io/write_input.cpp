@@ -370,7 +370,7 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_separate_loop", exx_separate_loop, "if 1, a two-step method is employed, else it will start with a GGA-Loop, and then Hybrid-Loop");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_hybrid_step", exx_hybrid_step, "the maximal electronic iteration number in the evaluation of Fock exchange");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_mixing_beta", exx_mixing_beta, "mixing_beta for outer-loop when exx_separate_loop=1");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_lambda", exx_lambda, "used to compensate for divergence points at G=0 in the evaluation of Fock exchange using lcao_in_pw or Ewald (with fq_type=1) method");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_lambda", exx_lambda, "used to compensate for divergence points at G=0 in the evaluation of Fock exchange using lcao_in_pw or Ewald method");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_real_number", exx_real_number, "exx calculated in real or complex");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_pca_threshold", exx_pca_threshold, "threshold to screen on-site ABFs in exx");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_c_threshold", exx_c_threshold, "threshold to screen C matrix in exx");
@@ -390,11 +390,10 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_opt_orb_tolerence", exx_opt_orb_tolerence, "the threshold when solving for the zeros of spherical Bessel functions for opt ABFs");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_use_ewald", exx_use_ewald, "if 1, use Ewald method to construct V matrix");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_fq_type", exx_fq_type, "auxiliary-function fq used in correction to V(q) at q->0");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_ecut", exx_ewald_ecut, "energy cutoff used in Ewald method");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdiv", exx_ewald_qdiv, "the order of q-divergence in auxiliary function");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdense", exx_ewald_qdense, "the density of q-points related to integral of fq_type=0");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_niter", exx_ewald_niter, "maximal iterations related to integral of fq_type=0");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_eps", exx_ewald_eps, "tolerance of iterations related to integral of fq_type=0");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_niter", exx_ewald_niter, "maximal iterations associated with Coulomb singularity correction");
+    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_eps", exx_ewald_eps, "Iteration tolerance associated with Coulomb singularity correction");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_arate", exx_ewald_arate, "adaptive rate of iterations related to integral of fq_type=0");
 
     ofs << "\n#Parameters (16.tddft)" << std::endl;
