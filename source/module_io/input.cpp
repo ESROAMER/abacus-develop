@@ -425,7 +425,7 @@ void Input::Default(void)
     exx_use_ewald = false;
     exx_fq_type = 0;
     exx_ewald_qdiv = 2;
-    exx_ewald_qdense = 40;
+    exx_ewald_qdense = 30;
     exx_ewald_niter = 30;
     exx_ewald_eps = 1E-6;
     exx_ewald_arate = 3;
