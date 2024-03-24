@@ -40,7 +40,8 @@ void LRI_CV<Tdata>::set_orbitals(
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
 	const double &kmesh_times,
-	const double &ccp_rmesh_times_in)
+	const double &ccp_rmesh_times_in,
+	const bool& cal_C)
 {
 	ModuleBase::TITLE("LRI_CV", "set_orbitals");
 	ModuleBase::timer::tick("LRI_CV", "set_orbitals");
@@ -62,9 +63,12 @@ void LRI_CV<Tdata>::set_orbitals(
 	this->m_abfs_abfs.init_radial( this->abfs_ccp, this->abfs );
 	this->m_abfs_abfs.init_radial_table();
 
-	this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
-	this->m_abfslcaos_lcaos.init_radial( this->abfs_ccp, this->lcaos, this->lcaos );
-	this->m_abfslcaos_lcaos.init_radial_table();
+	if(cal_C)
+	{
+		this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
+		this->m_abfslcaos_lcaos.init_radial( this->abfs_ccp, this->lcaos, this->lcaos );
+		this->m_abfslcaos_lcaos.init_radial_table();
+	}
 
 	ModuleBase::timer::tick("LRI_CV", "set_orbitals");
 }

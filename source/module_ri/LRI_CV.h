@@ -38,7 +38,8 @@ public:
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
 		const double &kmesh_times,
-		const double &ccp_rmesh_times_in);
+		const double &ccp_rmesh_times_in,
+		const bool& cal_C = true);
 
 	inline std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>
 	cal_Vs(
