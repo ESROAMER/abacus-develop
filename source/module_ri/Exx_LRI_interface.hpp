@@ -43,7 +43,7 @@ void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charg
                 XC_Functional::set_xc_type("scan");
             }
 
-			exx_lri->cal_exx_ions(wfc_basis);
+			exx_lri->cal_exx_ions();
 		}
 
 		if (Exx_Abfs::Jle::generate_matrix)
