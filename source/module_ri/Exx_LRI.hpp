@@ -24,6 +24,7 @@
 #include "module_ri/exx_abfs-construct_orbs.h"
 #include "module_ri/exx_abfs-io.h"
 #include "module_ri/serialization_cereal.h"
+#include "module_ri/singular_value.h"
 
 // template <typename Tdata>
 // Exx_LRI<Tdata>::Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in)
@@ -158,10 +159,45 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
     if (this->info_ewald.use_ewald)
     {
-        this->evq.init_atoms_from_Vs(Vs, list_As_Vs.first, list_As_Vs.second[0]);
-        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs = this->evq.cal_Vs();
+        const int nspin0 = std::map<int, int>{
+            {1, 1},
+            {2, 2},
+            {4, 1}
+        }.at(GlobalV::NSPIN);
+        const int nks0 = this->p_kv->nkstot_full / nspin0;
+        const std::array<int, 1> Nks = {nks0};
+        const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TK>>>> list_As_Vq
+            = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, Nks, 2, false);
+
+        double chi = 0.0;
+        switch (this->info_ewald.fq_type)
+        {
+        case Singular_Value::Fq_type::Type_0:
+            chi = Singular_Value::cal_type_0(this->p_kv->kvec_c,
+                                             this->info_ewald.ewald_qdiv,
+                                             this->info_ewald.ewald_qdense,
+                                             this->info_ewald.ewald_niter,
+                                             this->info_ewald.ewald_eps,
+                                             this->info_ewald.ewald_arate);
+            break;
+        case Singular_Value::Fq_type::Type_1:
+            chi = Singular_Value::cal_type_1(this->p_kv->kvec_c,
+                                             this->info_ewald.ewald_qdiv,
+                                             this->info_ewald.ewald_lambda,
+                                             this->info_ewald.ewald_niter,
+                                             this->info_ewald.ewald_eps);
+            break;
+        default:
+            throw std::domain_error(std::string(__FILE__) + " line " + std::to_string(__LINE__));
+            break;
+        }
+
+        std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>> Vq
+            = this->evq.cal_Vq(list_As_Vq.first, list_As_Vq.second[0], chi, Vs);
+
+        Vs = this->evq.cal_Vs(list_As_Vs.first, list_As_Vs.second[0], Vq);
     }
-    
+
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
 
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
