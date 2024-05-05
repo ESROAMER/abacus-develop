@@ -78,7 +78,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
             = std::max(GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size()) - 1);
 
     if (this->info_ewald.use_ewald)
-        this->evq.init(this->lcaos, this->abfs, this->p_kv);
+        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
 
     auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
         switch (this->info.ccp_type)
@@ -169,6 +169,16 @@ void Exx_LRI<Tdata>::cal_exx_ions()
         const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TK>>>> list_As_Vq
             = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, Nks, 2, false);
 
+        const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TC>>>> list_As_Vs_atoms
+            = RI::Distribute_Equally::distribute_atoms(this->mpi_comm, atoms, period_Vs, 2, false);
+        const std::vector<TA>& list_A0_pair_R = list_As_Vs_atoms.first;
+        const std::vector<TAC>& list_A1_pair_R = list_As_Vs_atoms.second[0];
+
+        const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TK>>>> list_As_Vq_atoms
+            = RI::Distribute_Equally::distribute_atoms(this->mpi_comm, atoms, Nks, 2, false);
+        const std::vector<TA>& list_A0_pair_k = list_As_Vq_atoms.first;
+        const std::vector<TAK>& list_A1_pair_k = list_As_Vq_atoms.second[0];
+
         double chi = 0.0;
         switch (this->info_ewald.fq_type)
         {
@@ -192,10 +202,16 @@ void Exx_LRI<Tdata>::cal_exx_ions()
             break;
         }
 
-        std::map<TA, std::map<TA, RI::Tensor<std::complex<double>>>> Vq
-            = this->evq.cal_Vq(list_As_Vq.first, list_As_Vq.second[0], chi, Vs);
-
-        Vs = this->evq.cal_Vs(list_As_Vs.first, list_As_Vs.second[0], Vq);
+        Vs = this->evq.cal_Vs(list_As_Vs.first,
+                              list_As_Vs.second[0],
+                              list_As_Vq.first,
+                              list_As_Vq.second[0],
+                              list_A0_pair_R,
+                              list_A1_pair_R,
+                              list_A0_pair_k,
+                              list_A1_pair_k,
+                              chi,
+                              Vs);
     }
 
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
