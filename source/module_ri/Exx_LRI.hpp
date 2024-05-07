@@ -171,13 +171,13 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
         const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TC>>>> list_As_Vs_atoms
             = RI::Distribute_Equally::distribute_atoms(this->mpi_comm, atoms, period_Vs, 2, false);
-        const std::vector<TA>& list_A0_pair_R = list_As_Vs_atoms.first;
-        const std::vector<TAC>& list_A1_pair_R = list_As_Vs_atoms.second[0];
+        const std::vector<TA> list_A0_pair_R = list_As_Vs_atoms.first;
+        const std::vector<TAC> list_A1_pair_R = list_As_Vs_atoms.second[0];
 
         const std::pair<std::vector<TA>, std::vector<std::vector<std::pair<TA, TK>>>> list_As_Vq_atoms
             = RI::Distribute_Equally::distribute_atoms(this->mpi_comm, atoms, Nks, 2, false);
-        const std::vector<TA>& list_A0_pair_k = list_As_Vq_atoms.first;
-        const std::vector<TAK>& list_A1_pair_k = list_As_Vq_atoms.second[0];
+        const std::vector<TA> list_A0_pair_k = list_As_Vq_atoms.first;
+        const std::vector<TAK> list_A1_pair_k = list_As_Vq_atoms.second[0];
 
         double chi = 0.0;
         switch (this->info_ewald.fq_type)
