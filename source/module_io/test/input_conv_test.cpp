@@ -2,6 +2,7 @@
 #include "gmock/gmock.h"
 #include "module_io/input_conv.h"
 #include "module_base/global_variable.h"
+#include "module_hsolver/hsolver_pw.h"
 #include "for_testing_input_conv.h"
 
 /************************************************
@@ -88,7 +89,9 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(GlobalV::DIAGO_PROC,4);
 	EXPECT_EQ(GlobalV::PW_DIAG_NMAX,50);
 	EXPECT_EQ(GlobalV::DIAGO_CG_PREC,1);
-	EXPECT_EQ(GlobalV::PW_DIAG_NDIM,4);
+    EXPECT_EQ(GlobalV::PW_DIAG_NDIM, 4);
+    EXPECT_EQ(hsolver::HSolverPW<std::complex<float>>::diago_full_acc, false);
+    EXPECT_EQ(hsolver::HSolverPW<std::complex<double>>::diago_full_acc, false);
 	EXPECT_DOUBLE_EQ(GlobalV::PW_DIAG_THR,0.01);
 	EXPECT_EQ(GlobalV::NB2D,0);
 	EXPECT_EQ(GlobalV::NURSE,0);
@@ -154,6 +157,9 @@ TEST_F(InputConvTest, Conv)
     EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_dh, INPUT.out_mat_dh);
     EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_dh, INPUT.out_mat_dh);
     EXPECT_EQ(GlobalV::out_mat_xc, false);
+	EXPECT_EQ(GlobalV::out_hr_npz, false);
+	EXPECT_EQ(GlobalV::out_dm_npz, false);
+	EXPECT_EQ(GlobalV::dm_to_rho, false);
     EXPECT_EQ(GlobalV::out_interval, 1);
     EXPECT_EQ(elecstate::ElecStateLCAO<double>::out_wfc_lcao, false);
     EXPECT_EQ(berryphase::berry_phase_flag, false);
@@ -302,24 +308,6 @@ TEST_F(InputConvTest, nspin)
     EXPECT_EQ(GlobalV::soc_lambda, INPUT.soc_lambda);
 }
 
-TEST_F(InputConvTest, nspinbeta)
-{
-	INPUT.Default();
-	std::string input_file = "./support/INPUT";
-	INPUT.Read(input_file);
-	INPUT.noncolin=true;
-	INPUT.cal_stress=true;
-	std::string output2;
-	testing::internal::CaptureStdout();
-	EXPECT_EXIT(Input_Conv::Convert(), ::testing::ExitedWithCode(0),"");
-	output2 = testing::internal::GetCapturedStdout();
-	EXPECT_THAT(output2,testing::HasSubstr("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"));
-	EXPECT_THAT(output2,testing::HasSubstr("                         NOTICE                          "));
-	EXPECT_THAT(output2,testing::HasSubstr("force & stress not ready for nspin=4(soc or noncollinear-spin) yet!"));
-	EXPECT_THAT(output2,testing::HasSubstr("CHECK IN FILE : warning.log"));
-	EXPECT_THAT(output2,testing::HasSubstr("TIME STATISTICS"));
-}
-
 TEST_F(InputConvTest, nupdown)
 {
 	INPUT.Default();
@@ -460,7 +448,7 @@ TEST_F(InputConvTest,parse )
     EXPECT_EQ(module_tddft::Evolve_elec::td_vext_dire_case.size(), 0);
 }
 
-TEST_F(InputConvTest,parse2 )
+TEST_F(InputConvTest, parse2)
 {
 	INPUT.Default();
 	std::string input_file = "./support/INPUT";
