@@ -179,6 +179,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
         const std::vector<TA> list_A0_pair_k = list_As_Vq_atoms.first;
         const std::vector<TAK> list_A1_pair_k = list_As_Vq_atoms.second[0];
 
+        std::vector<int> nmp = {this->p_kv->nmp[0], this->p_kv->nmp[1], this->p_kv->nmp[2]};
         double chi = 0.0;
         switch (this->info_ewald.fq_type)
         {
@@ -191,7 +192,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
                                              this->info_ewald.ewald_arate);
             break;
         case Singular_Value::Fq_type::Type_1:
-            chi = Singular_Value::cal_type_1(this->p_kv->kvec_c,
+            chi = Singular_Value::cal_type_1(nmp,
                                              this->info_ewald.ewald_qdiv,
                                              this->info_ewald.ewald_lambda,
                                              this->info_ewald.ewald_niter,
