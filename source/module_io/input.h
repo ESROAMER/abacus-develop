@@ -358,12 +358,11 @@ class Input
     std::string exx_cam_alpha;
     std::string exx_cam_beta;
     std::string exx_hse_omega;
+    std::string exx_lambda;
 
     bool exx_separate_loop; // 0 or 1
     int exx_hybrid_step;
     double exx_mixing_beta; // only for exx_separate_loop=1
-
-    double exx_lambda;
 
     std::string exx_real_number;
     double exx_pca_threshold;

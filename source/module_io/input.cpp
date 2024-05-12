@@ -401,12 +401,13 @@ void Input::Default(void)
     exx_cam_alpha = "default";
     exx_cam_beta = "default";
     exx_hse_omega = "default";
+    exx_lambda = "default";
 
     exx_separate_loop = true;
     exx_hybrid_step = 100;
     exx_mixing_beta = 1.0;
 
-    exx_lambda = 0.3;
+    //exx_lambda = 0.3;
 
     exx_real_number = "default";
     exx_pca_threshold = 1E-4;
@@ -2669,6 +2670,13 @@ void Input::Default_2(void) // jiyy add 2019-08-04
         else 
             exx_hse_omega = "0.0";
     }
+    if (exx_lambda == "default")
+    {
+        if (exx_use_ewald)
+            exx_lambda = "1.0";
+        else
+            exx_lambda = "0.3";
+    }
     if (exx_real_number == "default")
     {
         if (gamma_only)
@@ -3327,7 +3335,7 @@ void Input::Bcast()
     Parallel_Common::bcast_string(exx_hse_omega);
     Parallel_Common::bcast_bool(exx_separate_loop);
     Parallel_Common::bcast_int(exx_hybrid_step);
-    Parallel_Common::bcast_double(exx_lambda);
+    Parallel_Common::bcast_string(exx_lambda);
     Parallel_Common::bcast_double(exx_mixing_beta);
     Parallel_Common::bcast_string(exx_real_number);
     Parallel_Common::bcast_double(exx_pca_threshold);
@@ -3850,7 +3858,7 @@ void Input::Check(void)
     {
         if (exx_fq_type == 0)
         {
-            if (exx_ewald_niter <= 0)
+            if (exx_ewald_niter < 0)
                 ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_niter > 0");
             if (exx_ewald_eps < 0)
                 ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_eps >= 0");
@@ -3859,8 +3867,10 @@ void Input::Check(void)
         }
         else if (exx_fq_type == 1)
         {
-            if (exx_lambda <= 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_lambda > 0");
+            if (exx_ewald_niter < 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_niter > 0");
+            if (exx_ewald_eps < 0)
+                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_eps >= 0");
         }
         else
         {
