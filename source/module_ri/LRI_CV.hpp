@@ -9,6 +9,7 @@
 #include "LRI_CV.h"
 #include "LRI_CV_Tools.h"
 #include "module_ri/exx_abfs-abfs_index.h"
+#include "exx_abfs-construct_orbs.h"
 #include "RI_Util.h"
 #include "module_base/tool_title.h"
 #include "module_base/timer.h"
@@ -51,6 +52,12 @@ void LRI_CV<Tdata>::set_orbitals(
 	this->abfs_ccp = abfs_ccp_in;
 	this->ccp_rmesh_times = ccp_rmesh_times_in;
 
+	this->lcaos_rcut = Exx_Abfs::Construct_Orbs::get_Rcut(this->lcaos);
+	double lcaos_rmax = Exx_Abfs::Construct_Orbs::get_Rmax(this->lcaos);
+	//this->abfs_rcut = Exx_Abfs::Construct_Orbs::get_Rcut(this->abfs);
+	//this->abfs_ccp_rcut = Exx_Abfs::Construct_Orbs::get_Rcut(this->abfs_ccp);
+	double abfs_ccp_rmax = Exx_Abfs::Construct_Orbs::get_Rmax(this->abfs_ccp);
+
 	const ModuleBase::Element_Basis_Index::Range
 		range_lcaos = Exx_Abfs::Abfs_Index::construct_range( lcaos );
 	this->index_lcaos = ModuleBase::Element_Basis_Index::construct_index( range_lcaos );
@@ -59,13 +66,15 @@ void LRI_CV<Tdata>::set_orbitals(
 		range_abfs = Exx_Abfs::Abfs_Index::construct_range( abfs );
 	this->index_abfs = ModuleBase::Element_Basis_Index::construct_index( range_abfs );
 
-	this->m_abfs_abfs.init( 2, kmesh_times, (1+this->ccp_rmesh_times)/2.0 );
+	//this->m_abfs_abfs.init( 2, kmesh_times, (1+this->ccp_rmesh_times)/2.0 );
+	this->m_abfs_abfs.init( 2, kmesh_times, lcaos_rmax + abfs_ccp_rmax);
 	this->m_abfs_abfs.init_radial( this->abfs_ccp, this->abfs );
 	this->m_abfs_abfs.init_radial_table();
 
 	if(cal_C)
 	{
-		this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
+		//this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
+		this->m_abfslcaos_lcaos.init( 1, kmesh_times, lcaos_rmax );
 		this->m_abfslcaos_lcaos.init_radial( this->abfs_ccp, this->lcaos, this->lcaos );
 		this->m_abfslcaos_lcaos.init_radial_table();
 	}
@@ -103,9 +112,13 @@ auto LRI_CV<Tdata>::cal_datas(
 			const int ia1 = GlobalC::ucell.iat2ia[iat1];
 			const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[ia0];
 			const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
+			// const double Rcut = std::min(
+			// 	GlobalC::ORB.Phi[it0].getRcut() * rmesh_times + GlobalC::ORB.Phi[it1].getRcut(),
+			// 	GlobalC::ORB.Phi[it1].getRcut() * rmesh_times + GlobalC::ORB.Phi[it0].getRcut());
 			const double Rcut = std::min(
-				GlobalC::ORB.Phi[it0].getRcut() * rmesh_times + GlobalC::ORB.Phi[it1].getRcut(),
-				GlobalC::ORB.Phi[it1].getRcut() * rmesh_times + GlobalC::ORB.Phi[it0].getRcut());
+				this->lcaos_rcut[it0] * rmesh_times + this->lcaos_rcut[it1],
+				this->lcaos_rcut[it1] * rmesh_times + this->lcaos_rcut[it0]
+			);
 			const Abfs::Vector3_Order<double> R_delta = -tau0+tau1+(RI_Util::array3_to_Vector3(cell1)*GlobalC::ucell.latvec);
 			if( R_delta.norm()*GlobalC::ucell.lat0 < Rcut )
 			{

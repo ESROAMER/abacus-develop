@@ -12,7 +12,7 @@
 void Matrix_Orbs11::init(
 	const int mode,
 	const double kmesh_times,
-	const double rmesh_times)
+	const double rmax)
 {
 	ModuleBase::TITLE("Matrix_Orbs11","init");
 	ModuleBase::timer::tick("Matrix_Orbs11", "init");
@@ -24,7 +24,8 @@ void Matrix_Orbs11::init(
 		GlobalC::ORB.get_ntype(),							// number of atom types
 		std::max( GlobalC::ORB.get_lmax(), GlobalC::exx_info.info_ri.abfs_Lmax ),	// max L used to calculate overlap
 		static_cast<int>(GlobalC::ORB.get_kmesh() * kmesh_times) | 1,				// kpoints, for integration in k space
-		GlobalC::ORB.get_Rmax() * rmesh_times,				// max value of radial table
+		//GlobalC::ORB.get_Rmax() * rmesh_times,				// max value of radial table
+		rmax,
 		GlobalC::ORB.get_dR(),								// delta R, for making radial table
 //		GlobalC::ORB.get_dk() / kmesh_times);				// delta k, for integration in k space
 		GlobalC::ORB.get_dk());											// Peize Lin change 2017-04-16

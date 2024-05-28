@@ -67,6 +67,9 @@ private:
 	ModuleBase::Element_Basis_Index::IndexLNM index_lcaos;
 	ModuleBase::Element_Basis_Index::IndexLNM index_abfs;
 	double ccp_rmesh_times;
+	std::vector<double> lcaos_rcut;
+	//std::vector<double> abfs_rcut;
+	//std::vector<double> abfs_ccp_rcut;
 
 public:
 	std::map<int,std::map<int,std::map<Abfs::Vector3_Order<double>,RI::Tensor<Tdata>>>> Vws;
