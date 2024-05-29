@@ -77,9 +77,6 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
         GlobalC::exx_info.info_ri.abfs_Lmax
             = std::max(GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size()) - 1);
 
-    if (this->info_ewald.use_ewald)
-        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
-
     auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
         switch (this->info.ccp_type)
         {
@@ -114,7 +111,10 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
                                                       this->info.ccp_rmesh_times,
                                                       p_kv->nkstot_full);
 
-    this->cv.set_orbitals(this->lcaos, this->abfs, this->abfs_ccp, this->info.kmesh_times, this->info.ccp_rmesh_times);
+    this->cv.set_orbitals(this->lcaos, this->abfs, this->abfs_ccp, this->info.kmesh_times);
+
+    if (this->info_ewald.use_ewald)
+        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
 
     ModuleBase::timer::tick("Exx_LRI", "init");
 }

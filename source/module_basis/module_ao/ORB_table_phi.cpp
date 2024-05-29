@@ -73,7 +73,7 @@ void ORB_table_phi::allocate
 
 	// calculated from input parameters
 	this->nlm = (2*lmax+1) * (2*lmax+1);
-	this->Rmesh = static_cast<int>( Rmax/dr ) + 4;
+	this->Rmesh = static_cast<int>( Rmax/dr ) + 5;
 	if(Rmesh%2==0)
 	{
 		++Rmesh;
