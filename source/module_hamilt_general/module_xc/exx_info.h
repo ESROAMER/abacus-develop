@@ -44,7 +44,6 @@ struct Exx_Info
 
         double ewald_qdiv = 2;
         double ewald_qdense = 30;
-        double ewald_lambda = 0.3;
         int ewald_niter = 30;
         double ewald_eps = 1e-6;
         int ewald_arate = 3;

@@ -194,7 +194,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
         case Singular_Value::Fq_type::Type_1:
             chi = Singular_Value::cal_type_1(nmp,
                                              this->info_ewald.ewald_qdiv,
-                                             this->info_ewald.ewald_lambda,
+                                             this->ewald_lambda,
                                              this->info_ewald.ewald_niter,
                                              this->info_ewald.ewald_eps);
             break;

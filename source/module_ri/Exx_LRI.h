@@ -62,6 +62,7 @@ class Exx_LRI
     const Exx_Info::Exx_Info_Ewald& info_ewald;
     MPI_Comm mpi_comm;
     const K_Vectors* p_kv;
+    const double ewald_lambda = 1.0;
 
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
