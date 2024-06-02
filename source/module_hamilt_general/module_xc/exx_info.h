@@ -43,10 +43,6 @@ struct Exx_Info
         const bool& use_ewald;
 
         double ewald_qdiv = 2;
-        double ewald_qdense = 30;
-        int ewald_niter = 30;
-        double ewald_eps = 1e-6;
-        int ewald_arate = 3;
 
         Exx_Info_Ewald(const Exx_Info::Exx_Info_Global& info_global) : use_ewald(info_global.use_ewald)
         {

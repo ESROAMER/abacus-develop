@@ -1252,22 +1252,6 @@ bool input_parameters_set(std::map<std::string, InputParameter> input_parameters
     {
         INPUT.exx_ewald_qdiv = *static_cast<double*>(input_parameters["exx_ewald_qdiv"].get());
     }
-    else if (input_parameters.count("exx_ewald_qdense") != 0)
-    {
-        INPUT.exx_ewald_qdense = *static_cast<double*>(input_parameters["exx_ewald_qdense"].get());
-    }
-    else if (input_parameters.count("exx_ewald_niter") != 0)
-    {
-        INPUT.exx_ewald_niter = *static_cast<int*>(input_parameters["exx_ewald_niter"].get());
-    }
-    else if (input_parameters.count("exx_ewald_eps") != 0)
-    {
-        INPUT.exx_ewald_eps = *static_cast<double*>(input_parameters["exx_ewald_eps"].get());
-    }
-    else if (input_parameters.count("exx_ewald_arate") != 0)
-    {
-        INPUT.exx_ewald_arate = *static_cast<int*>(input_parameters["exx_ewald_arate"].get());
-    }
     else if (input_parameters.count("td_force_dt") != 0)
     {
         INPUT.td_force_dt = *static_cast<double*>(input_parameters["td_force_dt"].get());

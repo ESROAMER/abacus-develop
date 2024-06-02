@@ -426,10 +426,6 @@ void Input::Default(void)
     exx_use_ewald = false;
     exx_fq_type = 0;
     exx_ewald_qdiv = 2;
-    exx_ewald_qdense = 30;
-    exx_ewald_niter = 30;
-    exx_ewald_eps = 1E-6;
-    exx_ewald_arate = 3;
 
     exx_distribute_type = "htime";
 
@@ -2004,22 +2000,6 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, exx_ewald_qdiv);
         }
-        else if (strcmp("exx_ewald_qdense", word) == 0)
-        {
-            read_value(ifs, exx_ewald_qdense);
-        }
-        else if (strcmp("exx_ewald_niter", word) == 0)
-        {
-            read_value(ifs, exx_ewald_niter);
-        }
-        else if (strcmp("exx_ewald_eps", word) == 0)
-        {
-            read_value(ifs, exx_ewald_eps);
-        }
-        else if (strcmp("exx_ewald_arate", word) == 0)
-        {
-            read_value(ifs, exx_ewald_arate);
-        }
         else if (strcmp("noncolin", word) == 0)
         {
             read_bool(ifs, noncolin);
@@ -3358,10 +3338,6 @@ void Input::Bcast()
     Parallel_Common::bcast_bool(exx_use_ewald);
     Parallel_Common::bcast_int(exx_fq_type);
     Parallel_Common::bcast_double(exx_ewald_qdiv);
-    Parallel_Common::bcast_double(exx_ewald_qdense);
-    Parallel_Common::bcast_int(exx_ewald_niter);
-    Parallel_Common::bcast_double(exx_ewald_eps);
-    Parallel_Common::bcast_int(exx_ewald_arate);
 
     Parallel_Common::bcast_bool(noncolin);
     Parallel_Common::bcast_bool(lspinorb);
@@ -3853,29 +3829,6 @@ void Input::Check(void)
         if (exx_opt_orb_tolerence < 0)
         {
             ModuleBase::WARNING_QUIT("INPUT", "exx_opt_orb_tolerence must >=0");
-        }
-    }
-    if (exx_use_ewald)
-    {
-        if (exx_fq_type == 0)
-        {
-            if (exx_ewald_niter < 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_niter > 0");
-            if (exx_ewald_eps < 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_eps >= 0");
-            if (exx_ewald_arate < 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_arate >= 0");
-        }
-        else if (exx_fq_type == 1)
-        {
-            if (exx_ewald_niter < 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_niter > 0");
-            if (exx_ewald_eps < 0)
-                ModuleBase::WARNING_QUIT("INPUT", "must exx_ewald_eps >= 0");
-        }
-        else
-        {
-            ModuleBase::WARNING_QUIT("INPUT", "only exx_fq_type=0 or 1 are supported");
         }
     }
 

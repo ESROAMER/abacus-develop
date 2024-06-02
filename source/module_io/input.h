@@ -382,10 +382,6 @@ class Input
     bool exx_use_ewald;
     int exx_fq_type;
     double exx_ewald_qdiv;
-    double exx_ewald_qdense;
-    int exx_ewald_niter;
-    double exx_ewald_eps;
-    int exx_ewald_arate;
 
     std::string exx_distribute_type;
 

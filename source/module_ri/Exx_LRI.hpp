@@ -186,17 +186,17 @@ void Exx_LRI<Tdata>::cal_exx_ions()
         case Singular_Value::Fq_type::Type_0:
             chi = Singular_Value::cal_type_0(this->p_kv->kvec_c,
                                              this->info_ewald.ewald_qdiv,
-                                             this->info_ewald.ewald_qdense,
-                                             this->info_ewald.ewald_niter,
-                                             this->info_ewald.ewald_eps,
-                                             this->info_ewald.ewald_arate);
+                                             30,
+                                             30,
+                                             1e-6,
+                                             3);
             break;
         case Singular_Value::Fq_type::Type_1:
             chi = Singular_Value::cal_type_1(nmp,
                                              this->info_ewald.ewald_qdiv,
                                              this->ewald_lambda,
-                                             this->info_ewald.ewald_niter,
-                                             this->info_ewald.ewald_eps);
+                                             5,
+                                             1e-4);
             break;
         default:
             throw std::domain_error(std::string(__FILE__) + " line " + std::to_string(__LINE__));

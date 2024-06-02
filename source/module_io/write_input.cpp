@@ -391,10 +391,6 @@ ModuleBase::GlobalFunc::OUTP(ofs, "out_bandgap", out_bandgap, "if true, print ou
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_use_ewald", exx_use_ewald, "if 1, use Ewald method to construct V matrix");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_fq_type", exx_fq_type, "auxiliary-function fq used in correction to V(q) at q->0");
     ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdiv", exx_ewald_qdiv, "the order of q-divergence in auxiliary function");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_qdense", exx_ewald_qdense, "the density of q-points related to integral of fq_type=0");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_niter", exx_ewald_niter, "maximal iterations associated with Coulomb singularity correction");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_eps", exx_ewald_eps, "Iteration tolerance associated with Coulomb singularity correction");
-    ModuleBase::GlobalFunc::OUTP(ofs, "exx_ewald_arate", exx_ewald_arate, "adaptive rate of iterations related to integral of fq_type=0");
 
     ofs << "\n#Parameters (16.tddft)" << std::endl;
     ModuleBase::GlobalFunc::OUTP(ofs, "td_force_dt", td_force_dt, "time of force change");

@@ -613,11 +613,6 @@ void Input_Conv::Convert(void)
         GlobalC::exx_info.info_ri.ccp_rmesh_times = std::stod(INPUT.exx_ccp_rmesh_times);
 
         GlobalC::exx_info.info_ewald.ewald_qdiv = INPUT.exx_ewald_qdiv;
-        GlobalC::exx_info.info_ewald.ewald_qdense = INPUT.exx_ewald_qdense;
-        //GlobalC::exx_info.info_ewald.ewald_lambda = std::stod(INPUT.exx_lambda);
-        GlobalC::exx_info.info_ewald.ewald_niter = INPUT.exx_ewald_niter;
-        GlobalC::exx_info.info_ewald.ewald_eps = INPUT.exx_ewald_eps;
-        GlobalC::exx_info.info_ewald.ewald_arate = INPUT.exx_ewald_arate;
 
         Exx_Abfs::Jle::Lmax = INPUT.exx_opt_orb_lmax;
         Exx_Abfs::Jle::Ecut_exx = INPUT.exx_opt_orb_ecut;
