@@ -31,7 +31,7 @@ void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charg
 #ifdef __MPI
 		if ( GlobalC::exx_info.info_global.cal_exx )
 		{
-            if (GlobalC::ucell.atoms[0].ncpp.xc_func == "HSE" || GlobalC::ucell.atoms[0].ncpp.xc_func == "PBE0" ||
+            if (GlobalC::ucell.atoms[0].ncpp.xc_func == "HF" || GlobalC::ucell.atoms[0].ncpp.xc_func == "PBE0" || GlobalC::ucell.atoms[0].ncpp.xc_func == "HSE" ||
                 GlobalC::ucell.atoms[0].ncpp.xc_func == "LC_PBE" || GlobalC::ucell.atoms[0].ncpp.xc_func == "LC_WPBE" ||
                 GlobalC::ucell.atoms[0].ncpp.xc_func == "LRC_WPBEH" || GlobalC::ucell.atoms[0].ncpp.xc_func == "CAM_PBEH"
             )
