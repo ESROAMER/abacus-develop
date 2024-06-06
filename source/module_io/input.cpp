@@ -424,7 +424,7 @@ void Input::Default(void)
     exx_ccp_rmesh_times = "default";
 
     exx_use_ewald = false;
-    exx_fq_type = 0;
+    exx_fq_type = 1;
     exx_ewald_qdiv = 2;
 
     exx_distribute_type = "htime";
