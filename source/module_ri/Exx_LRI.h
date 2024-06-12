@@ -41,9 +41,6 @@ class Exx_LRI
     using TAC = std::pair<TA, TC>;
     using TatomR = std::array<double, Ndim>; // tmp
 
-    using TK = std::array<int, 1>;
-    using TAK = std::pair<TA, TK>;
-
   public:
     Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in)
         : info(info_in), info_ewald(info_ewald_in), evq(info, info_ewald){};
