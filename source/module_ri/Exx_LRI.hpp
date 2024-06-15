@@ -158,7 +158,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
     if (this->info_ewald.use_ewald)
     {
-        this->evq.init_parallel(period_Vs, list_As_Vs);
+        this->evq.init_ions(period_Vs, list_As_Vs);
         double chi = this->evq.get_singular_chi();
         Vs = this->evq.cal_Vs(chi, Vs);
     }
