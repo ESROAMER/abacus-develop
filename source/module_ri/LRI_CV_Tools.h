@@ -85,13 +85,15 @@ extern std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::ar
     const std::array<std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, RI::Tensor<Tdata>>>, 3>& dCVs);
 
 template <typename Tdata>
-inline Tdata init_elem(const size_t vq_ndim0, const size_t vq_ndim1);
+inline Tdata init_elem(const size_t ndim0, const size_t ndim1);
 template <typename T, std::size_t N>
-inline std::array<RI::Tensor<T>, N> init_elem(const size_t vq_ndim0, const size_t vq_ndim1);
+inline std::array<RI::Tensor<T>, N> init_elem(const size_t ndim0, const size_t ndim1);
 template <typename Tdata>
 inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val);
 template <typename T, std::size_t N>
-extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val);
+extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
+template <typename T, std::size_t N>
+extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<RI::Tensor<T>, N>& val, T& frac);
 } // namespace LRI_CV_Tools
 
 #include "LRI_CV_Tools.hpp"

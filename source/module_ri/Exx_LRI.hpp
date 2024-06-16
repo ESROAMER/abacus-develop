@@ -168,11 +168,11 @@ void Exx_LRI<Tdata>::cal_exx_ions()
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
     {
         std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, 3> dVs
-            = this->cv.cal_dVs(list_As_Vs.first,
+            = LRI_CV_Tools::change_order(this->cv.cal_dVs(list_As_Vs.first,
                                list_As_Vs.second[0],
                                {
                                    {"writable_dVws", true}
-        });
+        }));
         this->cv.dVws = LRI_CV_Tools::get_dCVws(dVs);
         this->exx_lri.set_dVs(std::move(dVs), this->info.V_grad_threshold);
     }

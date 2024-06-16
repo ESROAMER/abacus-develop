@@ -291,17 +291,17 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI:
 }
 
 template <typename Tdata>
-Tdata LRI_CV_Tools::init_elem(const size_t vq_ndim0, const size_t vq_ndim1)
+Tdata LRI_CV_Tools::init_elem(const size_t ndim0, const size_t ndim1)
 {
-    RI::Tensor<Tdata> data({vq_ndim0, vq_ndim1});
+    RI::Tensor<Tdata> data({ndim0, ndim1});
     return data;
 }
 
 template <typename T, std::size_t N>
-std::array<RI::Tensor<T>, N> LRI_CV_Tools::init_elem(const size_t vq_ndim0, const size_t vq_ndim1)
+std::array<RI::Tensor<T>, N> LRI_CV_Tools::init_elem(const size_t ndim0, const size_t ndim1)
 {
     std::array<RI::Tensor<T>, N> data;
-    data.fill(RI::Tensor<T>({vq_ndim0, vq_ndim1}));
+    data.fill(RI::Tensor<T>({ndim0, ndim1}));
     return data;
 }
 
@@ -312,10 +312,17 @@ void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lm
 }
 
 template <typename T, std::size_t N>
-void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val)
+void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac)
 {
     for (size_t i = 0; i != N; ++i)
-        data[i](lmp, lmq) += val[i];
+        data[i](lmp, lmq) += frac * val[i];
+}
+
+template <typename T, std::size_t N>
+void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<RI::Tensor<T>, N>& val, T& frac)
+{
+    for (size_t i = 0; i != N; ++i)
+        data[i](lmp, lmq) += frac * val[i](lmp, lmq);
 }
 
 #endif

@@ -170,7 +170,7 @@ auto LRI_CV<Tdata>::cal_dVs(const std::vector<TA>& list_A0,
                                                                                         std::placeholders::_4);
     const T_func_cal_Rcut func_cal_Rcut
         = std::bind(&LRI_CV<Tdata>::cal_V_Rcut, this, std::placeholders::_1, std::placeholders::_2);
-    return LRI_CV_Tools::change_order(this->cal_datas(list_A0, list_A1, flags, func_cal_Rcut, func_DPcal_dV));
+    return this->cal_datas(list_A0, list_A1, flags, func_cal_Rcut, func_DPcal_dV);
 }
 
 template <typename Tdata>
