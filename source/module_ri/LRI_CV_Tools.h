@@ -94,6 +94,10 @@ template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<RI::Tensor<T>, N>& val, T& frac);
+template <typename Tin, typename Tout>
+inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
+template <typename Tin, typename Tout, std::size_t N>
+extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>& data);
 } // namespace LRI_CV_Tools
 
 #include "LRI_CV_Tools.hpp"

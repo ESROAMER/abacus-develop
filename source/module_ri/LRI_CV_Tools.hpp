@@ -6,6 +6,8 @@
 #ifndef LRI_CV_TOOLS_HPP
 #define LRI_CV_TOOLS_HPP
 
+#include <RI/global/Global_Func-1.h>
+
 #include "../module_base/mathzone.h"
 #include "Inverse_Matrix.h"
 #include "LRI_CV_Tools.h"
@@ -312,17 +314,40 @@ void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lm
 }
 
 template <typename T, std::size_t N>
-void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac)
+void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
+                            const int lmp,
+                            const int lmq,
+                            std::array<T, N>& val,
+                            T& frac)
 {
     for (size_t i = 0; i != N; ++i)
         data[i](lmp, lmq) += frac * val[i];
 }
 
 template <typename T, std::size_t N>
-void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<RI::Tensor<T>, N>& val, T& frac)
+void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
+                            const int lmp,
+                            const int lmq,
+                            std::array<RI::Tensor<T>, N>& val,
+                            T& frac)
 {
     for (size_t i = 0; i != N; ++i)
         data[i](lmp, lmq) += frac * val[i](lmp, lmq);
+}
+
+template <typename Tin, typename Tout>
+RI::Tensor<Tout> LRI_CV_Tools::convert(RI::Tensor<Tin>& data)
+{
+    return RI::Global_Func::convert<Tout>(data);
+}
+
+template <typename Tin, typename Tout, std::size_t N>
+std::array<RI::Tensor<Tout>, N> LRI_CV_Tools::convert(std::array<RI::Tensor<Tin>, N>& data)
+{
+    std::array<RI::Tensor<Tout>, N> out;
+    for (size_t i = 0; i != N; ++i)
+        out[i] = RI::Global_Func::convert<Tout>(data[i]);
+    return out;
 }
 
 #endif
