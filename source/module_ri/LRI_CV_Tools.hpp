@@ -265,28 +265,25 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, RI::Tensor<Tda
 
 template <typename TA, typename Tcell, typename Tdata>
 std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> LRI_CV_Tools::
-    get_dCVws(const std::array<std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, RI::Tensor<Tdata>>>, 3>& dCVs)
+    get_dCVws(const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, std::array<RI::Tensor<Tdata>>, 3>>& dCVs)
 {
     std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> dCVws;
-    for (int ix = 0; ix < 3; ++ix)
+    for (const auto& dCVs_A: dCVs)
     {
-        for (const auto& dCVs_A: dCVs[ix])
+        const TA iat0 = dCVs_A.first;
+        const int it0 = GlobalC::ucell.iat2it[iat0];
+        const int ia0 = GlobalC::ucell.iat2ia[iat0];
+        const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[ia0];
+        for (const auto& dCVs_B: dCVs_A.second)
         {
-            const TA iat0 = dCVs_A.first;
-            const int it0 = GlobalC::ucell.iat2it[iat0];
-            const int ia0 = GlobalC::ucell.iat2ia[iat0];
-            const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[ia0];
-            for (const auto& dCVs_B: dCVs_A.second)
-            {
-                const TA iat1 = dCVs_B.first.first;
-                const int it1 = GlobalC::ucell.iat2it[iat1];
-                const int ia1 = GlobalC::ucell.iat2ia[iat1];
-                const std::array<int, 3>& cell1 = dCVs_B.first.second;
-                const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
-                const Abfs::Vector3_Order<double> R_delta
-                    = -tau0 + tau1 + (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec);
-                dCVws[it0][it1][R_delta][ix] = dCVs_B.second;
-            }
+            const TA iat1 = dCVs_B.first.first;
+            const int it1 = GlobalC::ucell.iat2it[iat1];
+            const int ia1 = GlobalC::ucell.iat2ia[iat1];
+            const std::array<int, 3>& cell1 = dCVs_B.first.second;
+            const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
+            const Abfs::Vector3_Order<double> R_delta
+                = -tau0 + tau1 + (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec);
+            dCVws[it0][it1][R_delta][ix] = dCVs_B.second;
         }
     }
     return dCVws;
@@ -337,13 +334,13 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
         data[i](lmp1, lmq1) += frac * val[i](lmp1, lmq1);
 }
 
-template <typename Tin, typename Tout>
+template <typename Tout, typename Tin>
 RI::Tensor<Tout> LRI_CV_Tools::convert(RI::Tensor<Tin>& data)
 {
     return RI::Global_Func::convert<Tout>(data);
 }
 
-template <typename Tin, typename Tout, std::size_t N>
+template <typename Tout, typename Tin, std::size_t N>
 std::array<RI::Tensor<Tout>, N> LRI_CV_Tools::convert(std::array<RI::Tensor<Tin>, N>& data)
 {
     std::array<RI::Tensor<Tout>, N> out;

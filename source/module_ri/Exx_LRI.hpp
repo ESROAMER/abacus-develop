@@ -167,14 +167,18 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
     {
-        std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, 3> dVs
-            = LRI_CV_Tools::change_order(this->cv.cal_dVs(list_As_Vs.first,
+        std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, 3>>> dVs
+            = this->cv.cal_dVs(list_As_Vs.first,
                                list_As_Vs.second[0],
                                {
                                    {"writable_dVws", true}
-        }));
+        });
         this->cv.dVws = LRI_CV_Tools::get_dCVws(dVs);
-        this->exx_lri.set_dVs(std::move(dVs), this->info.V_grad_threshold);
+
+        if (this->info_ewald.use_ewald)
+            dVs = this->evq.cal_dVs(dVs);
+
+        this->exx_lri.set_dVs(std::move(LRI_CV_Tools::change_order(dVs)), this->info.V_grad_threshold);
     }
 
     const std::array<Tcell, Ndim> period_Cs = LRI_CV_Tools::cal_latvec_range<Tcell>(2);

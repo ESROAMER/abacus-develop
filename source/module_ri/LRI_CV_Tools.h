@@ -100,9 +100,9 @@ extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      const int lmp1,
                      const int lmq1,
                      T& frac);
-template <typename Tin, typename Tout>
+template <typename Tout, typename Tin>
 inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
-template <typename Tin, typename Tout, std::size_t N>
+template <typename Tout, typename Tin, std::size_t N>
 extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>& data);
 } // namespace LRI_CV_Tools
 
