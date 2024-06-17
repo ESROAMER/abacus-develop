@@ -12,6 +12,8 @@
 #include <cstddef>
 #include <vector>
 
+#include "abfs.h"
+
 namespace LRI_CV_Tools
 {
 template <typename Tdata>
@@ -82,14 +84,19 @@ extern std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, RI::Ten
     const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, RI::Tensor<Tdata>>>& CVs);
 template <typename TA, typename Tcell, typename Tdata>
 extern std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> get_dCVws(
-    const std::array<std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, RI::Tensor<Tdata>>>, 3>& dCVs);
+    const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, std::array<RI::Tensor<Tdata>, 3>>>& dCVs);
 
 template <typename Tdata>
-inline Tdata init_elem(const size_t ndim0, const size_t ndim1);
+inline void init_elem(RI::Tensor<Tdata>& data, const size_t ndim0, const size_t ndim1);
 template <typename T, std::size_t N>
-inline std::array<RI::Tensor<T>, N> init_elem(const size_t ndim0, const size_t ndim1);
+inline void init_elem(std::array<RI::Tensor<T>, N>& data, const size_t ndim0, const size_t ndim1);
+
 template <typename Tdata>
-inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val);
+inline void add_elem(Tdata& data, Tdata& val, Tdata& frac);
+template <typename T, std::size_t N>
+extern void add_elem(std::array<T, N>& data, T& val, T& frac);
+template <typename Tdata>
+inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val, Tdata& frac);
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
 template <typename T, std::size_t N>
@@ -100,6 +107,7 @@ extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      const int lmp1,
                      const int lmq1,
                      T& frac);
+
 template <typename Tout, typename Tin>
 inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
 template <typename Tout, typename Tin, std::size_t N>

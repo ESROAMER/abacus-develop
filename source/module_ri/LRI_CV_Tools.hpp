@@ -11,6 +11,8 @@
 #include "../module_base/mathzone.h"
 #include "Inverse_Matrix.h"
 #include "LRI_CV_Tools.h"
+#include "RI_Util.h"
+#include "module_hamilt_pw/hamilt_pwdft/global.h"
 
 template <typename Tdata>
 RI::Tensor<Tdata> LRI_CV_Tools::cal_I(const RI::Tensor<Tdata>& m)
@@ -265,7 +267,7 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, RI::Tensor<Tda
 
 template <typename TA, typename Tcell, typename Tdata>
 std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> LRI_CV_Tools::
-    get_dCVws(const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, std::array<RI::Tensor<Tdata>>, 3>>& dCVs)
+    get_dCVws(const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, std::array<RI::Tensor<Tdata>, 3>>>& dCVs)
 {
     std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> dCVws;
     for (const auto& dCVs_A: dCVs)
@@ -283,31 +285,41 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI:
             const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
             const Abfs::Vector3_Order<double> R_delta
                 = -tau0 + tau1 + (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec);
-            dCVws[it0][it1][R_delta][ix] = dCVs_B.second;
+            dCVws[it0][it1][R_delta] = dCVs_B.second;
         }
     }
     return dCVws;
 }
 
 template <typename Tdata>
-Tdata LRI_CV_Tools::init_elem(const size_t ndim0, const size_t ndim1)
+void LRI_CV_Tools::init_elem(RI::Tensor<Tdata>& data, const size_t ndim0, const size_t ndim1)
 {
-    RI::Tensor<Tdata> data({ndim0, ndim1});
-    return data;
+    data.reshape({ndim0, ndim1});
 }
 
 template <typename T, std::size_t N>
-std::array<RI::Tensor<T>, N> LRI_CV_Tools::init_elem(const size_t ndim0, const size_t ndim1)
+void LRI_CV_Tools::init_elem(std::array<RI::Tensor<T>, N>& data, const size_t ndim0, const size_t ndim1)
 {
-    std::array<RI::Tensor<T>, N> data;
     data.fill(RI::Tensor<T>({ndim0, ndim1}));
-    return data;
 }
 
 template <typename Tdata>
-void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val)
+void LRI_CV_Tools::add_elem(Tdata& data, Tdata& val, Tdata& frac)
 {
-    data(lmp, lmq) += val;
+    data += frac * val;
+}
+
+template <typename T, std::size_t N>
+void LRI_CV_Tools::add_elem(std::array<T, N>& data, T& val, T& frac)
+{
+    for (size_t i = 0; i != N; ++i)
+        data[i] += frac * val;
+}
+
+template <typename Tdata>
+void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val, Tdata& frac)
+{
+    data(lmp, lmq) += frac * val;
 }
 
 template <typename T, std::size_t N>
