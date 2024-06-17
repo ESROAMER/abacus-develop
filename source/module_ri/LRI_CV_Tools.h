@@ -93,7 +93,13 @@ inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdat
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
 template <typename T, std::size_t N>
-extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<RI::Tensor<T>, N>& val, T& frac);
+extern void add_elem(std::array<RI::Tensor<T>, N>& data,
+                     const int lmp0,
+                     const int lmq0,
+                     std::array<RI::Tensor<T>, N>& val,
+                     const int lmp1,
+                     const int lmq1,
+                     T& frac);
 template <typename Tin, typename Tout>
 inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
 template <typename Tin, typename Tout, std::size_t N>

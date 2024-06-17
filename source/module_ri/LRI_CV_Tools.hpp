@@ -326,13 +326,15 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
 
 template <typename T, std::size_t N>
 void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
-                            const int lmp,
-                            const int lmq,
+                            const int lmp0,
+                            const int lmq0,
                             std::array<RI::Tensor<T>, N>& val,
+                            const int lmp1,
+                            const int lmq1,
                             T& frac)
 {
     for (size_t i = 0; i != N; ++i)
-        data[i](lmp, lmq) += frac * val[i](lmp, lmq);
+        data[i](lmp1, lmq1) += frac * val[i](lmp1, lmq1);
 }
 
 template <typename Tin, typename Tout>
