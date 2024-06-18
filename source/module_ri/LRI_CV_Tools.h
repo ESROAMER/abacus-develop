@@ -6,6 +6,7 @@
 #ifndef LRI_CV_TOOLS_H
 #define LRI_CV_TOOLS_H
 
+#include <RI/global/Array_Operator.h>
 #include <RI/global/Tensor.h>
 
 #include <array>
@@ -112,6 +113,14 @@ template <typename Tout, typename Tin>
 inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
 template <typename Tout, typename Tin, std::size_t N>
 extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>& data);
+
+template <typename T>
+struct plus {
+    T operator()(const T& lhs, const T& rhs) const {
+        using namespace RI::Array_Operator;
+        return lhs + rhs;
+    }
+};
 } // namespace LRI_CV_Tools
 
 #include "LRI_CV_Tools.hpp"
