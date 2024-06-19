@@ -59,6 +59,13 @@ extern RI::Tensor<T> mul2(const T& t1, const RI::Tensor<T>& t2);
 template <typename T, std::size_t N>
 extern std::vector<std::array<T, N>> minus(const std::vector<std::array<T, N>>& v1,
                                            const std::vector<std::array<T, N>>& v2);
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+inline std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> minus(
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v1,
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v2);
+template <typename TkeyA, typename TkeyB, typename Tvalue>
+extern std::map<TkeyA, std::map<TkeyB, Tvalue>> minus(std::map<TkeyA, std::map<TkeyB, Tvalue>>& v1,
+                                                      std::map<TkeyA, std::map<TkeyB, Tvalue>>& v2);
 
 template <typename T, std::size_t N>
 extern std::array<T, N> negative(const std::array<T, N>& v_in);
@@ -78,6 +85,9 @@ extern std::array<std::vector<std::vector<T>>, N> change_order(std::vector<std::
 template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
 extern std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> change_order(
     std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>&& ds_in);
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+extern std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> change_order(
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>&& ds_in);
 
 template <typename Tcell>
 extern std::array<Tcell, 3> cal_latvec_range(const double& rcut_times);
@@ -120,7 +130,7 @@ extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      T& frac);
 
 template <typename Tout, typename Tin>
-extern RI::Tensor<Tout> convert(RI::Tensor<Tin>&& data);
+inline RI::Tensor<Tout> convert(RI::Tensor<Tin>&& data);
 template <typename Tout, typename Tin, std::size_t N>
 extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>&& data);
 

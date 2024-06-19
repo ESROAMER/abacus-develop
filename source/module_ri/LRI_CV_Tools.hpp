@@ -7,6 +7,7 @@
 #define LRI_CV_TOOLS_HPP
 
 #include <RI/global/Global_Func-1.h>
+#include <RI/global/Map_Operator.h>
 
 #include "../module_base/mathzone.h"
 #include "Inverse_Matrix.h"
@@ -145,6 +146,37 @@ std::vector<std::array<T, N>> LRI_CV_Tools::minus(const std::vector<std::array<T
     return v;
 }
 
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> LRI_CV_Tools::minus(
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v1,
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v2)
+{
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> dv = minus(v1, v2);
+    return dv;
+}
+
+template <typename TkeyA, typename TkeyB, typename Tvalue>
+std::map<TkeyA, std::map<TkeyB, Tvalue>> LRI_CV_Tools::minus(std::map<TkeyA, std::map<TkeyB, Tvalue>>& v1,
+                                                             std::map<TkeyA, std::map<TkeyB, Tvalue>>& v2)
+{
+    assert(v1.size() == v2.size());
+    using namespace RI::Map_Operator;
+    using namespace RI::Array_Operator;
+
+    std::map<TkeyA, std::map<TkeyB, Tvalue>> dv;
+    auto it1 = v1.begin();
+    auto it2 = v2.begin();
+    while (it1 != v1.end() && it2 != v2.end())
+    {
+        assert(it1->first == it2->first);
+        const TkeyA& keyA = it1->first;
+        const std::map<TkeyB, Tvalue>& map1 = it1->second;
+        const std::map<TkeyB, Tvalue>& map2 = it2->second;
+        dv[keyA] = map1 - map2;
+    }
+    return dv;
+}
+
 template <typename T, std::size_t N>
 std::array<T, N> LRI_CV_Tools::negative(const std::array<T, N>& v_in)
 {
@@ -227,6 +259,18 @@ std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> LRI_CV_Tools::change_ord
         for (auto& ds_B: ds_A.second)
             for (int ix = 0; ix < N; ++ix)
                 ds[ix][ds_A.first][ds_B.first] = std::move(ds_B.second[ix]);
+    return ds;
+}
+
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> LRI_CV_Tools::change_order(
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>&& ds_in)
+{
+    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> ds;
+    for (int ix = 0; ix < N; ++ix)
+        for (auto& ds_A: ds_in[ix])
+            for (auto& ds_B: ds_A.second)
+                ds[ds_A.first][ds_B.first][ix] = std::move(ds_B.second);
     return ds;
 }
 

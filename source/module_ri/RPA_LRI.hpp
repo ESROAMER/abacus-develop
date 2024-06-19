@@ -45,7 +45,7 @@ template <typename T, typename Tdata> void RPA_LRI<T, Tdata>::cal_rpa_cv()
         = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, period_Cs, 2, false);
 
     std::pair<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>,
-              std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, 3>>
+              std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, 3>>>>
         Cs_dCs = exx_lri_rpa.cv.cal_Cs_dCs(list_As_Cs.first,
                                            list_As_Cs.second[0],
                                            {{"cal_dC", false},
