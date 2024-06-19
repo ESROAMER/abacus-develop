@@ -188,7 +188,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
         = RI::Distribute_Equally::distribute_atoms_periods(this->mpi_comm, atoms, period_Cs, 2, false);
 
     std::pair<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>,
-              std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, 3>>
+              std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, 3>>>>
         Cs_dCs = this->cv.cal_Cs_dCs(list_As_Cs.first,
                                      list_As_Cs.second[0],
                                      {
@@ -204,9 +204,10 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 
     if (GlobalV::CAL_FORCE || GlobalV::CAL_STRESS)
     {
-        std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, 3>& dCs = std::get<1>(Cs_dCs);
+        std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, 3>>>& dCs = std::get<1>(Cs_dCs);
         this->cv.dCws = LRI_CV_Tools::get_dCVws(dCs);
-        this->exx_lri.set_dCs(std::move(dCs), this->info.C_grad_threshold);
+        std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, Ndim> dCs_order = LRI_CV_Tools::change_order(std::move(dCs));
+        this->exx_lri.set_dCs(std::move(dCs_order), this->info.C_grad_threshold);
     }
     ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
 }

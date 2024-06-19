@@ -49,6 +49,8 @@ extern std::vector<RI::Tensor<Tdata>> mul2(const std::vector<std::vector<RI::Ten
                                            const std::vector<RI::Tensor<Tdata>>& vec);
 template <typename T1, typename T2>
 extern std::array<T2, 3> mul2(const T1& t1, const std::array<T2, 3>& t2);
+template <typename T>
+extern RI::Tensor<T> mul2(const T& t1, const RI::Tensor<T>& t2);
 
 // template<typename T, std::size_t N>
 // std::array<T,N> operator-(const std::array<T,N> &v1, const std::array<T,N> &v2);
@@ -100,6 +102,14 @@ template <typename Tdata>
 inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val, Tdata& frac);
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
+template <typename Tdata>
+inline void add_elem(RI::Tensor<Tdata>& data,
+                     const int lmp0,
+                     const int lmq0,
+                     RI::Tensor<Tdata>& val,
+                     const int lmp1,
+                     const int lmq1,
+                     Tdata& frac);
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      const int lmp0,
@@ -110,13 +120,15 @@ extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      T& frac);
 
 template <typename Tout, typename Tin>
-inline RI::Tensor<Tout> convert(RI::Tensor<Tin>& data);
+extern RI::Tensor<Tout> convert(RI::Tensor<Tin>&& data);
 template <typename Tout, typename Tin, std::size_t N>
-extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>& data);
+extern std::array<RI::Tensor<Tout>, N> convert(std::array<RI::Tensor<Tin>, N>&& data);
 
 template <typename T>
-struct plus {
-    T operator()(const T& lhs, const T& rhs) const {
+struct plus
+{
+    T operator()(const T& lhs, const T& rhs) const
+    {
         using namespace RI::Array_Operator;
         return lhs + rhs;
     }

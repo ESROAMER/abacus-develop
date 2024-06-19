@@ -108,6 +108,12 @@ std::array<T2, 3> LRI_CV_Tools::mul2(const T1& t1, const std::array<T2, 3>& t2)
     return std::array<T2, 3>{mul2(t1, t2[0]), mul2(t1, t2[1]), mul2(t1, t2[2])};
 }
 
+template <typename T>
+RI::Tensor<T> LRI_CV_Tools::mul2(const T& t1, const RI::Tensor<T>& t2)
+{
+    return t1 * t2;
+}
+
 /*
 template<typename T, std::size_t N>
 std::array<T,N> LRI_CV_Tools::operator-(const std::array<T,N> &v1, const std::array<T,N> &v2)
@@ -333,6 +339,18 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
         data[i](lmp, lmq) += frac * val[i];
 }
 
+template <typename Tdata>
+void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data,
+                            const int lmp0,
+                            const int lmq0,
+                            RI::Tensor<Tdata>& val,
+                            const int lmp1,
+                            const int lmq1,
+                            Tdata& frac)
+{
+    data(lmp1, lmq1) += frac * val(lmp1, lmq1);
+}
+
 template <typename T, std::size_t N>
 void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const int lmp0,
@@ -347,13 +365,13 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
 }
 
 template <typename Tout, typename Tin>
-RI::Tensor<Tout> LRI_CV_Tools::convert(RI::Tensor<Tin>& data)
+RI::Tensor<Tout> LRI_CV_Tools::convert(RI::Tensor<Tin>&& data)
 {
     return RI::Global_Func::convert<Tout>(data);
 }
 
 template <typename Tout, typename Tin, std::size_t N>
-std::array<RI::Tensor<Tout>, N> LRI_CV_Tools::convert(std::array<RI::Tensor<Tin>, N>& data)
+std::array<RI::Tensor<Tout>, N> LRI_CV_Tools::convert(std::array<RI::Tensor<Tin>, N>&& data)
 {
     std::array<RI::Tensor<Tout>, N> out;
     for (size_t i = 0; i != N; ++i)
