@@ -173,6 +173,8 @@ std::map<TkeyA, std::map<TkeyB, Tvalue>> LRI_CV_Tools::minus(std::map<TkeyA, std
         const std::map<TkeyB, Tvalue>& map1 = it1->second;
         const std::map<TkeyB, Tvalue>& map2 = it2->second;
         dv[keyA] = map1 - map2;
+        ++it1;
+        ++it2;
     }
     return dv;
 }
@@ -344,7 +346,7 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI:
 template <typename Tdata>
 void LRI_CV_Tools::init_elem(RI::Tensor<Tdata>& data, const size_t ndim0, const size_t ndim1)
 {
-    data.reshape({ndim0, ndim1});
+    data = RI::Tensor<Tdata>({ndim0, ndim1});
 }
 
 template <typename T, std::size_t N>
