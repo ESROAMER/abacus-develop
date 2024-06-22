@@ -343,71 +343,35 @@ std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI:
     return dCVws;
 }
 
-template <typename Tdata>
-void LRI_CV_Tools::init_elem(RI::Tensor<Tdata>& data, const size_t ndim0, const size_t ndim1)
-{
-    data = RI::Tensor<Tdata>({ndim0, ndim1});
-}
-
 template <typename T, std::size_t N>
-void LRI_CV_Tools::init_elem(std::array<RI::Tensor<T>, N>& data, const size_t ndim0, const size_t ndim1)
+void LRI_CV_Tools::add_elem(std::array<T, N>& data, const T& val, const T& frac)
 {
-    data.fill(RI::Tensor<T>({ndim0, ndim1}));
-}
-
-template <typename Tdata>
-void LRI_CV_Tools::add_elem(Tdata& data, Tdata& val, Tdata& frac)
-{
-    data += frac * val;
-}
-
-template <typename T, std::size_t N>
-void LRI_CV_Tools::add_elem(std::array<T, N>& data, T& val, T& frac)
-{
-    for (size_t i = 0; i != N; ++i)
+    for (size_t i = 0; i < N; ++i)
         data[i] += frac * val;
-}
-
-template <typename Tdata>
-void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val, Tdata& frac)
-{
-    data(lmp, lmq) += frac * val;
 }
 
 template <typename T, std::size_t N>
 void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const int lmp,
                             const int lmq,
-                            std::array<T, N>& val,
-                            T& frac)
+                            const std::array<T, N>& val,
+                            const T& frac)
 {
-    for (size_t i = 0; i != N; ++i)
+    for (size_t i = 0; i < N; ++i)
         data[i](lmp, lmq) += frac * val[i];
-}
-
-template <typename Tdata>
-void LRI_CV_Tools::add_elem(RI::Tensor<Tdata>& data,
-                            const int lmp0,
-                            const int lmq0,
-                            RI::Tensor<Tdata>& val,
-                            const int lmp1,
-                            const int lmq1,
-                            Tdata& frac)
-{
-    data(lmp1, lmq1) += frac * val(lmp1, lmq1);
 }
 
 template <typename T, std::size_t N>
 void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const int lmp0,
                             const int lmq0,
-                            std::array<RI::Tensor<T>, N>& val,
+                            const std::array<RI::Tensor<T>, N>& val,
                             const int lmp1,
                             const int lmq1,
-                            T& frac)
+                            const T& frac)
 {
-    for (size_t i = 0; i != N; ++i)
-        data[i](lmp1, lmq1) += frac * val[i](lmp1, lmq1);
+    for (size_t i = 0; i < N; ++i)
+        data[i](lmp0, lmq0) += frac * val[i](lmp1, lmq1);
 }
 
 template <typename Tout, typename Tin>

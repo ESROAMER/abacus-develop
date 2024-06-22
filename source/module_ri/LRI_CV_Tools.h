@@ -99,35 +99,90 @@ template <typename TA, typename Tcell, typename Tdata>
 extern std::map<int, std::map<int, std::map<Abfs::Vector3_Order<double>, std::array<RI::Tensor<Tdata>, 3>>>> get_dCVws(
     const std::map<TA, std::map<std::pair<TA, std::array<Tcell, 3>>, std::array<RI::Tensor<Tdata>, 3>>>& dCVs);
 
-template <typename Tdata>
-inline void init_elem(RI::Tensor<Tdata>& data, const size_t ndim0, const size_t ndim1);
+template <typename T>
+struct is_std_array : std::false_type
+{
+};
 template <typename T, std::size_t N>
-inline void init_elem(std::array<RI::Tensor<T>, N>& data, const size_t ndim0, const size_t ndim1);
+struct is_std_array<std::array<T, N>> : std::true_type
+{
+};
+template <typename T>
+struct is_tensor : std::false_type
+{
+};
+template <typename T>
+struct is_tensor<RI::Tensor<T>> : std::true_type
+{
+};
 
-template <typename Tdata>
-inline void add_elem(Tdata& data, Tdata& val, Tdata& frac);
+template <typename Tout>
+struct TinType;
+
+template <typename T>
+struct TinType<RI::Tensor<T>>
+{
+    using type = T;
+};
+
 template <typename T, std::size_t N>
-extern void add_elem(std::array<T, N>& data, T& val, T& frac);
-template <typename Tdata>
-inline void add_elem(RI::Tensor<Tdata>& data, const int lmp, const int lmq, Tdata& val, Tdata& frac);
+struct TinType<std::array<RI::Tensor<T>, N>>
+{
+    using type = T;
+};
+
+template <typename Tdata, typename = std::enable_if_t<!is_std_array<Tdata>::value>>
+inline void init_elem(Tdata& data, const size_t ndim0, const size_t ndim1)
+{
+    data = Tdata({ndim0, ndim1});
+};
 template <typename T, std::size_t N>
-extern void add_elem(std::array<RI::Tensor<T>, N>& data, const int lmp, const int lmq, std::array<T, N>& val, T& frac);
-template <typename Tdata>
-inline void add_elem(RI::Tensor<Tdata>& data,
+inline void init_elem(std::array<RI::Tensor<T>, N>& data, const size_t ndim0, const size_t ndim1)
+{
+    data.fill(RI::Tensor<T>({ndim0, ndim1}));
+};
+
+template <typename Tdata, typename = std::enable_if_t<!is_std_array<Tdata>::value && !is_tensor<Tdata>::value>>
+inline void add_elem(Tdata& data, const Tdata& val, const Tdata& frac)
+{
+    data += frac * val;
+};
+template <typename T, std::size_t N>
+extern void add_elem(std::array<T, N>& data, const T& val, const T& frac);
+template <typename Tdata, typename = std::enable_if_t<is_tensor<Tdata>::value>>
+inline void add_elem(const Tdata& data,
+                     const int lmp,
+                     const int lmq,
+                     const typename TinType<Tdata>::type& val,
+                     const typename TinType<Tdata>::type& frac)
+{
+    data(lmp, lmq) += frac * val;
+};
+template <typename T, std::size_t N>
+extern void add_elem(std::array<RI::Tensor<T>, N>& data,
+                     const int lmp,
+                     const int lmq,
+                     const std::array<T, N>& val,
+                     const T& frac);
+template <typename Tdata, typename = std::enable_if_t<is_tensor<Tdata>::value>>
+inline void add_elem(Tdata& data,
                      const int lmp0,
                      const int lmq0,
-                     RI::Tensor<Tdata>& val,
+                     const Tdata& val,
                      const int lmp1,
                      const int lmq1,
-                     Tdata& frac);
+                     const typename TinType<Tdata>::type& frac)
+{
+    data(lmp0, lmq0) += frac * val(lmp1, lmq1);
+};
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data,
                      const int lmp0,
                      const int lmq0,
-                     std::array<RI::Tensor<T>, N>& val,
+                     const std::array<RI::Tensor<T>, N>& val,
                      const int lmp1,
                      const int lmq1,
-                     T& frac);
+                     const T& frac);
 
 template <typename Tout, typename Tin>
 inline RI::Tensor<Tout> convert(RI::Tensor<Tin>&& data);
