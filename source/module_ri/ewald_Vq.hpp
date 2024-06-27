@@ -140,7 +140,7 @@ double Ewald_Vq<Tdata>::get_singular_chi()
     switch (this->info_ewald.fq_type)
     {
     case Singular_Value::Fq_type::Type_0:
-        chi = Singular_Value::cal_type_0(this->kvec_c, this->info_ewald.ewald_qdiv, 160, 30, 1e-6, 3);
+        chi = Singular_Value::cal_type_0(this->kvec_c, this->info_ewald.ewald_qdiv, 100, 30, 1e-6, 3);
         break;
     case Singular_Value::Fq_type::Type_1:
         chi = Singular_Value::cal_type_1(this->nmp, this->info_ewald.ewald_qdiv, this->ewald_lambda, 5, 1e-4);
@@ -246,12 +246,14 @@ auto Ewald_Vq<Tdata>::set_Vs_dVs_minus_gauss(const std::vector<TA>& list_A0,
         {
             const TA iat0 = list_A0[i0];
             const int it0 = GlobalC::ucell.iat2it[iat0];
+            const int ia0 = GlobalC::ucell.iat2ia[iat0];
             const TA iat1 = list_A1[i1].first;
             const int it1 = GlobalC::ucell.iat2it[iat1];
+            const int ia1 = GlobalC::ucell.iat2ia[iat1];
             const TC& cell1 = list_A1[i1].second;
 
-            const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[iat0];
-            const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[iat1];
+            const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[ia0];
+            const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
 
             const double Rcut
                 = std::min(this->g_lcaos_rcut[it0] * this->info.ccp_rmesh_times + this->g_lcaos_rcut[it1],
@@ -459,12 +461,14 @@ auto Ewald_Vq<Tdata>::set_Vq_dVq_minus_gauss(const std::vector<TA>& list_A0,
             {
                 const TA iat0 = list_A0[i0];
                 const int it0 = GlobalC::ucell.iat2it[iat0];
+                const int ia0 = GlobalC::ucell.iat2ia[iat0];
                 const TA iat1 = list_A1[i1].first;
                 const int it1 = GlobalC::ucell.iat2it[iat1];
+                const int ia1 = GlobalC::ucell.iat2ia[iat1];
                 const TC& cell1 = list_A1[i1].second;
 
-                const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[iat0];
-                const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[iat1];
+                const ModuleBase::Vector3<double> tau0 = GlobalC::ucell.atoms[it0].tau[ia0];
+                const ModuleBase::Vector3<double> tau1 = GlobalC::ucell.atoms[it1].tau[ia1];
                 const double Rcut = std::min(this->get_Rcut_min(it0, it1), this->get_Rcut_min(it1, it0));
                 const Abfs::Vector3_Order<double> R_delta
                     = -tau0 + tau1 + (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec);
