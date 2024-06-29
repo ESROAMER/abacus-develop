@@ -15,6 +15,7 @@ public:
     std::vector<ModuleBase::Vector3<double>> kvec_c;		// Cartesian coordinates of k points
     std::vector<ModuleBase::Vector3<double>> kvec_d;		// Direct coordinates of k points
     std::vector<ModuleBase::Vector3<double>> kvec_d_ibz;	// ibz Direct coordinates of k points
+    std::vector<ModuleBase::Vector3<double>> kvec_c_full; // Cartesian coordinates of full k mesh match with nkstot_full
 
     std::vector<double> wk;						// wk, weight of k points
     std::vector<double> wk_ibz;					// ibz kpoint wk ,weight of k points
