@@ -60,6 +60,10 @@ template <typename T, std::size_t N>
 extern std::vector<std::array<T, N>> minus(const std::vector<std::array<T, N>>& v1,
                                            const std::vector<std::array<T, N>>& v2);
 template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+extern std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> minus(
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>& v1,
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>& v2);
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
 inline std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> minus(
     std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v1,
     std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v2);
@@ -198,6 +202,14 @@ struct plus
         return lhs + rhs;
     }
 };
+
+template <typename Tin>
+inline bool check_empty(RI::Tensor<Tin>&& data)
+{
+    return data.empty();
+}
+template <typename Tin, std::size_t N>
+extern bool check_empty(std::array<RI::Tensor<Tin>, N>&& data);
 } // namespace LRI_CV_Tools
 
 #include "LRI_CV_Tools.hpp"

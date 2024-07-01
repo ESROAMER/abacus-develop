@@ -151,7 +151,20 @@ std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> LRI_CV_Tools::minus(
     std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v1,
     std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>& v2)
 {
-    std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> dv = minus(v1, v2);
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> v1_order = change_order(std::move(v1));
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> v2_order = change_order(std::move(v2));
+    auto dv = minus(v1_order, v2_order);
+    return change_order(std::move(dv));
+}
+
+template <typename TkeyA, typename TkeyB, typename Tvalue, std::size_t N>
+std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> LRI_CV_Tools::minus(
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>& v1,
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>& v2)
+{
+    std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N> dv;
+    for (size_t i = 0; i != N; ++i)
+        dv[i] = minus(v1[i], v2[i]);
     return dv;
 }
 
@@ -386,6 +399,19 @@ std::array<RI::Tensor<Tout>, N> LRI_CV_Tools::convert(std::array<RI::Tensor<Tin>
     std::array<RI::Tensor<Tout>, N> out;
     for (size_t i = 0; i != N; ++i)
         out[i] = RI::Global_Func::convert<Tout>(data[i]);
+    return out;
+}
+
+template <typename Tin, std::size_t N>
+bool LRI_CV_Tools::check_empty(std::array<RI::Tensor<Tin>, N>&& data)
+{
+    bool out = false;
+    for (size_t i = 0; i != N; ++i)
+    {
+        if (data[i].empty())
+            return true;
+    }
+
     return out;
 }
 
