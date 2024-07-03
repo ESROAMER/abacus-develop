@@ -89,7 +89,7 @@ void LCAO_Deepks::init(
     
     int tot_inl = tot_inl_per_atom * nat;
 
-    if(if_equiv) tot_inl = nat;
+    if(GlobalV::deepks_equiv) tot_inl = nat;
 
     this->lmaxd = lm;
     this->nmaxd = nm;
@@ -99,7 +99,7 @@ void LCAO_Deepks::init(
 
     int pdm_size = 0;
     this->inlmax = tot_inl;
-    if(!if_equiv)
+    if(!GlobalV::deepks_equiv)
     {
         GlobalV::ofs_running << " total basis (all atoms) for descriptor= " << std::endl;
 
@@ -125,7 +125,7 @@ void LCAO_Deepks::init(
     }
 
     // cal n(descriptor) per atom , related to Lmax, nchi(L) and m. (not total_nchi!)
-    if(!if_equiv)
+    if(!GlobalV::deepks_equiv)
     {
         this->des_per_atom=0; // mohan add 2021-04-21
         for (int l = 0; l <= this->lmaxd; l++)
@@ -214,6 +214,16 @@ void LCAO_Deepks::init_gdmx(const int nat)
     this->gdmx = new double** [nat];
     this->gdmy = new double** [nat];
     this->gdmz = new double** [nat];
+    int pdm_size = 0;
+    if(!GlobalV::deepks_equiv)
+    {
+        pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
+    }
+    else
+    {
+        pdm_size = this -> des_per_atom;
+    }
+    
     for (int iat = 0;iat < nat;iat++)
     {
         this->gdmx[iat] = new double* [inlmax];
@@ -221,12 +231,12 @@ void LCAO_Deepks::init_gdmx(const int nat)
         this->gdmz[iat] = new double* [inlmax];
         for (int inl = 0;inl < inlmax;inl++)
         {
-            this->gdmx[iat][inl] = new double [(2 * lmaxd + 1) * (2 * lmaxd + 1)];
-            this->gdmy[iat][inl] = new double [(2 * lmaxd + 1) * (2 * lmaxd + 1)];
-            this->gdmz[iat][inl] = new double[(2 * lmaxd + 1) * (2 * lmaxd + 1)];
-            ModuleBase::GlobalFunc::ZEROS(gdmx[iat][inl], (2 * lmaxd + 1) * (2 * lmaxd + 1));
-            ModuleBase::GlobalFunc::ZEROS(gdmy[iat][inl], (2 * lmaxd + 1) * (2 * lmaxd + 1));
-            ModuleBase::GlobalFunc::ZEROS(gdmz[iat][inl], (2 * lmaxd + 1) * (2 * lmaxd + 1));
+            this->gdmx[iat][inl] = new double [pdm_size];
+            this->gdmy[iat][inl] = new double [pdm_size];
+            this->gdmz[iat][inl] = new double[pdm_size];
+            ModuleBase::GlobalFunc::ZEROS(gdmx[iat][inl], pdm_size);
+            ModuleBase::GlobalFunc::ZEROS(gdmy[iat][inl], pdm_size);
+            ModuleBase::GlobalFunc::ZEROS(gdmz[iat][inl], pdm_size);
         }
     }
     this->nat_gdm = nat;
@@ -258,13 +268,23 @@ void LCAO_Deepks::init_gdmepsl()
 {
     this->gdm_epsl = new double** [6];
     
+    int pdm_size = 0;
+    if(!GlobalV::deepks_equiv)
+    {
+        pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
+    }
+    else
+    {
+        pdm_size = this -> des_per_atom;
+    }    
+
     for (int ipol = 0;ipol < 6;ipol++)
     {
         this->gdm_epsl[ipol] = new double* [inlmax];
         for (int inl = 0;inl < inlmax;inl++)
         {
-            this->gdm_epsl[ipol][inl] = new double [(2 * lmaxd + 1) * (2 * lmaxd + 1)];
-            ModuleBase::GlobalFunc::ZEROS(gdm_epsl[ipol][inl], (2 * lmaxd + 1) * (2 * lmaxd + 1));
+            this->gdm_epsl[ipol][inl] = new double [pdm_size];
+            ModuleBase::GlobalFunc::ZEROS(gdm_epsl[ipol][inl], pdm_size);
         }
     }
     return;
@@ -307,7 +327,16 @@ void LCAO_Deepks::allocate_V_delta(const int nat, const int nks)
     }
 
     //init gedm**
-    const int pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
+    int pdm_size = 0;
+    if(!GlobalV::deepks_equiv)
+    {
+        pdm_size = (this->lmaxd * 2 + 1) * (this->lmaxd * 2 + 1);
+    }
+    else
+    {
+        pdm_size = this -> des_per_atom;
+    }
+
     this->gedm = new double* [this->inlmax];
     for (int inl = 0;inl < this->inlmax;inl++)
     {

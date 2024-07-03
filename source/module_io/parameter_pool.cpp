@@ -888,7 +888,7 @@ void input_parameters_set(std::map<std::string, InputParameter> input_parameters
     }
     else if (input_parameters.count("out_chg") != 0)
     {
-        INPUT.out_chg = *static_cast<bool*>(input_parameters["out_chg"].get());
+        INPUT.out_chg = *static_cast<int*>(input_parameters["out_chg"].get());
     }
     else if (input_parameters.count("out_dm") != 0)
     {
@@ -1528,6 +1528,10 @@ void input_parameters_set(std::map<std::string, InputParameter> input_parameters
     else if (input_parameters.count("deepks_scf") != 0)
     {
         INPUT.deepks_scf = *static_cast<bool*>(input_parameters["deepks_scf"].get());
+    }
+    else if (input_parameters.count("deepks_equiv") != 0)
+    {
+        INPUT.deepks_equiv = *static_cast<bool*>(input_parameters["deepks_equiv"].get());
     }
     else if (input_parameters.count("deepks_bandgap") != 0)
     {

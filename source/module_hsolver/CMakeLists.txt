@@ -13,7 +13,7 @@ list(APPEND objects
 if(ENABLE_LCAO)
   list(APPEND objects
       hsolver_lcao.cpp
-      diago_blas.cpp
+      diago_scalapack.cpp
   )
   if (USE_ELPA)
     list(APPEND objects
@@ -21,7 +21,7 @@ if(ENABLE_LCAO)
     )
   endif ()
 
-  if(USE_CUSOLVER_LCAO AND USE_CUDA)
+  if(USE_CUDA)
       list(APPEND objects
           ./kernels/math_kernel_op.cpp
           ./kernels/dngvd_op.cpp
@@ -29,6 +29,13 @@ if(ENABLE_LCAO)
           diago_cusolver.cpp
           diago_cusolver.h
       )
+      if(ENABLE_CUSOLVERMP)
+        list(APPEND objects
+            ./kernels/cuda/diag_cusolvermp.cu
+            diago_cusolvermp.cpp
+            diago_cusolvermp.h
+        )
+      endif()
     add_library(
         diag_cusolver
         OBJECT
@@ -38,6 +45,14 @@ if(ENABLE_LCAO)
       add_coverage(diag_cusolver)
     endif()
   endif()
+
+  if(ENABLE_PEXSI)
+  list(APPEND objects
+      diago_pexsi.cpp
+    )
+    add_subdirectory(module_pexsi)
+  endif()
+
 endif()
 
 add_library(
@@ -57,4 +72,5 @@ endif()
 IF (BUILD_TESTING)
   add_subdirectory(test)
   add_subdirectory(kernels/test)
+  message(STATUS "Building tests")
 endif()

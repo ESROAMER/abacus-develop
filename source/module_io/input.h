@@ -111,6 +111,7 @@ class Input
     std::string dft_functional; // input DFT functional.
     double xc_temperature; // only relevant if finite temperature functional is used
     int nspin; // LDA ; LSDA ; non-linear spin
+    bool two_fermi = false;
     double nupdown = 0.0;
     double nelec; // total number of electrons
     double nelec_delta; // change in the number of total electrons
@@ -137,7 +138,7 @@ class Input
     double press2;
     double press3;
     bool cal_stress; // calculate the stress
-
+    int nstream;
     std::string fixed_axes; // which axes are fixed
     bool fixed_ibrav; //whether to keep type of lattice; must be used along with latname
     bool fixed_atoms; //whether to fix atoms during vc-relax
@@ -262,7 +263,7 @@ class Input
     int printe; // mohan add 2011-03-16
     int out_freq_elec;  // the frequency ( >= 0) of electronic iter to output charge density and wavefunction. 0: output only when converged
     int out_freq_ion;  // the frequency ( >= 0 ) of ionic step to output charge density and wavefunction. 0: output only when ion steps are finished
-    bool out_chg; // output charge density. 0: no; 1: yes
+    int out_chg; // output charge density. 0: no; 1: yes
     bool out_dm; // output density matrix.
     bool out_dm1;
     int out_pot; // yes or no
@@ -416,6 +417,8 @@ class Input
     bool out_dipole; // output the dipole or not
     bool out_efield; // output the efield or not
     bool out_current; //output the current or not
+    bool out_vecpot; // output the vector potential or not
+    bool init_vecpot_file; // initialize the vector potential, though file or integral
 
     double td_print_eij; // threshold to output Eij elements
     int td_edm; //0: new edm method   1: old edm method
@@ -517,7 +520,7 @@ class Input
                             // 2022-1-12
     bool deepks_scf; //(need libnpy and libtorch) if set 1, a trained model would be needed to cal V_delta and F_delta
     bool deepks_bandgap; // for bandgap label. QO added 2021-12-15
-
+    bool deepks_equiv;
     bool deepks_out_unittest; // if set 1, prints intermediate quantities that shall be used for making unit test
 
     std::string deepks_model; // needed when deepks_scf=1
@@ -612,6 +615,40 @@ class Input
     double qo_thr = 1e-6;
     std::vector<std::string> qo_strategy = {};
     std::vector<double> qo_screening_coeff = {};
+    //==========================================================
+    // variables for PEXSI
+    //==========================================================
+    int pexsi_npole = 40;
+    bool pexsi_inertia = true;
+    int pexsi_nmax = 80;
+    // int pexsi_symbolic = 1;
+    bool pexsi_comm = true;
+    bool pexsi_storage = true;
+    int pexsi_ordering = 0;
+    int pexsi_row_ordering = 1;
+    int pexsi_nproc = 1;
+    bool pexsi_symm = true;
+    bool pexsi_trans = false;
+    int pexsi_method = 1;
+    int pexsi_nproc_pole = 1;
+    // double pexsi_spin = 2;
+    double pexsi_temp = 0.015;
+    double pexsi_gap = 0;
+    double pexsi_delta_e = 20.0;
+    double pexsi_mu_lower = -10;
+    double pexsi_mu_upper = 10;
+    double pexsi_mu = 0.0;
+    double pexsi_mu_thr = 0.05;
+    double pexsi_mu_expand = 0.3;
+    double pexsi_mu_guard = 0.2;
+    double pexsi_elec_thr = 0.001;
+    double pexsi_zero_thr = 1e-10;
+    //==========================================================
+    // variables for elpa
+    //==========================================================
+    int elpa_num_thread=-1;
+
+    bool check_input = false;
     
     std::time_t get_start_time(void) const
     {
