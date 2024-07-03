@@ -13,7 +13,6 @@
 #include "module_base/tool_title.h"
 #include "module_basis/module_ao/parallel_orbitals.h"
 #include "module_ri/Mix_DMk_2D.h"
-#include "module_ri/conv_coulomb_pot_k-template.h"
 #include "module_ri/conv_coulomb_pot_k.h"
 #include "module_ri/exx_abfs-construct_orbs.h"
 #include "module_ri/exx_abfs-io.h"
@@ -41,19 +40,19 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
     //	if(GlobalC::exx_info.info_global.separate_loop)
     //	{
     //		Hexx_para.mixing_mode =
-    //Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::No;
+    // Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::No;
     //		Hexx_para.mixing_beta = 0;
     //	}
     //	else
     //	{
     //		if("plain"==GlobalC::CHR.mixing_mode)
     //			Hexx_para.mixing_mode =
-    //Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::Plain; 		else
-    //if("pulay"==GlobalC::CHR.mixing_mode) 			Hexx_para.mixing_mode =
-    //Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::Pulay; 		else 			throw
-    //std::invalid_argument("exx mixing error. exx_separate_loop==false,
-    //mixing_mode!=plain or pulay"); 		Hexx_para.mixing_beta =
-    //GlobalC::CHR.mixing_beta;
+    // Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::Plain; 		else
+    // if("pulay"==GlobalC::CHR.mixing_mode) 			Hexx_para.mixing_mode =
+    // Exx_Abfs::Parallel::Communicate::Hexx::Mixing_Mode::Pulay; 		else
+    // throw std::invalid_argument("exx mixing error. exx_separate_loop==false,
+    // mixing_mode!=plain or pulay"); 		Hexx_para.mixing_beta =
+    // GlobalC::CHR.mixing_beta;
     //	}
 
     this->mpi_comm = mpi_comm_in;
@@ -95,7 +94,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
         }
         case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
             return {{"hse_omega", this->info.hse_omega}};
-        case Conv_Coulomb_Pot_K::Ccp_Type::Cam:
+        case Conv_Coulomb_Pot_K::Ccp_Type::Cam: {
             // 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
             const int nspin0 = (GlobalV::NSPIN == 2) ? 2 : 1;
             const double hf_Rcut
@@ -106,6 +105,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                     {"cam_alpha", this->info.cam_alpha},
                     {"cam_beta", this->info.cam_beta},
                     {"hf_Rcut", hf_Rcut}};
+        }
         case Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam:
             return {{"hse_omega", this->info.hse_omega},
                     {"cam_alpha", this->info.cam_alpha},
@@ -142,7 +142,7 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
     ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
 
     //	init_radial_table_ions( cal_atom_centres_core(atom_pairs_core_origin),
-    //atom_pairs_core_origin );
+    // atom_pairs_core_origin );
 
     //	this->m_abfsabfs.init_radial_table(Rradial);
     //	this->m_abfslcaos_lcaos.init_radial_table(Rradial);

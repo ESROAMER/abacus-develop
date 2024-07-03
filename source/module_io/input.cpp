@@ -3027,6 +3027,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_cam_alpha == "default")
     {
+        std::string dft_functional_lower = dft_functional;
+        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
         if (dft_functional_lower == "hf" ||
             dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
             dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
@@ -3040,6 +3042,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_cam_beta == "default")
     {
+        std::string dft_functional_lower = dft_functional;
+        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
         if (dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
             dft_functional_lower == "lrc_wpbe")
             exx_cam_beta = "-1";
@@ -3054,6 +3058,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_hse_omega == "default")
     {
+        std::string dft_functional_lower = dft_functional;
+        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
         if (dft_functional_lower == "hse")
             exx_hse_omega = "0.11";
         else if (dft_functional_lower == "lc_pbe")
@@ -3085,6 +3091,8 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if (exx_ccp_rmesh_times == "default")
     {
+        std::string dft_functional_lower = dft_functional;
+        std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
         if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0" ||
             dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
             dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")

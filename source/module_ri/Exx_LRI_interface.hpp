@@ -133,7 +133,7 @@ void Exx_LRI_Interface<T, Tdata>::read_Hexxs_csr(const std::string& file_name, c
 }
 
 template<typename T, typename Tdata>
-void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charge_Mixing& chgmix, const ModulePW::PW_Basis_K* wfc_basis)
+void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charge_Mixing& chgmix)
 {
 #ifdef __MPI
     if (GlobalC::exx_info.info_global.cal_exx)

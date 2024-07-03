@@ -14,6 +14,7 @@ namespace Conv_Coulomb_Pot_K
 		Hf,						//		"hf_Rcut"
 		Hse,    //  	"hse_omega"
         Cam,    //  	"hse_omega", "cam_alpha", "cam_beta", "hf_Rcut"
+		Ccp_Cam // "hse_omega", "cam_alpha", "cam_beta"
     };
 
 	template<typename T> T cal_orbs_ccp(
@@ -38,13 +39,13 @@ namespace Conv_Coulomb_Pot_K
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
 		const double hse_omega);
-  std::vector<double> cal_psi_cam(const int& nks,
+  std::vector<double> cal_psi_cam(
                                            const std::vector<double>& psif,
                                            const std::vector<double>& k_radial,
                                            const double omega,
                                            const double cam_alpha,
                                            const double cam_beta,
-                                           const double hf_Rcut);
+                                           const double Rc);
 
   std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
                                                const std::vector<double>& k_radial,

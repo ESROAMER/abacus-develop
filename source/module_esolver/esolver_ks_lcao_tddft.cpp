@@ -209,9 +209,9 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
 
 #ifdef __EXX
     if (GlobalC::exx_info.info_ri.real_number)
-        this->exd->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
+        this->exd->exx_hamilt2density(*this->pelec,  this->orb_con.ParaV, iter);
     else
-        this->exc->exx_hamilt2density(*this->pelec, *this->LOWF.ParaV);
+        this->exc->exx_hamilt2density(*this->pelec,  this->orb_con.ParaV, iter);
 #endif
 
     // using new charge density.
