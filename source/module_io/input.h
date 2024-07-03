@@ -5,9 +5,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include "module_base/vector3.h"
 #include "module_md/md_para.h"
+#include "input_conv.h"
 
 class Input
 {
@@ -47,6 +49,7 @@ class Input
     int ntype; // number of atom types
     int nbands; // number of bands
     int nbands_istate; // number of bands around fermi level for get_pchg calculation.
+
     int pw_seed; // random seed for initializing wave functions qianrui 2021-8-12
 
     bool init_vel;             // read velocity from STRU or not  liuyu 2021-07-14
@@ -71,6 +74,7 @@ class Input
     bool towannier90; // add by jingan for wannier90
     std::string nnkpfile; // add by jingan for wannier90
     std::string wannier_spin; // add by jingan for wannier90
+    int wannier_method; // different implementation methods under Lcao basis set
     bool out_wannier_mmn;  // add by renxi for wannier90
     bool out_wannier_amn;
     bool out_wannier_unk;
@@ -84,6 +88,7 @@ class Input
     int nbands_sto;			// number of stochastic bands //qianrui 2021-2-5
     std::string nbndsto_str; // string parameter for stochastic bands
     int seed_sto; // random seed for sDFT
+    double initsto_ecut = 0.0; // maximum ecut to init stochastic bands
     double emax_sto; // Emax & Emin to normalize H
     double emin_sto;
     int bndpar; //parallel for stochastic/deterministic bands
@@ -91,7 +96,8 @@ class Input
     int method_sto; //different methods for sdft, 1: slow, less memory  2: fast, more memory
     int npart_sto; //for method_sto = 2, reduce memory
     bool cal_cond; //calculate electronic conductivities
-    int cond_nche; //orders of Chebyshev expansions for conductivities
+    double cond_che_thr; //control the error of Chebyshev expansions for conductivities
+    int cond_smear; //smearing method for conductivities 1: Gaussian 2: Lorentzian
     double cond_dw; //d\omega for conductivities
     double cond_wcut; //cutoff \omega for conductivities
     double cond_dt;  //dt to integrate conductivities
@@ -105,8 +111,10 @@ class Input
     std::string dft_functional; // input DFT functional.
     double xc_temperature; // only relevant if finite temperature functional is used
     int nspin; // LDA ; LSDA ; non-linear spin
+    bool two_fermi = false;
     double nupdown = 0.0;
     double nelec; // total number of electrons
+    double nelec_delta; // change in the number of total electrons
     int lmaxmax;
 
     //==========================================================
@@ -130,7 +138,7 @@ class Input
     double press2;
     double press3;
     bool cal_stress; // calculate the stress
-
+    int nstream;
     std::string fixed_axes; // which axes are fixed
     bool fixed_ibrav; //whether to keep type of lattice; must be used along with latname
     bool fixed_atoms; //whether to fix atoms during vc-relax
@@ -159,6 +167,7 @@ class Input
     //==========================================================
     bool gamma_only; // for plane wave.
     bool gamma_only_local; // for local orbitals.
+    int fft_mode = 0; // fftw mode 0: estimate, 1: measure, 2: patient, 3: exhaustive
 
     double ecutwfc; // energy cutoff for wavefunctions
     double ecutrho; // energy cutoff for charge/potential
@@ -170,7 +179,7 @@ class Input
     int ncx, ncy, ncz; // three dimension of FFT charge/grid
     int nx, ny, nz; // three dimension of FFT wavefunc
     int bx, by, bz; // big mesh ball. mohan add 2011-04-21
-    int nsx, nsy, nsz; // three dimension of FFT smooth charge density
+    int ndx, ndy, ndz; // three dimension of FFT smooth charge density
 
     //==========================================================
     // technique
@@ -179,6 +188,7 @@ class Input
     int pw_diag_nmax;
     int diago_cg_prec; // mohan add 2012-03-31
     int pw_diag_ndim;
+    bool diago_full_acc;
     double pw_diag_thr; // used in cg method
 
     int nb2d; // matrix 2d division.
@@ -227,9 +237,16 @@ class Input
     std::string mixing_mode; // "plain","broyden",...
     double mixing_beta; // 0 : no_mixing
     int mixing_ndim; // used in Broyden method
-    double mixing_gg0; // used in kerker method. mohan add 2014-09-27
+    double mixing_restart; // mixing will restart once if drho is smaller than mixing_restart
+    double mixing_gg0; // used in kerker method
+    double mixing_beta_mag;
+    double mixing_gg0_mag;
+    double mixing_gg0_min;
+    double mixing_angle;
+
     bool mixing_tau; // whether to mix tau in mgga
     bool mixing_dftu; //whether to mix locale in DFT+U
+    bool mixing_dmr; // whether to mix real space density matrix
 
     //==========================================================
     // potential / charge / wavefunction / energy
@@ -246,22 +263,27 @@ class Input
     int printe; // mohan add 2011-03-16
     int out_freq_elec;  // the frequency ( >= 0) of electronic iter to output charge density and wavefunction. 0: output only when converged
     int out_freq_ion;  // the frequency ( >= 0 ) of ionic step to output charge density and wavefunction. 0: output only when ion steps are finished
-    bool out_chg; // output charge density. 0: no; 1: yes
+    int out_chg; // output charge density. 0: no; 1: yes
     bool out_dm; // output density matrix.
     bool out_dm1;
     int out_pot; // yes or no
     int out_wfc_pw; // 0: no; 1: txt; 2: dat
     bool out_wfc_r; // 0: no; 1: yes
     int out_dos; // dos calculation. mohan add 20090909
-    bool out_band; // band calculation pengfei 2014-10-13
+    std::vector<int> out_band; // band calculation pengfei 2014-10-13
     bool out_proj_band; // projected band structure calculation jiyy add 2022-05-11
-    bool out_mat_hs; // output H matrix and S matrix in local basis.
+    std::vector<int> out_mat_hs; // output H matrix and S matrix in local basis.
+    bool out_mat_xc; // output exchange-correlation matrix in KS-orbital representation.
+    bool out_hr_npz;// output exchange-correlation matrix in KS-orbital representation.
+    bool out_dm_npz;
+    bool dm_to_rho;
     bool cal_syns; // calculate asynchronous S matrix to output
     double dmax; // maximum displacement of all atoms in one step (bohr)
     bool out_mat_hs2; // LiuXh add 2019-07-16, output H(R) matrix and S(R) matrix in local basis.
     bool out_mat_dh;
     int out_interval;
     bool out_app_flag;    // whether output r(R), H(R), S(R), T(R), and dH(R) matrices in an append manner during MD  liuyu 2023-03-20
+    int out_ndigits;
     bool out_mat_t;
     bool out_mat_r; // jingan add 2019-8-14, output r(R) matrix.
     int out_wfc_lcao; // output the wave functions in local basis.
@@ -290,6 +312,7 @@ class Input
     double lcao_rmax; // rmax(a.u.) to make table.
     double search_radius; // 11.1
     bool search_pbc; // 11.2
+    double onsite_radius; // the radius of on-site orbitals
 
     //==========================================================
     // molecular dynamics
@@ -378,6 +401,7 @@ class Input
     double exx_cauchy_stress_threshold;
     double exx_ccp_threshold;
     std::string exx_ccp_rmesh_times;
+    double rpa_ccp_rmesh_times;
 
     bool exx_use_ewald;
     int exx_fq_type;
@@ -398,6 +422,9 @@ class Input
     std::string td_vext_dire; // vext direction
     bool out_dipole; // output the dipole or not
     bool out_efield; // output the efield or not
+    bool out_current; //output the current or not
+    bool out_vecpot; // output the vector potential or not
+    bool init_vecpot_file; // initialize the vector potential, though file or integral
 
     double td_print_eij; // threshold to output Eij elements
     int td_edm; //0: new edm method   1: old edm method
@@ -473,12 +500,13 @@ class Input
     //==========================================================
     //    DFT+U       Xin Qu added on 2020-10-29
     //==========================================================
-    bool dft_plus_u;             ///< true:DFT+U correction; false: standard DFT calculation(default)
+    int dft_plus_u;              ///< 1:DFT+U correction; 2:old DFT+U method; 0:standard DFT calculation(default)
     int* orbital_corr = nullptr; ///< which correlated orbitals need corrected ; d:2 ,f:3, do not need correction:-1
     double* hubbard_u = nullptr; ///< Hubbard Coulomb interaction parameter U(ev)
     int omc;                     ///< whether turn on occupation matrix control method or not
     bool yukawa_potential;       ///< default:false
     double yukawa_lambda;        ///< default:-1.0, which means we calculate lambda
+    double uramping;             ///< default:-1.0, which means we do not use U-Ramping method
 
     //==========================================================
     //    DFT+DMFT       Xin Qu added on 2021-08
@@ -498,7 +526,7 @@ class Input
                             // 2022-1-12
     bool deepks_scf; //(need libnpy and libtorch) if set 1, a trained model would be needed to cal V_delta and F_delta
     bool deepks_bandgap; // for bandgap label. QO added 2021-12-15
-
+    bool deepks_equiv;
     bool deepks_out_unittest; // if set 1, prints intermediate quantities that shall be used for making unit test
 
     std::string deepks_model; // needed when deepks_scf=1
@@ -541,6 +569,7 @@ class Input
 	double	bessel_nao_sigma;		// spherical bessel smearing_sigma
 	std::string	bessel_nao_ecut;		// energy cutoff for spherical bessel functions(Ry)
 	double	bessel_nao_rcut;		// radial cutoff for spherical bessel functions(a.u.)
+    std::vector<double> bessel_nao_rcuts;
 	double	bessel_nao_tolerence;	// tolerence for spherical bessel root
     // the following are used when generating jle.orb
 	int		bessel_descriptor_lmax;			// lmax used in descriptor
@@ -565,9 +594,72 @@ class Input
     bool test_skip_ewald = false;
 
     //==========================================================
-    // whether to use PAW
+    // variables for non-collinear spin-constrained DFT (deltaspin)
+    //==========================================================
+    /**
+     * 0: none spin-constrained DFT;
+     * 1: constrain atomic spin;
+     */
+    bool sc_mag_switch; // the switch to open the DeltaSpin function, 0: no spin-constrained DFT; 1: constrain atomic magnetization
+    bool decay_grad_switch;// the switch to use the local approximation of gradient decay, 0: no local approximation; 1: apply the method
+    double sc_thr; // threshold for spin-constrained DFT in uB
+    int nsc; // maximum number of inner lambda loop
+    int nsc_min; // minimum number of inner lambda loop
+    int sc_scf_nmin; // minimum number of outer scf loop before initial lambda loop
+    double alpha_trial; // initial trial step size for lambda in eV/uB^2
+    double sccut; // restriction of step size in eV/uB
+    std::string sc_file; // file name for Deltaspin (json format)
+    //==========================================================
+    // variables for PAW
     //==========================================================
     bool use_paw = false;
+    //==========================================================
+    // variables for Quasiatomic Orbital analysis
+    //==========================================================
+    bool qo_switch = false;
+    std::string qo_basis = "hydrogen";
+    double qo_thr = 1e-6;
+    std::vector<std::string> qo_strategy = {};
+    std::vector<double> qo_screening_coeff = {};
+    //==========================================================
+    // variables for PEXSI
+    //==========================================================
+    int pexsi_npole = 40;
+    bool pexsi_inertia = true;
+    int pexsi_nmax = 80;
+    // int pexsi_symbolic = 1;
+    bool pexsi_comm = true;
+    bool pexsi_storage = true;
+    int pexsi_ordering = 0;
+    int pexsi_row_ordering = 1;
+    int pexsi_nproc = 1;
+    bool pexsi_symm = true;
+    bool pexsi_trans = false;
+    int pexsi_method = 1;
+    int pexsi_nproc_pole = 1;
+    // double pexsi_spin = 2;
+    double pexsi_temp = 0.015;
+    double pexsi_gap = 0;
+    double pexsi_delta_e = 20.0;
+    double pexsi_mu_lower = -10;
+    double pexsi_mu_upper = 10;
+    double pexsi_mu = 0.0;
+    double pexsi_mu_thr = 0.05;
+    double pexsi_mu_expand = 0.3;
+    double pexsi_mu_guard = 0.2;
+    double pexsi_elec_thr = 0.001;
+    double pexsi_zero_thr = 1e-10;
+    //==========================================================
+    // variables for elpa
+    //==========================================================
+    int elpa_num_thread=-1;
+
+    bool check_input = false;
+    
+    std::time_t get_start_time(void) const
+    {
+        return start_time;
+    }
 
   private:
     //==========================================================
@@ -580,6 +672,8 @@ class Input
     //        other processors)
     //==========================================================
 
+    // start time
+    std::time_t start_time;
     bool Read(const std::string &fn);
 
     void Default(void);
@@ -594,12 +688,14 @@ class Input
 
     int count_ntype(const std::string &fn); // sunliang add 2022-12-06
 
+    std::string bands_to_print_; // specify the bands to be calculated in the get_pchg calculation, formalism similar to ocp_set.
+
   public:
     template <class T> static void read_value(std::ifstream &ifs, T &var)
     {
         ifs >> var;
         std::string line;
-        getline(ifs, line);
+        getline(ifs, line); // read the rest of the line, directly discard it.
         return;
     }
     void read_kspacing(std::ifstream &ifs)
@@ -629,8 +725,42 @@ class Input
         // << std::endl;
     };
 
+    /* I hope this function would be more and more useful if want to support
+    vector/list of input */
+    template <typename T>
+    void read_value2stdvector(std::ifstream& ifs, std::vector<T>& var);
+    template <typename T>
+    typename std::enable_if<std::is_same<T, double>::value, T>::type cast_string(const std::string& str) { return std::stod(str); }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, int>::value, T>::type cast_string(const std::string& str)
+    {
+        if (str == "true" || str == "1")
+            return 1;
+        else if (str == "false" || str == "0")
+            return 0;
+        else
+            return std::stoi(str);
+    }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, bool>::value, T>::type cast_string(const std::string& str) { return (str == "true" || str == "1"); }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, std::string>::value, T>::type cast_string(const std::string& str) { return str; }
     void strtolower(char *sa, char *sb);
     void read_bool(std::ifstream &ifs, bool &var);
+
+    // Return the const string pointer of private member bands_to_print_
+    // Not recommended to use this function directly, use get_out_band_kb() instead
+    const std::string* get_bands_to_print() const
+    {
+        return &bands_to_print_;
+    }
+    // Return parsed bands_to_print_ as a vector of integers
+    std::vector<int> get_out_band_kb() const
+    {
+        std::vector<int> out_band_kb;
+        Input_Conv::parse_expression(bands_to_print_, out_band_kb);
+        return out_band_kb;
+    }
 };
 
 extern Input INPUT;

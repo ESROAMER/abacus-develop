@@ -9,7 +9,7 @@ pseudo_dir      ../../PP_ORB
 orbital_dir     ../../PP_ORB
 
 #Parameters (2.Iteration)
-ecutwfc			20
+ecutwfc			10
 scf_thr			1e-1
 scf_nmax		1
 cal_force 		1
@@ -25,3 +25,4 @@ smearing_sigma		0.002
 mixing_type             broyden
 mixing_beta             0.1
 ks_solver 		genelpa
+symmetry_prec 1e-5

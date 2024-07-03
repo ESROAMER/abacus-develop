@@ -2,10 +2,9 @@
 #include "gmock/gmock.h"
 #include "module_io/read_wfc_nao.h"
 #include "module_basis/module_ao/parallel_orbitals.h"
+#include "module_io/write_wfc_nao.h"
 
 //write mock function for Parallel_Orbitals
-Parallel_2D::Parallel_2D(){}
-Parallel_2D::~Parallel_2D(){}
 Parallel_Orbitals::Parallel_Orbitals() {}
 Parallel_Orbitals::~Parallel_Orbitals(){}
 //define a mock derived class of class ElecState
@@ -14,6 +13,16 @@ namespace elecstate
 {
       const double* ElecState::getRho(int spin) const{return &(this->eferm.ef);}//just for mock
       void ElecState::calculate_weights(){}
+}
+
+// mock wfc_lcao_gen_fname
+std::string ModuleIO::wfc_nao_gen_fname(const int out_type,
+                                         const bool gamma_only,
+                                         const bool out_app_flag,
+                                         const int ik,
+                                         const int istep)
+{
+      return "WFC_NAO_GAMMA1.txt";
 }
 
 /************************************************
@@ -55,7 +64,7 @@ TEST_F(ReadWfcNaoTest,DistriWfcNao)
       Parallel_Orbitals* ParaV = new Parallel_Orbitals;
       psi::Psi<double>* psid = new psi::Psi<double>(nks, nband, nlocal, &ngk[0]);
       // Act
-      ModuleIO::distri_wfc_nao(ctot, is, ParaV, psid);
+      ModuleIO::distri_wfc_nao(ctot, is, GlobalV::NB2D, GlobalV::NBANDS, GlobalV::NLOCAL, ParaV, psid);
       // Assert
       for (int i=0; i<nband; i++)
       {
@@ -97,11 +106,12 @@ TEST_F(ReadWfcNaoTest,ReadWfcNao)
       pelec->ekb.create(nks,nband);
       pelec->wg.create(nks,nband);
       // Act
-      ModuleIO::read_wfc_nao(ctot, is, ParaV, psid, pelec);
+      ModuleIO::read_wfc_nao(ctot, is, GlobalV::GAMMA_ONLY_LOCAL, GlobalV::NB2D, GlobalV::NBANDS,
+                             GlobalV::NLOCAL, GlobalV::global_readin_dir, ParaV, psid, pelec);
       // Assert
-      EXPECT_NEAR(pelec->ekb(0,1),0.314822,1e-5);
+      EXPECT_NEAR(pelec->ekb(0,1),0.31482195194888534794941393,1e-5);
       EXPECT_NEAR(pelec->wg(0,1),0.0,1e-5);
-      EXPECT_NEAR(psid[0](0,1,1),0.595957,1e-5);
+      EXPECT_NEAR(psid[0](0,1,1),0.59595655928,1e-5);
       // clean up
       delete ParaV;
       delete psid;

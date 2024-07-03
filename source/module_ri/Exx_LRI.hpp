@@ -6,6 +6,18 @@
 #ifndef EXX_LRI_HPP
 #define EXX_LRI_HPP
 
+#include "Exx_LRI.h"
+#include "RI_2D_Comm.h"
+#include "RI_Util.h"
+#include "module_ri/exx_abfs-construct_orbs.h"
+#include "module_ri/exx_abfs-io.h"
+#include "module_ri/conv_coulomb_pot_k.h"
+#include "module_base/tool_title.h"
+#include "module_base/timer.h"
+#include "module_ri/serialization_cereal.h"
+#include "module_ri/Mix_DMk_2D.h"
+#include "module_basis/module_ao/parallel_orbitals.h"
+
 #include <RI/distribute/Distribute_Equally.h>
 #include <RI/global/Map_Operator-3.h>
 
@@ -72,26 +84,30 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
             = Exx_Abfs::IO::construct_abfs(abfs_same_atom, GlobalC::ORB, this->info.files_abfs, this->info.kmesh_times);
     Exx_Abfs::Construct_Orbs::print_orbs_size(this->abfs, GlobalV::ofs_running);
 
-    for (size_t T = 0; T != this->abfs.size(); ++T)
-        GlobalC::exx_info.info_ri.abfs_Lmax
-            = std::max(GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size()) - 1);
-
-    auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
-        switch (this->info.ccp_type)
-        {
-        case Conv_Coulomb_Pot_K::Ccp_Type::Ccp:
-            return {};
-        case Conv_Coulomb_Pot_K::Ccp_Type::Hf:
-            return {};
-        case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
-            return {
-                {"hse_omega", this->info.hse_omega}
-            };
-        case Conv_Coulomb_Pot_K::Ccp_Type::Cam:
+	auto get_ccp_parameter = [this]() -> std::map<std::string,double>
+	{
+		switch(this->info.ccp_type)
+		{
+			case Conv_Coulomb_Pot_K::Ccp_Type::Ccp:
+				return {};
+			case Conv_Coulomb_Pot_K::Ccp_Type::Hf:
+			{
+				// 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
+				const int nspin0 = (GlobalV::NSPIN==2) ? 2 : 1;
+				const double hf_Rcut = std::pow(0.75 * this->p_kv->get_nkstot_full()/nspin0 * GlobalC::ucell.omega / (ModuleBase::PI), 1.0/3.0);
+				return {{"hf_Rcut", hf_Rcut}};
+			}
+			case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
+				return {{"hse_omega", this->info.hse_omega}};
+            case Conv_Coulomb_Pot_K::Ccp_Type::Cam:
+            // 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
+				const int nspin0 = (GlobalV::NSPIN==2) ? 2 : 1;
+				const double hf_Rcut = std::pow(0.75 * this->p_kv->get_nkstot_full()/nspin0 * GlobalC::ucell.omega / (ModuleBase::PI), 1.0/3.0);
             return {
                 {"hse_omega", this->info.hse_omega},
                 {"cam_alpha", this->info.cam_alpha},
-                {"cam_beta",  this->info.cam_beta }
+                {"cam_beta",  this->info.cam_beta },
+                {"hf_Rcut", hf_Rcut}
             };
         case Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam:
             return {
@@ -99,21 +115,19 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in)
                 {"cam_alpha", this->info.cam_alpha},
                 {"cam_beta",  this->info.cam_beta }
             };
-        default:
-            throw std::domain_error(std::string(__FILE__) + " line " + std::to_string(__LINE__));
-            break;
-        }
-    };
-    this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs,
-                                                      this->info.ccp_type,
-                                                      get_ccp_parameter(),
-                                                      this->info.ccp_rmesh_times,
-                                                      p_kv->nkstot_full);
+			default:
+				throw std::domain_error(std::string(__FILE__)+" line "+std::to_string(__LINE__));	break;
+		}
+	};
+    this->abfs_ccp = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs, this->info.ccp_type, get_ccp_parameter(), this->info.ccp_rmesh_times);
 
-    this->cv.set_orbitals(this->lcaos, this->abfs, this->abfs_ccp, this->info.kmesh_times);
 
-    if (this->info_ewald.use_ewald)
-        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
+	for( size_t T=0; T!=this->abfs.size(); ++T )
+		GlobalC::exx_info.info_ri.abfs_Lmax = std::max( GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(this->abfs[T].size())-1 );
+
+	this->cv.set_orbitals(
+		this->lcaos, this->abfs, this->abfs_ccp,
+		this->info.kmesh_times, this->info.ccp_rmesh_times );
 
     ModuleBase::timer::tick("Exx_LRI", "init");
 }
@@ -129,17 +143,17 @@ void Exx_LRI<Tdata>::cal_exx_ions()
     //	this->m_abfsabfs.init_radial_table(Rradial);
     //	this->m_abfslcaos_lcaos.init_radial_table(Rradial);
 
-    std::vector<TA> atoms(GlobalC::ucell.nat);
-    for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
-        atoms[iat] = iat;
-    std::map<TA, TatomR> atoms_pos;
-    for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
-        atoms_pos[iat] = RI_Util::Vector3_to_array3(
-            GlobalC::ucell.atoms[GlobalC::ucell.iat2it[iat]].tau[GlobalC::ucell.iat2ia[iat]]);
-    const std::array<TatomR, Ndim> latvec = {RI_Util::Vector3_to_array3(GlobalC::ucell.a1),
-                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a2),
-                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a3)};
-    const std::array<Tcell, Ndim> period = {p_kv->nmp[0], p_kv->nmp[1], p_kv->nmp[2]};
+	std::vector<TA> atoms(GlobalC::ucell.nat);
+	for(int iat=0; iat<GlobalC::ucell.nat; ++iat)
+		atoms[iat] = iat;
+	std::map<TA,TatomR> atoms_pos;
+	for(int iat=0; iat<GlobalC::ucell.nat; ++iat)
+		atoms_pos[iat] = RI_Util::Vector3_to_array3( GlobalC::ucell.atoms[ GlobalC::ucell.iat2it[iat] ].tau[ GlobalC::ucell.iat2ia[iat] ] );
+	const std::array<TatomR,Ndim> latvec
+		= {RI_Util::Vector3_to_array3(GlobalC::ucell.a1),
+		   RI_Util::Vector3_to_array3(GlobalC::ucell.a2),
+		   RI_Util::Vector3_to_array3(GlobalC::ucell.a3)};
+	const std::array<Tcell,Ndim> period = {this->p_kv->nmp[0], this->p_kv->nmp[1], this->p_kv->nmp[2]};
 
     this->exx_lri.set_parallel(this->mpi_comm, atoms_pos, latvec, period);
 
@@ -212,43 +226,37 @@ void Exx_LRI<Tdata>::cal_exx_ions()
     ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
 }
 
-template <typename Tdata>
-void Exx_LRI<Tdata>::cal_exx_elec(const Parallel_Orbitals& pv)
+template<typename Tdata>
+void Exx_LRI<Tdata>::cal_exx_elec(const std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>> &Ds, const Parallel_Orbitals &pv)
 {
     ModuleBase::TITLE("Exx_LRI", "cal_exx_elec");
     ModuleBase::timer::tick("Exx_LRI", "cal_exx_elec");
 
     const std::vector<std::tuple<std::set<TA>, std::set<TA>>> judge = RI_2D_Comm::get_2D_judge(pv);
 
-    std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Ds
-        = GlobalV::GAMMA_ONLY_LOCAL ? RI_2D_Comm::split_m2D_ktoR<Tdata>(*p_kv, this->mix_DMk_2D.get_DMk_gamma_out(), pv)
-                                    : RI_2D_Comm::split_m2D_ktoR<Tdata>(*p_kv, this->mix_DMk_2D.get_DMk_k_out(), pv);
+	this->exx_lri.set_csm_threshold(this->info.cauchy_threshold);
 
-    this->exx_lri.set_csm_threshold(this->info.cauchy_threshold);
-
-    this->Hexxs.resize(GlobalV::NSPIN);
-    this->Eexx = 0;
-    for (int is = 0; is < GlobalV::NSPIN; ++is)
-    {
-        if (!(GlobalV::CAL_FORCE || GlobalV::CAL_STRESS))
-        {
-            this->exx_lri.set_Ds(std::move(Ds[is]), this->info.dm_threshold);
-            this->exx_lri.cal_Hs();
-        }
-        else
-        {
-            this->exx_lri.set_Ds(std::move(Ds[is]), this->info.dm_threshold, std::to_string(is));
-            this->exx_lri.cal_Hs({"", "", std::to_string(is)});
-        }
-        this->Hexxs[is] = RI::Communicate_Tensors_Map_Judge::comm_map2_first(this->mpi_comm,
-                                                                             std::move(this->exx_lri.Hs),
-                                                                             std::get<0>(judge[is]),
-                                                                             std::get<1>(judge[is]));
-        this->Eexx += this->exx_lri.energy;
-        post_process_Hexx(this->Hexxs[is]);
-    }
-    this->Eexx = post_process_Eexx(this->Eexx);
-    ModuleBase::timer::tick("Exx_LRI", "cal_exx_elec");
+	this->Hexxs.resize(GlobalV::NSPIN);
+	this->Eexx = 0;
+	for(int is=0; is<GlobalV::NSPIN; ++is)
+	{
+		if(!(GlobalV::CAL_FORCE || GlobalV::CAL_STRESS))
+		{
+			this->exx_lri.set_Ds(Ds[is], this->info.dm_threshold);
+			this->exx_lri.cal_Hs();
+		}
+		else
+		{
+			this->exx_lri.set_Ds(Ds[is], this->info.dm_threshold, std::to_string(is));
+			this->exx_lri.cal_Hs({"","",std::to_string(is)});
+		}
+		this->Hexxs[is] = RI::Communicate_Tensors_Map_Judge::comm_map2_first(
+			this->mpi_comm, std::move(this->exx_lri.Hs), std::get<0>(judge[is]), std::get<1>(judge[is]));
+        this->Eexx += std::real(this->exx_lri.energy);
+		post_process_Hexx(this->Hexxs[is]);
+	}
+	this->Eexx = post_process_Eexx(this->Eexx);
+	ModuleBase::timer::tick("Exx_LRI", "cal_exx_elec");	
 }
 
 template <typename Tdata>
@@ -260,17 +268,13 @@ void Exx_LRI<Tdata>::post_process_Hexx(std::map<TA, std::map<TAC, RI::Tensor<Tda
     RI::Map_Operator::for_each(Hexxs_io, multiply_frac);
 }
 
-template <typename Tdata>
-Tdata Exx_LRI<Tdata>::post_process_Eexx(const Tdata& Eexx_in) const
+template<typename Tdata>
+double Exx_LRI<Tdata>::post_process_Eexx(const double& Eexx_in) const
 {
-    ModuleBase::TITLE("Exx_LRI", "post_process_Eexx");
-    const Tdata SPIN_multiple = std::map<int, Tdata>{
-        {1, 2},
-        {2, 1},
-        {4, 1}
-    }.at(GlobalV::NSPIN); // why?
-    const Tdata frac = -SPIN_multiple;
-    return frac * Eexx_in;
+	ModuleBase::TITLE("Exx_LRI","post_process_Eexx");
+    const double SPIN_multiple = std::map<int, double>{ {1,2}, {2,1}, {4,1} }.at(GlobalV::NSPIN);				// why?
+    const double frac = -SPIN_multiple;
+	return frac * Eexx_in;
 }
 
 /*

@@ -1,12 +1,8 @@
 #include "parallel_orbitals.h"
 
-#ifdef __MPI
-extern "C"
-{
 #include "module_base/blacs_connector.h"
 #include "module_base/scalapack_connector.h"
-}
-#endif
+#include "module_base/global_function.h"
 
 Parallel_Orbitals::Parallel_Orbitals()
 {
@@ -214,7 +210,7 @@ int Parallel_Orbitals::set_nloc_wfc_Eij(
 {
     ModuleBase::TITLE("Parallel_Orbitals", "set_nloc_wfc_Eij");
     // for wavefuncton , calculate nbands_loc
-    int end_id;
+    int end_id = 0;
     int block = N_A / nb;
     if (block * nb < N_A)
     {

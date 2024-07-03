@@ -16,15 +16,17 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
     ModuleBase::TITLE("Stress_Func","stress_loc");
     ModuleBase::timer::tick("Stress_Func","stress_loc");
 
-    FPTYPE *dvloc = new FPTYPE[rho_basis->npw];
+	std::vector<FPTYPE> dvloc(rho_basis->npw);
     FPTYPE evloc=0.0;
 	FPTYPE fact=1.0;
+
+	const int nspin_rho = (GlobalV::NSPIN == 2) ? 2 : 1;
 
 	if (INPUT.gamma_only && is_pw) fact=2.0;
 
     
 
-	std::complex<FPTYPE> *aux = new std::complex<FPTYPE> [rho_basis->nmaxgr];
+	std::vector<std::complex<FPTYPE>> aux(rho_basis->nmaxgr);
 
 	/*
 		blocking rho_basis->nrxx for data locality.
@@ -48,7 +50,7 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
 				aux[ir] = std::complex<FPTYPE>(chr->rho[0][ir], 0.0 );
 			}
 		}
-		for (int is = 1; is < GlobalV::NSPIN; is++)
+		for (int is = 1; is < nspin_rho; is++)
 		{
 			for (int ir = irb; ir < ir_end; ++ir)
 			{ // accumulate aux
@@ -56,7 +58,7 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
 			}
 		}
  	}
-	rho_basis->real2recip(aux,aux);
+	rho_basis->real2recip(aux.data(),aux.data());
 
 //    if(INPUT.gamma_only==1) fact=2.0;
 //    else fact=1.0;
@@ -76,18 +78,16 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
                              * (p_sf->strucFac(it, ig) * conj(aux[ig]) * fact).real();
             }
 		}
-	}
-	for(int nt = 0;nt< GlobalC::ucell.ntype; nt++)
-	{
-		const Atom* atom = &GlobalC::ucell.atoms[nt];
-		//mark by zhengdy for check
-		// if ( GlobalC::ppcell.vloc == NULL ){
-		if(0)
+    }
+    for (int it = 0; it < GlobalC::ucell.ntype; ++it)
+    {
+        const Atom* atom = &GlobalC::ucell.atoms[it];
+		if(atom->coulomb_potential)
 		{
 		//
 		// special case: pseudopotential is coulomb 1/r potential
 		//
-			this->dvloc_coul (atom->ncpp.zv, dvloc, rho_basis);
+			this->dvloc_coulomb (atom->ncpp.zv, dvloc.data(), rho_basis);
 		//
 		}
 		else
@@ -96,7 +96,7 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
 		// normal case: dvloc contains dV_loc(G)/dG
 		//
 			this->dvloc_of_g ( atom->ncpp.msh, atom->ncpp.rab, atom->ncpp.r,
-					atom->ncpp.vloc_at, atom->ncpp.zv, dvloc, rho_basis);
+					atom->ncpp.vloc_at, atom->ncpp.zv, dvloc.data(), rho_basis);
 		//
 		}
 #ifndef _OPENMP
@@ -114,7 +114,7 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
 				for (int m = 0; m<l+1;m++)
 				{
                     local_sigma(l, m) = local_sigma(l, m)
-                                        + (conj(aux[ig]) * p_sf->strucFac(nt, ig)).real() * 2.0
+                                        + (conj(aux[ig]) * p_sf->strucFac(it, ig)).real() * 2.0
                                               * dvloc[rho_basis->ig2igg[ig]] * GlobalC::ucell.tpiba2
                                               * rho_basis->gcar[ig][l] * rho_basis->gcar[ig][m] * fact;
                 }
@@ -156,8 +156,7 @@ void Stress_Func<FPTYPE, Device>::stress_loc(ModuleBase::matrix& sigma,
 			sigma(m,l) = sigma(l,m);
 		}
 	}
-	delete[] dvloc;
-	delete[] aux;
+
 
 
 	ModuleBase::timer::tick("Stress_Func","stress_loc");
@@ -185,14 +184,14 @@ ModulePW::PW_Basis* rho_basis
   //FPTYPE  dvloc[ngl];
   // the fourier transform dVloc/dG
   //
-	FPTYPE  *aux1;
+	
 
 	int igl0;
 	// counter on erf functions or gaussians
 	// counter on g shells vectors
 	// first shell with g != 0
-
-	aux1 = new FPTYPE[msh];
+	
+	std::vector<FPTYPE> aux1(msh);
 
 	// the  G=0 component is not computed
 	if (rho_basis->gg_uniq[0] < 1.0e-8)
@@ -223,8 +222,7 @@ ModulePW::PW_Basis* rho_basis
 		aux1[i] = r [i] * vloc_at [i] + zp * ModuleBase::e2 * erf(r[i]);
 	}
 
-	FPTYPE  *aux;
-	aux = new FPTYPE[msh];
+	std::vector<FPTYPE> aux(msh);
 	aux[0] = 0.0;
 #ifdef _OPENMP
 	#pragma omp for
@@ -247,7 +245,7 @@ ModulePW::PW_Basis* rho_basis
 		}
 		FPTYPE vlcp=0;
 		// simpson (msh, aux, rab, vlcp);
-		ModuleBase::Integral::Simpson_Integral(msh, aux, rab, vlcp );
+		ModuleBase::Integral::Simpson_Integral(msh, aux.data(), rab, vlcp );
 		// DV(g^2)/Dg^2 = (DV(g)/Dg)/2g
 		vlcp *= ModuleBase::FOUR_PI / GlobalC::ucell.omega / 2.0 / gx;
 		// subtract the long-range term
@@ -255,57 +253,42 @@ ModulePW::PW_Basis* rho_basis
 		vlcp += ModuleBase::FOUR_PI / GlobalC::ucell.omega * zp * ModuleBase::e2 * ModuleBase::libm::exp ( - g2a) * (g2a + 1) / pow(gx2 , 2);
 		dvloc [igl] = vlcp;
 	}
-	delete[] aux;
+
 #ifdef _OPENMP
 }
 #endif
-	delete[] aux1;
+	
 
 	return;
 }
 
-template<typename FPTYPE, typename Device>
-void Stress_Func<FPTYPE, Device>::dvloc_coul
-(
-const FPTYPE& zp,
-FPTYPE* dvloc,
-ModulePW::PW_Basis* rho_basis
-)
+template <typename FPTYPE, typename Device>
+void Stress_Func<FPTYPE, Device>::dvloc_coulomb(const FPTYPE& zp, FPTYPE* dvloc, ModulePW::PW_Basis* rho_basis)
 {
-	//----------------------------------------------------------------------
-	//
-	//    Fourier transform of the Coulomb potential - For all-electron
-	//    calculations, in specific cases only, for testing purposes
-	//
-
-
-	// fourier transform: dvloc = D Vloc (g^2) / D g^2 = 4pi e^2/omegai /G^4
-
-	int  igl0;
-	// first shell with g != 0
-
-	// the  G=0 component is 0
-	if (rho_basis->gg_uniq[0] < 1.0e-8)
-	{
-		dvloc[0] = 0.0;
-		igl0 = 1;
-	}
-	else
-	{
-		igl0 = 0;
-	}
+    int igl0;
+	// start from |G|=0 or not.
+    if (rho_basis->gg_uniq[0] < 1.0e-8)
+    {
+        dvloc[0] = 0.0;
+        igl0 = 1;
+    }
+    else
+    {
+        igl0 = 0;
+    }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-	for(int i=igl0;i<rho_basis->ngg;i++)
-	{
-		dvloc[i] = ModuleBase::FOUR_PI * zp * ModuleBase::e2 / GlobalC::ucell.omega / pow(( GlobalC::ucell.tpiba2 * rho_basis->gg_uniq[i] ),2);
-	}
+    for (int i = igl0; i < rho_basis->ngg; i++)
+    {
+        dvloc[i] = ModuleBase::FOUR_PI * zp * ModuleBase::e2 / GlobalC::ucell.omega
+                   / pow((GlobalC::ucell.tpiba2 * rho_basis->gg_uniq[i]), 2);
+    }
 
-	return;
+    return;
 }
 
-template class Stress_Func<double, psi::DEVICE_CPU>;
+template class Stress_Func<double, base_device::DEVICE_CPU>;
 #if ((defined __CUDA) || (defined __ROCM))
-template class Stress_Func<double, psi::DEVICE_GPU>;
+template class Stress_Func<double, base_device::DEVICE_GPU>;
 #endif

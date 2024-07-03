@@ -14,9 +14,12 @@
 #include "module_hamilt_general/module_ewald/H_Ewald_pw.h"
 #include "module_hamilt_general/module_surchem/surchem.h"
 #include "module_hamilt_general/module_vdw/vdw.h"
-#include "module_psi/kernels/device.h"
+
 #ifdef _OPENMP
 #include <omp.h>
+#endif
+#ifdef USE_PAW
+#include "module_cell/module_paw/paw_cell.h"
 #endif
 
 template <typename FPTYPE, typename Device>
@@ -30,8 +33,9 @@ void Forces<FPTYPE, Device>::cal_force(ModuleBase::matrix& force,
                                        const psi::Psi<std::complex<FPTYPE>, Device>* psi_in)
 {
     ModuleBase::TITLE("Forces", "init");
-    this->device = psi::device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
     const ModuleBase::matrix& wg = elec.wg;
+    const ModuleBase::matrix& ekb = elec.ekb;
     const Charge* const chr = elec.charge;
     force.create(nat, 3);
 
@@ -40,15 +44,136 @@ void Forces<FPTYPE, Device>::cal_force(ModuleBase::matrix& force,
     ModuleBase::matrix forcecc(nat, 3);
     ModuleBase::matrix forcenl(nat, 3);
     ModuleBase::matrix forcescc(nat, 3);
-    this->cal_force_loc(forcelc, rho_basis, chr);
-    this->cal_force_ew(forceion, rho_basis, p_sf);
-    if(wfc_basis != nullptr)
+    ModuleBase::matrix forcepaw(nat, 3);
+
+    // Force due to local ionic potential
+    // For PAW, calculated together in paw_cell.calculate_force
+    if (!GlobalV::use_paw)
     {
-        this->npwx = wfc_basis->npwk_max;
-        this->cal_force_nl(forcenl, wg, pkv, wfc_basis, psi_in);
+        this->cal_force_loc(forcelc, rho_basis, chr);
     }
-    this->cal_force_cc(forcecc, rho_basis, chr);
-    this->cal_force_scc(forcescc, rho_basis, elec.vnew, elec.vnew_exist);
+    else
+    {
+        forcelc.zero_out();
+    }
+
+    // Ewald
+    this->cal_force_ew(forceion, rho_basis, p_sf);
+
+    // Force due to nonlocal part of pseudopotential
+    if (wfc_basis != nullptr)
+    {
+        if (!GlobalV::use_paw)
+        {
+            this->npwx = wfc_basis->npwk_max;
+            Forces::cal_force_nl(forcenl, wg, ekb, pkv, wfc_basis, p_sf, &GlobalC::ppcell, GlobalC::ucell, psi_in);
+
+            if (GlobalV::use_uspp)
+            {
+                this->cal_force_us(forcenl, rho_basis, &GlobalC::ppcell, elec, GlobalC::ucell);
+            }
+        }
+        else
+        {
+#ifdef USE_PAW
+            for (int ik = 0; ik < wfc_basis->nks; ik++)
+            {
+                const int npw = wfc_basis->npwk[ik];
+                ModuleBase::Vector3<double>* _gk = new ModuleBase::Vector3<double>[npw];
+                for (int ig = 0; ig < npw; ig++)
+                {
+                    _gk[ig] = wfc_basis->getgpluskcar(ik, ig);
+                }
+
+                double* kpt;
+                kpt = new double[3];
+                kpt[0] = wfc_basis->kvec_c[ik].x;
+                kpt[1] = wfc_basis->kvec_c[ik].y;
+                kpt[2] = wfc_basis->kvec_c[ik].z;
+
+                double** kpg;
+                double** gcar;
+                kpg = new double*[npw];
+                gcar = new double*[npw];
+                for (int ipw = 0; ipw < npw; ipw++)
+                {
+                    kpg[ipw] = new double[3];
+                    kpg[ipw][0] = _gk[ipw].x;
+                    kpg[ipw][1] = _gk[ipw].y;
+                    kpg[ipw][2] = _gk[ipw].z;
+
+                    gcar[ipw] = new double[3];
+                    gcar[ipw][0] = wfc_basis->getgcar(ik, ipw).x;
+                    gcar[ipw][1] = wfc_basis->getgcar(ik, ipw).y;
+                    gcar[ipw][2] = wfc_basis->getgcar(ik, ipw).z;
+                }
+
+                GlobalC::paw_cell.set_paw_k(npw,
+                                            wfc_basis->npwk_max,
+                                            kpt,
+                                            wfc_basis->get_ig2ix(ik).data(),
+                                            wfc_basis->get_ig2iy(ik).data(),
+                                            wfc_basis->get_ig2iz(ik).data(),
+                                            (const double**)kpg,
+                                            GlobalC::ucell.tpiba,
+                                            (const double**)gcar);
+
+                delete[] kpt;
+                for (int ipw = 0; ipw < npw; ipw++)
+                {
+                    delete[] kpg[ipw];
+                    delete[] gcar[ipw];
+                }
+                delete[] kpg;
+                delete[] gcar;
+
+                GlobalC::paw_cell.get_vkb();
+
+                GlobalC::paw_cell.set_currentk(ik);
+
+                psi_in[0].fix_k(ik);
+                double *weight, *epsilon;
+                weight = new double[GlobalV::NBANDS];
+                epsilon = new double[GlobalV::NBANDS];
+                for (int ib = 0; ib < GlobalV::NBANDS; ib++)
+                {
+                    weight[ib] = wg(ik, ib);
+                    epsilon[ib] = ekb(ik, ib);
+                }
+                GlobalC::paw_cell.paw_nl_force(reinterpret_cast<std::complex<double>*>(psi_in[0].get_pointer()),
+                                               epsilon,
+                                               weight,
+                                               GlobalV::NBANDS,
+                                               forcenl.c);
+
+                delete[] weight;
+                delete[] epsilon;
+            }
+#endif
+        }
+    }
+
+    // non-linear core correction
+    // not relevant for PAW
+    if (!GlobalV::use_paw)
+    {
+        this->cal_force_cc(forcecc, rho_basis, chr);
+    }
+    else
+    {
+        forcecc.zero_out();
+    }
+
+    // force due to core charge
+    // For PAW, calculated together in paw_cell.calculate_force
+    if (!GlobalV::use_paw)
+    {
+        this->cal_force_scc(forcescc, rho_basis, elec.vnew, elec.vnew_exist);
+    }
+    else
+    {
+        forcescc.zero_out();
+    }
 
     ModuleBase::matrix stress_vdw_pw; //.create(3,3);
     ModuleBase::matrix force_vdw;
@@ -102,6 +227,52 @@ void Forces<FPTYPE, Device>::cal_force(ModuleBase::matrix& force,
         }
     }
 
+#ifdef USE_PAW
+    if (GlobalV::use_paw)
+    {
+        double* force_paw;
+        double* rhor;
+        rhor = new double[rho_basis->nrxx];
+        for (int ir = 0; ir < rho_basis->nrxx; ir++)
+        {
+            rhor[ir] = 0.0;
+        }
+        for (int is = 0; is < GlobalV::NSPIN; is++)
+        {
+            for (int ir = 0; ir < rho_basis->nrxx; ir++)
+            {
+                rhor[ir] += chr->rho[is][ir] + chr->nhat[is][ir];
+            }
+        }
+
+        force_paw = new double[3 * this->nat];
+        ModuleBase::matrix v_xc, v_effective;
+        v_effective.create(GlobalV::NSPIN, rho_basis->nrxx);
+        v_effective.zero_out();
+        elec.pot->update_from_charge(elec.charge, &GlobalC::ucell);
+        v_effective = elec.pot->get_effective_v();
+
+        v_xc.create(GlobalV::NSPIN, rho_basis->nrxx);
+        v_xc.zero_out();
+        const std::tuple<double, double, ModuleBase::matrix> etxc_vtxc_v
+            = XC_Functional::v_xc(rho_basis->nrxx, elec.charge, &GlobalC::ucell);
+        v_xc = std::get<2>(etxc_vtxc_v);
+
+        GlobalC::paw_cell.calculate_force(v_effective.c, v_xc.c, rhor, force_paw);
+
+        for (int iat = 0; iat < this->nat; iat++)
+        {
+            // Ha to Ry
+            forcepaw(iat, 0) = force_paw[3 * iat] * 2.0;
+            forcepaw(iat, 1) = force_paw[3 * iat + 1] * 2.0;
+            forcepaw(iat, 2) = force_paw[3 * iat + 2] * 2.0;
+        }
+
+        delete[] force_paw;
+        delete[] rhor;
+    }
+#endif
+
     // impose total force = 0
     int iat = 0;
     for (int ipol = 0; ipol < 3; ipol++)
@@ -115,6 +286,11 @@ void Forces<FPTYPE, Device>::cal_force(ModuleBase::matrix& force,
             {
                 force(iat, ipol) = forcelc(iat, ipol) + forceion(iat, ipol) + forcenl(iat, ipol) + forcecc(iat, ipol)
                                    + forcescc(iat, ipol);
+
+                if (GlobalV::use_paw)
+                {
+                    force(iat, ipol) += forcepaw(iat, ipol);
+                }
 
                 if (vdw_solver != nullptr) // linpz and jiyy added vdw force, modified by zhengdy
                 {
@@ -243,23 +419,41 @@ void Forces<FPTYPE, Device>::cal_force(ModuleBase::matrix& force,
 
     if (GlobalV::TEST_FORCE)
     {
-        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "LOCAL    FORCE (eV/Angstrom)", forcelc, 0);
-        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NONLOCAL FORCE (eV/Angstrom)", forcenl, 0);
-        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NLCC     FORCE (eV/Angstrom)", forcecc, 0);
-        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "ION      FORCE (eV/Angstrom)", forceion, 0);
-        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "SCC      FORCE (eV/Angstrom)", forcescc, 0);
+        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "LOCAL    FORCE (eV/Angstrom)", forcelc, false);
+        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NONLOCAL FORCE (eV/Angstrom)", forcenl, false);
+        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NLCC     FORCE (eV/Angstrom)", forcecc, false);
+        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "ION      FORCE (eV/Angstrom)", forceion, false);
+        ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "SCC      FORCE (eV/Angstrom)", forcescc, false);
+        if (GlobalV::use_paw)
+        {
+            ModuleIO::print_force(GlobalV::ofs_running,
+                                  GlobalC::ucell,
+                                  "PAW      FORCE (eV/Angstrom)",
+                                  forcepaw,
+                                  false);
+        }
         if (GlobalV::EFIELD_FLAG)
-            ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "EFIELD   FORCE (eV/Angstrom)", force_e, 0);
+        {
+            ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "EFIELD   FORCE (eV/Angstrom)", force_e, false);
+        }
         if (GlobalV::GATE_FLAG)
+        {
             ModuleIO::print_force(GlobalV::ofs_running,
                                   GlobalC::ucell,
                                   "GATEFIELD   FORCE (eV/Angstrom)",
                                   force_gate,
-                                  0);
+                                  false);
+        }
         if (GlobalV::imp_sol)
-            ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "IMP_SOL   FORCE (eV/Angstrom)", forcesol, 0);
+        {
+            ModuleIO::print_force(GlobalV::ofs_running,
+                                  GlobalC::ucell,
+                                  "IMP_SOL   FORCE (eV/Angstrom)",
+                                  forcesol,
+                                  false);
+        }
     }
-    ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "TOTAL-FORCE (eV/Angstrom)", force, 0);
+    ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "TOTAL-FORCE (eV/Angstrom)", force, false);
 
     return;
 }
@@ -298,11 +492,11 @@ void Forces<FPTYPE, Device>::cal_force_loc(ModuleBase::matrix& forcelc,
                 aux[ir] = std::complex<double>(chr->rho[0][ir], 0.0);
             }
         }
-        for (int is = 1; is < GlobalV::NSPIN; is++)
+        if (GlobalV::NSPIN == 2)
         {
             for (int ir = irb; ir < ir_end; ++ir)
             { // accumulate aux
-                aux[ir] += std::complex<double>(chr->rho[is][ir], 0.0);
+                aux[ir] += std::complex<double>(chr->rho[1][ir], 0.0);
             }
         }
     }
@@ -368,16 +562,24 @@ void Forces<FPTYPE, Device>::cal_force_ew(ModuleBase::matrix& forceion,
         // calculate the actual task length of this block
         int ig_end = std::min(igb + block_ig, rho_basis->npw);
 
-        { // it = 0
-            const double dzv = static_cast<double>(GlobalC::ucell.atoms[0].ncpp.zv);
-            for (int ig = igb; ig < ig_end; ++ig)
-            { // initialize aux
-                aux[ig] = dzv * conj(p_sf->strucFac(0, ig));
-            }
-        }
-        for (int it = 1; it < GlobalC::ucell.ntype; it++)
+        for (int ig = igb; ig < ig_end; ++ig)
         {
-            const double dzv = static_cast<double>(GlobalC::ucell.atoms[it].ncpp.zv);
+            aux[ig] = 0.0;
+        }
+        for (int it = 0; it < GlobalC::ucell.ntype; it++)
+        {
+            double dzv;
+            if (GlobalV::use_paw)
+            {
+#ifdef USE_PAW
+                dzv = GlobalC::paw_cell.get_val(it);
+#endif
+            }
+            else
+            {
+                dzv = GlobalC::ucell.atoms[it].ncpp.zv;
+            }
+
             for (int ig = igb; ig < ig_end; ++ig)
             { // accumulate aux
                 aux[ig] += dzv * conj(p_sf->strucFac(it, ig));
@@ -389,7 +591,16 @@ void Forces<FPTYPE, Device>::cal_force_ew(ModuleBase::matrix& forceion,
     double charge = 0.0;
     for (int it = 0; it < GlobalC::ucell.ntype; it++)
     {
-        charge += GlobalC::ucell.atoms[it].na * GlobalC::ucell.atoms[it].ncpp.zv; // mohan modify 2007-11-7
+        if (GlobalV::use_paw)
+        {
+#ifdef USE_PAW
+            charge += GlobalC::ucell.atoms[it].na * GlobalC::paw_cell.get_val(it);
+#endif
+        }
+        else
+        {
+            charge += GlobalC::ucell.atoms[it].na * GlobalC::ucell.atoms[it].ncpp.zv; // mohan modify 2007-11-7
+        }
     }
 
     double alpha = 1.1;
@@ -461,8 +672,18 @@ void Forces<FPTYPE, Device>::cal_force_ew(ModuleBase::matrix& forceion,
         {
             if (it != last_it)
             { // calculate it_tact when it is changed
-                it_fact = GlobalC::ucell.atoms[it].ncpp.zv * ModuleBase::e2 * GlobalC::ucell.tpiba * ModuleBase::TWO_PI
-                          / GlobalC::ucell.omega * fact;
+                double zv;
+                if (GlobalV::use_paw)
+                {
+#ifdef USE_PAW
+                    zv = GlobalC::paw_cell.get_val(it);
+#endif
+                }
+                else
+                {
+                    zv = GlobalC::ucell.atoms[it].ncpp.zv;
+                }
+                it_fact = zv * ModuleBase::e2 * GlobalC::ucell.tpiba * ModuleBase::TWO_PI / GlobalC::ucell.omega * fact;
                 last_it = it;
             }
 
@@ -533,10 +754,23 @@ void Forces<FPTYPE, Device>::cal_force_ew(ModuleBase::matrix& forceion,
                         {
                             const double rr = sqrt(r2[n]) * GlobalC::ucell.lat0;
 
-                            double factor = GlobalC::ucell.atoms[T1].ncpp.zv * GlobalC::ucell.atoms[T2].ncpp.zv
-                                            * ModuleBase::e2 / (rr * rr)
-                                            * (erfc(sqa * rr) / rr + sq8a_2pi * ModuleBase::libm::exp(-alpha * rr * rr))
-                                            * GlobalC::ucell.lat0;
+                            double factor;
+                            if (GlobalV::use_paw)
+                            {
+#ifdef USE_PAW
+                                factor = GlobalC::paw_cell.get_val(T1) * GlobalC::paw_cell.get_val(T2) * ModuleBase::e2
+                                         / (rr * rr)
+                                         * (erfc(sqa * rr) / rr + sq8a_2pi * ModuleBase::libm::exp(-alpha * rr * rr))
+                                         * GlobalC::ucell.lat0;
+#endif
+                            }
+                            else
+                            {
+                                factor = GlobalC::ucell.atoms[T1].ncpp.zv * GlobalC::ucell.atoms[T2].ncpp.zv
+                                         * ModuleBase::e2 / (rr * rr)
+                                         * (erfc(sqa * rr) / rr + sq8a_2pi * ModuleBase::libm::exp(-alpha * rr * rr))
+                                         * GlobalC::ucell.lat0;
+                            }
 
                             forceion(iat1, 0) -= factor * r[n].x;
                             forceion(iat1, 1) -= factor * r[n].y;
@@ -558,7 +792,7 @@ void Forces<FPTYPE, Device>::cal_force_ew(ModuleBase::matrix& forceion,
     }
 #endif
 
-Parallel_Reduce::reduce_pool(forceion.c, forceion.nr* forceion.nc);
+    Parallel_Reduce::reduce_pool(forceion.c, forceion.nr * forceion.nc);
 
     // this->print(GlobalV::ofs_running, "ewald forces", forceion);
 
@@ -721,222 +955,10 @@ void Forces<FPTYPE, Device>::cal_force_cc(ModuleBase::matrix& forcecc,
 
     delete[] rhocg;
 
-    delete[] psiv;                                                           // mohan fix bug 2012-03-22
+    delete[] psiv;                                                    // mohan fix bug 2012-03-22
     Parallel_Reduce::reduce_pool(forcecc.c, forcecc.nr * forcecc.nc); // qianrui fix a bug for kpar > 1
     ModuleBase::timer::tick("Forces", "cal_force_cc");
     return;
-}
-
-template <typename FPTYPE, typename Device>
-void Forces<FPTYPE, Device>::cal_force_nl(ModuleBase::matrix& forcenl,
-                                          const ModuleBase::matrix& wg,
-                                          K_Vectors* p_kv,
-                                          ModulePW::PW_Basis_K* wfc_basis,
-                                          const psi::Psi<complex<FPTYPE>, Device>* psi_in)
-{
-    ModuleBase::TITLE("Forces", "cal_force_nl");
-    ModuleBase::timer::tick("Forces", "cal_force_nl");
-
-    const int nkb = GlobalC::ppcell.nkb;
-    if (nkb == 0 || psi_in == nullptr || wfc_basis == nullptr)
-    {
-        return; // mohan add 2010-07-25
-    }
-
-    // dbecp: conj( -iG * <Beta(nkb,npw)|psi(nbnd,npw)> )
-    // ModuleBase::ComplexArray dbecp(3, GlobalV::NBANDS, nkb);
-    // ModuleBase::ComplexMatrix becp(GlobalV::NBANDS, nkb);
-    std::complex<FPTYPE>*dbecp = nullptr, *becp = nullptr, *vkb1 = nullptr, *vkb = nullptr;
-    resmem_complex_op()(this->ctx, becp, GlobalV::NBANDS * nkb, "Force::becp");
-    resmem_complex_op()(this->ctx, dbecp, 3 * GlobalV::NBANDS * nkb, "Force::dbecp");
-    // vkb1: |Beta(nkb,npw)><Beta(nkb,npw)|psi(nbnd,npw)>
-    // ModuleBase::ComplexMatrix vkb1(nkb, this->npwx);
-    resmem_complex_op()(this->ctx, vkb1, this->npwx * nkb, "Force::vkb1");
-    // init additional params
-    FPTYPE *force = nullptr;
-    FPTYPE *d_wg = nullptr;
-    FPTYPE *gcar = nullptr;
-    auto *deeq = GlobalC::ppcell.get_deeq_data<FPTYPE>();
-    int wg_nc = wg.nc;
-    int *atom_nh = nullptr, *atom_na = nullptr;
-    int* h_atom_nh = new int[GlobalC::ucell.ntype];
-    int* h_atom_na = new int[GlobalC::ucell.ntype];
-    for (int ii = 0; ii < GlobalC::ucell.ntype; ii++)
-    {
-        h_atom_nh[ii] = GlobalC::ucell.atoms[ii].ncpp.nh;
-        h_atom_na[ii] = GlobalC::ucell.atoms[ii].na;
-    }
-    if (this->device == psi::GpuDevice)
-    {
-        resmem_var_op()(this->ctx, d_wg, wg.nr * wg.nc);
-        resmem_var_op()(this->ctx, force, forcenl.nr * forcenl.nc);
-        resmem_var_op()(this->ctx, gcar, 3 * wfc_basis->nks * wfc_basis->npwk_max);
-        syncmem_var_h2d_op()(this->ctx, this->cpu_ctx, d_wg, wg.c, wg.nr * wg.nc);
-        syncmem_var_h2d_op()(this->ctx, this->cpu_ctx, force, forcenl.c, forcenl.nr * forcenl.nc);
-        syncmem_var_h2d_op()(this->ctx,
-                             this->cpu_ctx,
-                             gcar,
-                             &wfc_basis->gcar[0][0],
-                             3 * wfc_basis->nks * wfc_basis->npwk_max);
-
-        resmem_int_op()(this->ctx, atom_nh, GlobalC::ucell.ntype);
-        resmem_int_op()(this->ctx, atom_na, GlobalC::ucell.ntype);
-        syncmem_int_h2d_op()(this->ctx, this->cpu_ctx, atom_nh, h_atom_nh, GlobalC::ucell.ntype);
-        syncmem_int_h2d_op()(this->ctx, this->cpu_ctx, atom_na, h_atom_na, GlobalC::ucell.ntype);
-    }
-    else
-    {
-        d_wg = wg.c;
-        force = forcenl.c;
-        gcar = &wfc_basis->gcar[0][0];
-        atom_nh = h_atom_nh;
-        atom_na = h_atom_na;
-    }
-
-    for (int ik = 0; ik < wfc_basis->nks; ik++)
-    {
-        if (GlobalV::NSPIN == 2)
-            GlobalV::CURRENT_SPIN = p_kv->isk[ik];
-        const int nbasis = wfc_basis->npwk[ik];
-        // generate vkb
-        if (GlobalC::ppcell.nkb > 0)
-        {
-            vkb = GlobalC::ppcell.get_vkb_data<FPTYPE>();
-            GlobalC::ppcell.getvnl(ctx, ik, vkb);
-        }
-
-        // get becp according to wave functions and vkb
-        // important here ! becp must set zero!!
-        // vkb: Beta(nkb,npw)
-        // becp(nkb,nbnd): <Beta(nkb,npw)|psi(nbnd,npw)>
-        // becp.zero_out();
-        psi_in[0].fix_k(ik);
-        char transa = 'C';
-        char transb = 'N';
-        ///
-        /// only occupied band should be calculated.
-        ///
-        int nbands_occ = GlobalV::NBANDS;
-        const double threshold = ModuleBase::threshold_wg * wg(ik, 0);
-        while (std::fabs(wg(ik, nbands_occ - 1)) < threshold)
-        {
-            nbands_occ--;
-            if (nbands_occ == 0)
-            {
-                break;
-            }
-        }
-        int npm = GlobalV::NPOL * nbands_occ;
-        gemm_op()(this->ctx,
-                  transa,
-                  transb,
-                  nkb,
-                  npm,
-                  nbasis,
-                  &ModuleBase::ONE,
-                  vkb,
-                  this->npwx,
-                  psi_in[0].get_pointer(),
-                  this->npwx,
-                  &ModuleBase::ZERO,
-                  becp,
-                  nkb);
-        if (this->device == psi::GpuDevice)
-        {
-            std::complex<FPTYPE>* h_becp = nullptr;
-            resmem_complex_h_op()(this->cpu_ctx, h_becp, GlobalV::NBANDS * nkb);
-            syncmem_complex_d2h_op()(this->cpu_ctx, this->ctx, h_becp, becp, GlobalV::NBANDS * nkb);
-            Parallel_Reduce::reduce_pool(h_becp, GlobalV::NBANDS * nkb);
-            syncmem_complex_h2d_op()(this->ctx, this->cpu_ctx, becp, h_becp, GlobalV::NBANDS * nkb);
-            delmem_complex_h_op()(this->cpu_ctx, h_becp);
-        }
-        else
-        {
-            Parallel_Reduce::reduce_pool(becp, GlobalV::NBANDS * nkb);
-        }
-        // out.printcm_real("becp",becp,1.0e-4);
-        //  Calculate the derivative of beta,
-        //  |dbeta> =  -ig * |beta>
-        // dbecp.zero_out();
-        for (int ipol = 0; ipol < 3; ipol++)
-        {
-            cal_vkb1_nl_op()(this->ctx,
-                             nkb,
-                             this->npwx,
-                             wfc_basis->npwk_max,
-                             GlobalC::ppcell.vkb.nc,
-                             nbasis,
-                             ik,
-                             ipol,
-                             ModuleBase::NEG_IMAG_UNIT,
-                             vkb,
-                             gcar,
-                             vkb1);
-            std::complex<double>* pdbecp = dbecp + ipol * GlobalV::NBANDS * nkb;
-            gemm_op()(this->ctx,
-                      transa,
-                      transb,
-                      nkb,
-                      npm,
-                      nbasis,
-                      &ModuleBase::ONE,
-                      vkb1,
-                      this->npwx,
-                      psi_in[0].get_pointer(),
-                      this->npwx,
-                      &ModuleBase::ZERO,
-                      pdbecp,
-                      nkb);
-        } // end ipol
-
-        //		don't need to reduce here, keep dbecp different in each processor,
-        //		and at last sum up all the forces.
-        //		Parallel_Reduce::reduce_pool( dbecp.ptr, dbecp.ndata);
-        cal_force_nl_op()(this->ctx,
-                          GlobalC::ppcell.multi_proj,
-                          nbands_occ,
-                          wg_nc,
-                          GlobalC::ucell.ntype,
-                          GlobalV::CURRENT_SPIN,
-                          GlobalC::ppcell.deeq.getBound2(),
-                          GlobalC::ppcell.deeq.getBound3(),
-                          GlobalC::ppcell.deeq.getBound4(),
-                          forcenl.nc,
-                          GlobalV::NBANDS,
-                          ik,
-                          nkb,
-                          atom_nh,
-                          atom_na,
-                          GlobalC::ucell.tpiba,
-                          d_wg,
-                          deeq,
-                          becp,
-                          dbecp,
-                          force);
-    } // end ik
-
-    if (this->device == psi::GpuDevice)
-    {
-        syncmem_var_d2h_op()(this->cpu_ctx, this->ctx, forcenl.c, force, forcenl.nr * forcenl.nc);
-    }
-    // sum up forcenl from all processors
-    Parallel_Reduce::reduce_all(forcenl.c, forcenl.nr* forcenl.nc);
-
-    delete[] h_atom_nh;
-    delete[] h_atom_na;
-    delmem_complex_op()(this->ctx, vkb1);
-    delmem_complex_op()(this->ctx, becp);
-    delmem_complex_op()(this->ctx, dbecp);
-    if (this->device == psi::GpuDevice)
-    {
-        delmem_var_op()(this->ctx, d_wg);
-        delmem_var_op()(this->ctx, gcar);
-        delmem_var_op()(this->ctx, force);
-        delmem_int_op()(this->ctx, atom_nh);
-        delmem_int_op()(this->ctx, atom_na);
-    }
-    //  this->print(GlobalV::ofs_running, "nonlocal forces", forcenl);
-    ModuleBase::timer::tick("Forces", "cal_force_nl");
 }
 
 template <typename FPTYPE, typename Device>
@@ -1067,7 +1089,7 @@ void Forces<FPTYPE, Device>::cal_force_scc(ModuleBase::matrix& forcescc,
         }
     }
 
-    Parallel_Reduce::reduce_pool(forcescc.c, forcescc.nr* forcescc.nc);
+    Parallel_Reduce::reduce_pool(forcescc.c, forcescc.nr * forcescc.nc);
 
     delete[] psic;    // mohan fix bug 2012-03-22
     delete[] rhocgnt; // mohan fix bug 2012-03-22
@@ -1076,7 +1098,7 @@ void Forces<FPTYPE, Device>::cal_force_scc(ModuleBase::matrix& forcescc,
     return;
 }
 
-template class Forces<double, psi::DEVICE_CPU>;
+template class Forces<double, base_device::DEVICE_CPU>;
 #if ((defined __CUDA) || (defined __ROCM))
-template class Forces<double, psi::DEVICE_GPU>;
+template class Forces<double, base_device::DEVICE_GPU>;
 #endif

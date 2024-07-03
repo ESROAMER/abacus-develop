@@ -10,6 +10,7 @@ endif()
 add_library(
     base
     OBJECT
+    assoc_laguerre.cpp
     clebsch_gordan_coeff.cpp
     complexarray.cpp
     complexmatrix.cpp
@@ -23,6 +24,7 @@ add_library(
     global_variable.cpp
     intarray.cpp
     math_integral.cpp
+    math_lebedev_laikov.cpp
     math_polyint.cpp
     math_sphbes.cpp
     math_ylmreal.cpp
@@ -49,21 +51,12 @@ add_library(
     parallel_reduce.cpp
     spherical_bessel_transformer.cpp
     cubic_spline.cpp
-    formatter_fmt.cpp
-    formatter_physfmt.cpp
-    formatter_table.cpp
-    formatter_contextfmt.cpp
     module_mixing/mixing_data.cpp
+    module_mixing/mixing.cpp
+    module_mixing/plain_mixing.cpp
+    module_mixing/pulay_mixing.cpp
+    module_mixing/broyden_mixing.cpp
     ${LIBM_SRC}
-)
-
-add_library(
-  formatter
-  OBJECT
-  formatter_fmt.cpp
-  formatter_physfmt.cpp
-  formatter_table.cpp
-  formatter_contextfmt.cpp
 )
 
 add_subdirectory(module_container)
@@ -77,6 +70,7 @@ if(BUILD_TESTING)
   add_subdirectory(test_parallel)
   add_subdirectory(kernels/test)
   add_subdirectory(module_mixing/test)
+  add_subdirectory(module_device/test)
   if (USE_ABACUS_LIBM)
     add_subdirectory(libm/test)
   endif()

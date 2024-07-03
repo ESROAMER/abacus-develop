@@ -9,8 +9,6 @@ namespace ModuleESolver
 {
 class ESolver
 {
-    // protected:
-    //     ModuleBase::matrix lattice_v;
   public:
     ESolver()
     {
@@ -21,31 +19,47 @@ class ESolver
     {
     }
 
-    // virtual void Init(Input_EnSolver &inp, matrix &lattice_v)=0
-    virtual void Init(Input& inp, UnitCell& cell) = 0;
+    //! initialize the energy solver by using input parameters and cell modules
+    virtual void before_all_runners(Input& inp, UnitCell& cell) = 0;
 
-    // They shoud be add after atom class is refactored
-    // virtual void UpdateLatAtom(ModuleBase::matrix &lat_in, Atom &atom_in);
-    // virtual void UpdateLat(ModuleBase::matrix &lat_in);
-    // virtual void UpdateAtom(Atom &atom_in);
+    //! run energy solver
+    virtual void runner(const int istep, UnitCell& cell) = 0;
 
-    virtual void Run(int istep, UnitCell& cell) = 0;
+    //! perform post processing calculations
+    virtual void after_all_runners(){};
 
-    // Deal with exx and other calculation than scf/md/relax:
-    //  such as nscf, get_wf and get_pchg
-    virtual void othercalculation(const int istep){};
+    //! deal with exx and other calculation than scf/md/relax/cell-relax:
+    //! such as nscf, get_wf and get_pchg
+    virtual void others(const int istep){};
 
-    virtual double cal_Energy() = 0;
-    virtual void cal_Force(ModuleBase::matrix& force) = 0;
-    virtual void cal_Stress(ModuleBase::matrix& stress) = 0;
-    virtual void postprocess(){};
+    //! calculate total energy of a given system
+    virtual double cal_energy() = 0;
+
+    //! calcualte forces for the atoms in the given cell
+    virtual void cal_force(ModuleBase::matrix& force) = 0;
+
+    //! calcualte stress of given cell
+    virtual void cal_stress(ModuleBase::matrix& stress) = 0;
+
 
     // Print current classname.
     void printname();
 
     // temporarily
     // get iterstep used in current scf
-    virtual int getniter()
+    virtual int get_niter()
+    {
+        return 0;
+    }
+
+    // get maxniter used in current scf
+    virtual int get_maxniter()
+    {
+        return 0;
+    }
+
+    // get conv_elec used in current scf
+    virtual bool get_conv_elec()
     {
         return 0;
     }
@@ -59,7 +73,7 @@ class ESolver
  * 
  * @return [out] std::string The type of ESolver
  */
-std::string determine_type();
+std::string determine_type(void);
 
 /**
  * @brief Determine and initialize an ESolver based on input information.

@@ -2,7 +2,10 @@
 
 #include "module_base/global_variable.h"
 #include "module_base/tool_quit.h"
-#include "module_psi/kernels/device.h"
+
+#include "module_base/module_device/device.h"
+#include <type_traits>
+
 
 #include <cassert>
 #include <complex>
@@ -29,19 +32,19 @@ Range::Range(const bool k_first_in, const size_t index_1_in, const size_t range_
 template <typename T, typename Device> Psi<T, Device>::Psi()
 {
     this->npol = GlobalV::NPOL;
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
 }
 
 template <typename T, typename Device> Psi<T, Device>::~Psi()
 {
-    delete_memory_op()(this->ctx, this->psi);
+    if (this->allocate_inside) delete_memory_op()(this->ctx, this->psi);
 }
 
 template <typename T, typename Device> Psi<T, Device>::Psi(const int* ngk_in)
 {
     this->ngk = ngk_in;
     this->npol = GlobalV::NPOL;
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
 }
 
 template <typename T, typename Device> Psi<T, Device>::Psi(const int nk_in, const int nbd_in, const int nbs_in, const int* ngk_in, const bool k_first_in)
@@ -51,14 +54,32 @@ template <typename T, typename Device> Psi<T, Device>::Psi(const int nk_in, cons
     this->current_b = 0;
     this->current_k = 0;
     this->npol = GlobalV::NPOL;
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
     this->resize(nk_in, nbd_in, nbs_in);
     // Currently only GPU's implementation is supported for device recording!
-    device::print_device_info<Device>(this->ctx, GlobalV::ofs_device);
-    device::record_device_memory<Device>(this->ctx,
+    base_device::information::print_device_info<Device>(this->ctx, GlobalV::ofs_device);
+    base_device::information::record_device_memory<Device>(this->ctx,
                                          GlobalV::ofs_device,
                                          "Psi->resize()",
                                          sizeof(T) * nk_in * nbd_in * nbs_in);
+}
+
+template <typename T, typename Device> Psi<T, Device>::Psi(T* psi_pointer, const int nk_in, const int nbd_in, const int nbs_in, const int* ngk_in, const bool k_first_in)
+{
+    this->k_first = k_first_in;
+    this->ngk = ngk_in;
+    this->current_b = 0;
+    this->current_k = 0;
+    this->npol = GlobalV::NPOL;
+    this->device = base_device::get_device_type<Device>(this->ctx);
+    this->nk = nk_in;
+    this->nbands = nbd_in;
+    this->nbasis = nbs_in;
+    this->current_nbasis = nbs_in;
+    this->psi_current = this->psi = psi_pointer;
+    this->allocate_inside = false;
+    // Currently only GPU's implementation is supported for device recording!
+    base_device::information::print_device_info<Device>(this->ctx, GlobalV::ofs_device);
 }
 
 template <typename T, typename Device> Psi<T, Device>::Psi(const Psi& psi_in, const int nk_in, int nband_in)
@@ -90,7 +111,7 @@ template <typename T, typename Device>
 Psi<T, Device>::Psi(T* psi_pointer, const Psi& psi_in, const int nk_in, int nband_in)
 {
     this->k_first = psi_in.get_k_first();
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
     assert(this->device == psi_in.device);
     assert(nk_in <= psi_in.get_nk());
     if (nband_in == 0)
@@ -103,6 +124,8 @@ Psi<T, Device>::Psi(T* psi_pointer, const Psi& psi_in, const int nk_in, int nban
     this->nbands = nband_in;
     this->nbasis = psi_in.nbasis;
     this->psi_current = psi_pointer;
+    this->allocate_inside = false;
+    this->psi = psi_pointer;
 }
 
 template <typename T, typename Device> Psi<T, Device>::Psi(const Psi& psi_in)
@@ -116,9 +139,9 @@ template <typename T, typename Device> Psi<T, Device>::Psi(const Psi& psi_in)
     this->current_b = psi_in.get_current_b();
     this->k_first = psi_in.get_k_first();
     // this function will copy psi_in.psi to this->psi no matter the device types of each other.
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
     this->resize(psi_in.get_nk(), psi_in.get_nbands(), psi_in.get_nbasis());
-    memory::synchronize_memory_op<T, Device, Device>()(this->ctx,
+    base_device::memory::synchronize_memory_op<T, Device, Device>()(this->ctx,
                                                        psi_in.get_device(),
                                                        this->psi,
                                                        psi_in.get_pointer() - psi_in.get_psi_bias(),
@@ -141,13 +164,40 @@ Psi<T, Device>::Psi(const Psi<T_in, Device_in>& psi_in)
     this->current_b = psi_in.get_current_b();
     this->k_first = psi_in.get_k_first();
     // this function will copy psi_in.psi to this->psi no matter the device types of each other.
-    this->device = device::get_device_type<Device>(this->ctx);
+    this->device = base_device::get_device_type<Device>(this->ctx);
     this->resize(psi_in.get_nk(), psi_in.get_nbands(), psi_in.get_nbasis());
-    memory::cast_memory_op<T, T_in, Device, Device_in>()(this->ctx,
-                                                         psi_in.get_device(),
-                                                         this->psi,
-                                                         psi_in.get_pointer() - psi_in.get_psi_bias(),
-                                                         psi_in.size());
+
+    // Specifically, if the Device_in type is CPU and the Device type is GPU.
+    // Which means we need to initialize a GPU psi from a given CPU psi.
+    // We first malloc a memory in CPU, then cast the memory from T_in to T in CPU.
+    // Finally, synchronize the memory from CPU to GPU.
+    // This could help to reduce the peak memory usage of device.
+    if (std::is_same<Device, base_device::DEVICE_GPU>::value && 
+        std::is_same<Device_in, base_device::DEVICE_CPU>::value) 
+    {
+        auto * arr = (T*) malloc(sizeof(T) * psi_in.size());
+        // cast the memory from T_in to T in CPU
+        base_device::memory::cast_memory_op<T, T_in, Device_in, Device_in>()(psi_in.get_device(),
+                                                                psi_in.get_device(),
+                                                                arr,
+                                                                psi_in.get_pointer() - psi_in.get_psi_bias(),
+                                                                psi_in.size());
+        // synchronize the memory from CPU to GPU
+        base_device::memory::synchronize_memory_op<T, Device, Device_in>()(this->ctx,
+                                                              psi_in.get_device(),
+                                                              this->psi,
+                                                              arr,
+                                                              psi_in.size());
+        free(arr);
+    }
+    else
+    {
+        base_device::memory::cast_memory_op<T, T_in, Device, Device_in>()(this->ctx,
+                                                             psi_in.get_device(),
+                                                             this->psi,
+                                                             psi_in.get_pointer() - psi_in.get_psi_bias(),
+                                                             psi_in.size());
+    }
     this->psi_bias = psi_in.get_psi_bias();
     this->current_nbasis = psi_in.get_current_nbas();
     this->psi_current = this->psi + psi_in.get_psi_bias();
@@ -158,7 +208,7 @@ void Psi<T, Device>::resize(const int nks_in, const int nbands_in, const int nba
 {
     assert(nks_in > 0 && nbands_in >= 0 && nbasis_in > 0);
     // This function will delete the psi array first(if psi exist), then malloc a new memory for it.
-    resize_memory_op()(this->ctx, this->psi, nks_in * nbands_in * nbasis_in, "no_record");
+    resize_memory_op()(this->ctx, this->psi, nks_in * static_cast<std::size_t>(nbands_in) * nbasis_in, "no_record");
     this->nk = nks_in;
     this->nbands = nbands_in;
     this->nbasis = nbasis_in;
@@ -214,13 +264,13 @@ template <typename T, typename Device> const int& Psi<T, Device>::get_nbasis() c
     return this->nbasis;
 }
 
-template <typename T, typename Device> size_t Psi<T, Device>::size() const
+template <typename T, typename Device> std::size_t Psi<T, Device>::size() const
 {
     if (this->psi == nullptr)
     {
         return 0;
     }
-    return this->nk * this->nbands * this->nbasis;
+    return this->nk * static_cast<std::size_t>(this->nbands) * this->nbasis;
 }
 
 template <typename T, typename Device> void Psi<T, Device>::fix_k(const int ik) const
@@ -361,27 +411,35 @@ template <typename T, typename Device> std::tuple<const T*, int> Psi<T, Device>:
     }
 }
 
-template class Psi<float, DEVICE_CPU>;
-template class Psi<std::complex<float>, DEVICE_CPU>;
-template class Psi<double, DEVICE_CPU>;
-template class Psi<std::complex<double>, DEVICE_CPU>;
-template Psi<std::complex<float>, DEVICE_CPU>::Psi(const Psi<std::complex<double>, DEVICE_CPU>&);
-template Psi<std::complex<double>, DEVICE_CPU>::Psi(const Psi<std::complex<float>, DEVICE_CPU>&);
+template class Psi<float, base_device::DEVICE_CPU>;
+template class Psi<std::complex<float>, base_device::DEVICE_CPU>;
+template class Psi<double, base_device::DEVICE_CPU>;
+template class Psi<std::complex<double>, base_device::DEVICE_CPU>;
+template Psi<std::complex<float>, base_device::DEVICE_CPU>::Psi(
+    const Psi<std::complex<double>, base_device::DEVICE_CPU>&);
+template Psi<std::complex<double>, base_device::DEVICE_CPU>::Psi(
+    const Psi<std::complex<float>, base_device::DEVICE_CPU>&);
 #if ((defined __CUDA) || (defined __ROCM))
-template class Psi<float, DEVICE_GPU>;
-template class Psi<std::complex<float>, DEVICE_GPU>;
-template Psi<float, DEVICE_CPU>::Psi(const Psi<float, DEVICE_GPU>&);
-template Psi<float, DEVICE_GPU>::Psi(const Psi<float, DEVICE_CPU>&);
-template Psi<std::complex<float>, DEVICE_CPU>::Psi(const Psi<std::complex<float>, DEVICE_GPU>&);
-template Psi<std::complex<float>, DEVICE_GPU>::Psi(const Psi<std::complex<float>, DEVICE_CPU>&);
+template class Psi<float, base_device::DEVICE_GPU>;
+template class Psi<std::complex<float>, base_device::DEVICE_GPU>;
+template Psi<float, base_device::DEVICE_CPU>::Psi(const Psi<float, base_device::DEVICE_GPU>&);
+template Psi<float, base_device::DEVICE_GPU>::Psi(const Psi<float, base_device::DEVICE_CPU>&);
+template Psi<std::complex<float>, base_device::DEVICE_CPU>::Psi(
+    const Psi<std::complex<float>, base_device::DEVICE_GPU>&);
+template Psi<std::complex<float>, base_device::DEVICE_GPU>::Psi(
+    const Psi<std::complex<float>, base_device::DEVICE_CPU>&);
 
-template class Psi<double, DEVICE_GPU>;
-template class Psi<std::complex<double>, DEVICE_GPU>;
-template Psi<double, DEVICE_CPU>::Psi(const Psi<double, DEVICE_GPU>&);
-template Psi<double, DEVICE_GPU>::Psi(const Psi<double, DEVICE_CPU>&);
-template Psi<std::complex<double>, DEVICE_CPU>::Psi(const Psi<std::complex<double>, DEVICE_GPU>&);
-template Psi<std::complex<double>, DEVICE_GPU>::Psi(const Psi<std::complex<double>, DEVICE_CPU>&);
-template Psi<std::complex<float>, DEVICE_GPU>::Psi(const Psi<std::complex<double>, DEVICE_CPU>&);
-template Psi<std::complex<double>, DEVICE_GPU>::Psi(const Psi<std::complex<float>, DEVICE_GPU>&);
+template class Psi<double, base_device::DEVICE_GPU>;
+template class Psi<std::complex<double>, base_device::DEVICE_GPU>;
+template Psi<double, base_device::DEVICE_CPU>::Psi(const Psi<double, base_device::DEVICE_GPU>&);
+template Psi<double, base_device::DEVICE_GPU>::Psi(const Psi<double, base_device::DEVICE_CPU>&);
+template Psi<std::complex<double>, base_device::DEVICE_CPU>::Psi(
+    const Psi<std::complex<double>, base_device::DEVICE_GPU>&);
+template Psi<std::complex<double>, base_device::DEVICE_GPU>::Psi(
+    const Psi<std::complex<double>, base_device::DEVICE_CPU>&);
+template Psi<std::complex<float>, base_device::DEVICE_GPU>::Psi(
+    const Psi<std::complex<double>, base_device::DEVICE_CPU>&);
+template Psi<std::complex<double>, base_device::DEVICE_GPU>::Psi(
+    const Psi<std::complex<float>, base_device::DEVICE_GPU>&);
 #endif
 } // namespace psi

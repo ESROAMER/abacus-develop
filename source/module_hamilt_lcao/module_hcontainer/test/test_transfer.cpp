@@ -56,18 +56,12 @@ class TransferTest : public ::testing::Test
 #ifdef __MPI
     void init_parav()
     {
+        int nb = 2;
         int global_row = test_size * test_nw;
         int global_col = test_size * test_nw;
         std::ofstream ofs_running;
         paraV = new Parallel_Orbitals();
-        paraV->set_block_size(2/* nb_2d set to be 2*/);
-        paraV->set_proc_dim(dsize, 0);
-        paraV->mpi_create_cart(MPI_COMM_WORLD);
-        paraV->set_local2global(global_row, global_col, ofs_running, ofs_running);
-        int lr = paraV->get_row_size();
-        int lc = paraV->get_col_size();
-        paraV->set_desc(global_row, global_col, lr);
-        paraV->set_global2local(global_row, global_col, true, ofs_running);
+        paraV->init(global_row, global_col, nb, MPI_COMM_WORLD);
         paraV->set_atomic_trace(ucell.get_iat2iwt(), test_size, global_row);
     }
 #else
@@ -105,7 +99,7 @@ TEST_F(TransferTest, serialToPara)
             int atom_i = atom_pair.get_atom_i();
             int atom_j = atom_pair.get_atom_j();
             //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-            auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+            auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
             double* data = atom_pair.get_pointer(0);
             for(int k = 0; k < test_nw; k++)
             {
@@ -135,7 +129,7 @@ TEST_F(TransferTest, serialToPara)
         int atom_i = atom_pair.get_atom_i();
         int atom_j = atom_pair.get_atom_j();
         //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-        auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+        auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
         double* data = atom_pair.get_pointer(0);
         auto row_indexes = paraV->get_indexes_row(atom_i);
         auto col_indexes = paraV->get_indexes_col(atom_j);
@@ -233,6 +227,42 @@ TEST_F(TransferTest, paraToSerial)
     end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
     std::cout <<"rank: "<<my_rank<< " HR init time: " << elapsed_time0.count()<<" transfer_p2s time: "<<elapsed_time1.count()<<" check time: "<<elapsed_time2.count()<<" seconds." << std::endl;
+
+    // now assume the HR_serial is empty and do the same test
+    Parallel_Orbitals serialV;
+    std::ofstream ofs("test.log");
+    serialV.set_serial(test_size*test_nw, test_size*test_nw);
+    serialV.set_atomic_trace(ucell.get_iat2iwt(), test_size, test_size*test_nw);
+    hamilt::HContainer<double>* HR_serial2;
+    if(my_rank == 0)
+    {
+        HR_serial2 = new hamilt::HContainer<double>(&serialV);
+    }
+    hamilt::gatherParallels(*HR_para, HR_serial2, 0);
+    if(my_rank == 0)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for(int i = 0; i < HR_serial2->size_atom_pairs(); i++)
+        {
+            hamilt::AtomPair<double>& atom_pair = HR_serial2->get_atom_pair(i);
+            int atom_i = atom_pair.get_atom_i();
+            int atom_j = atom_pair.get_atom_j();
+            //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
+            auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+            double* data = atom_pair.get_pointer(0);
+            for(int k = 0; k < test_nw; k++)
+            {
+                for(int l = 0; l < test_nw; l++)
+                {
+                    EXPECT_NEAR(*data , value(k, l), 1e-10);
+                    ++data;
+                }
+            }
+        }
+        delete HR_serial2;
+    }
 #endif
 }
 
@@ -254,7 +284,7 @@ TEST_F(TransferTest, serialAllToParaAll)
         int atom_i = atom_pair.get_atom_i();
         int atom_j = atom_pair.get_atom_j();
         //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-        auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+        auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
         double* data = atom_pair.get_pointer(0);
         for(int k = 0; k < test_nw; k++)
         {
@@ -283,7 +313,7 @@ TEST_F(TransferTest, serialAllToParaAll)
         int atom_i = atom_pair.get_atom_i();
         int atom_j = atom_pair.get_atom_j();
         //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-        auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l)*dsize;};
+        auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l)*dsize;};
         double* data = atom_pair.get_pointer(0);
         auto row_indexes = paraV->get_indexes_row(atom_i);
         auto col_indexes = paraV->get_indexes_col(atom_j);
@@ -319,7 +349,7 @@ TEST_F(TransferTest, paraAllToserialAll)
         int atom_i = atom_pair.get_atom_i();
         int atom_j = atom_pair.get_atom_j();
         //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-        auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+        auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
         double* data = atom_pair.get_pointer(0);
         auto row_indexes = paraV->get_indexes_row(atom_i);
         auto col_indexes = paraV->get_indexes_col(atom_j);
@@ -353,7 +383,7 @@ TEST_F(TransferTest, paraAllToserialAll)
         int atom_i = atom_pair.get_atom_i();
         int atom_j = atom_pair.get_atom_j();
         //lambda function to calculate value of array: (atom_i*test_size+atom_j+k)*test_nw + l
-        auto value = [&](int k, int l) -> double {return (((atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
+        auto value = [&](int k, int l) -> double {return ((double(atom_i*test_nw+k)*test_size+atom_j)*test_nw + l);};
         double* data = atom_pair.get_pointer(0);
         for(int k = 0; k < test_nw; k++)
         {

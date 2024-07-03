@@ -10,19 +10,26 @@ namespace hamilt
 template <typename T>
 HContainer<T>::~HContainer()
 {
-    // do nothing
+    if(this->allocated)
+    {
+        delete[] this->wrapper_pointer;
+    }
 }
 
 // copy constructor
 template <typename T>
-HContainer<T>::HContainer(const HContainer<T>& HR_in)
+HContainer<T>::HContainer(const HContainer<T>& HR_in, T* data_array)
 {
-    this->atom_pairs = HR_in.atom_pairs;
     this->sparse_ap = HR_in.sparse_ap;
     this->sparse_ap_index = HR_in.sparse_ap_index;
     this->gamma_only = HR_in.gamma_only;
     this->paraV = HR_in.paraV;
     this->current_R = -1;
+    this->wrapper_pointer = data_array;
+    this->allocated = false;
+    this->atom_pairs = HR_in.atom_pairs;
+    // data of HR_in will not be copied, please call add() after this constructor to copy data.
+    this->allocate(this->wrapper_pointer, true);
     // tmp terms not copied
 }
 
@@ -107,42 +114,68 @@ HContainer<T>::HContainer(const UnitCell& ucell_, const Parallel_Orbitals* paraV
             }
         }
     }
-    this->allocate(true);
+    this->allocate(nullptr, true);
 }
 
 //HContainer(const Parallel_Orbitals* paraV, T* data_pointer = nullptr);
 template <typename T>
-HContainer<T>::HContainer(const Parallel_Orbitals* paraV_in, T* data_pointer)
+HContainer<T>::HContainer(const Parallel_Orbitals* paraV_in, T* data_pointer, const std::vector<int>* ijr_info)
 {
     this->current_R = -1;
-    // use HContainer as a wrapper
-    if(data_pointer != nullptr)
-    {
-        this->gamma_only = true;
-        this->wrapper_pointer = data_pointer;
-    }
-    else // use HContainer as a container
-    {
-        this->gamma_only = false;
-    }
+
+    // use HContainer as a wrapper(!nullptr) or container(nullptr)
+    this->wrapper_pointer = data_pointer;
+
+#ifdef __DEBUG
+    assert(paraV_in != nullptr);
+#endif
+
     // save Parallel_Orbitals pointer
     this->paraV = paraV_in;
     // initialize sparse_ap
     int natom = paraV->atom_begin_row.size();
     this->sparse_ap.resize(natom);
     this->sparse_ap_index.resize(natom);
+    if(ijr_info != nullptr)
+    {
+        this->insert_ijrs(ijr_info);
+        // allocate memory
+        this->allocate(data_pointer, false);
+    }
 }
 
 // allocate
 template <typename T>
-void HContainer<T>::allocate(bool is_zero)
+void HContainer<T>::allocate(T* data_array, bool is_zero)
 {
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+    size_t nnr = this->get_nnr();
+    if(this->allocated)
+    {// delete existed memory of this->wrapper_pointer
+        delete[] this->wrapper_pointer;
+        this->allocated = false;
+    }
+    if(data_array == nullptr)
+    {
+        // use this->wrapper_pointer as data_array
+        this->allocated = true;
+        this->wrapper_pointer = new T[nnr];
+        ModuleBase::GlobalFunc::ZEROS(this->wrapper_pointer, nnr);
+        data_array = this->wrapper_pointer;
+    }
+    else
+    {
+        // use data_array to replace this->wrapper_pointer
+        this->wrapper_pointer = data_array;
+        if(is_zero)
+        {
+            ModuleBase::GlobalFunc::ZEROS(this->wrapper_pointer, nnr);
+        }
+    }
     for(int it=0;it<this->atom_pairs.size();it++)
     {
-        this->atom_pairs[it].allocate(is_zero);
+        this->atom_pairs[it].allocate(data_array, false);
+        // move data_array pointer for the next AtomPair
+        data_array += this->atom_pairs[it].get_R_size() * this->atom_pairs[it].get_size();
     }
 }
 
@@ -218,6 +251,49 @@ BaseMatrix<T>* HContainer<T>::find_matrix(int atom_i, int atom_j, int rx, int ry
         }
     }
 }
+
+template <typename T>
+BaseMatrix<T>* HContainer<T>::find_matrix(int atom_i, int atom_j, const ModuleBase::Vector3<int>& R_index) 
+{
+    AtomPair<T>* tmp = this->find_pair(atom_i, atom_j);
+    if(tmp == nullptr)
+    {
+        return nullptr;
+    }
+    else
+    {
+        if(this->gamma_only)
+        {
+            return tmp->find_matrix(0, 0, 0);
+        }
+        else
+        {
+            return tmp->find_matrix(R_index);
+        }
+    }
+}
+
+template <typename T>
+const BaseMatrix<T>* HContainer<T>::find_matrix(int atom_i, int atom_j,const ModuleBase::Vector3<int>& R_index) const
+{
+    AtomPair<T>* tmp = this->find_pair(atom_i, atom_j);
+    if(tmp == nullptr)
+    {
+        return nullptr;
+    }
+    else
+    {
+        if(this->gamma_only)
+        {
+            return tmp->find_matrix(0, 0, 0);
+        }
+        else
+        {
+            return tmp->find_matrix(R_index);
+        }
+    }
+}
+
 
 // get_atom_pair with atom_ij
 template <typename T>
@@ -360,10 +436,28 @@ int HContainer<T>::find_R(const int& rx_in, const int& ry_in, const int& rz_in) 
     {
         return -1;
     }
-    for (int i = 0; i < this->tmp_R_index.size() / 3; i++)
+    for (int i = 0; i < this->tmp_R_index.size(); i++)
     {
-        if (this->tmp_R_index[i * 3] == rx_in && this->tmp_R_index[i * 3 + 1] == ry_in
-            && this->tmp_R_index[i * 3 + 2] == rz_in)
+        if (this->tmp_R_index[i].x == rx_in && this->tmp_R_index[i].y == ry_in
+            && this->tmp_R_index[i].z == rz_in)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+template <typename T>
+int HContainer<T>::find_R(const ModuleBase::Vector3<int>& R_in) const
+{
+    // search R_in in this->tmp_R_index
+    if (this->tmp_R_index.empty())
+    {
+        return -1;
+    }
+    for (int i = 0; i < this->tmp_R_index.size(); i++)
+    {
+        if (this->tmp_R_index[i] == R_in)
         {
             return i;
         }
@@ -376,9 +470,9 @@ template <typename T>
 size_t HContainer<T>::size_R_loop() const
 {
     // R index is fixed
-    if (this->current_R > -1 && this->tmp_R_index.size() > 2)
+    if (this->current_R > -1 && this->tmp_R_index.size() > 0)
     {
-        return this->tmp_R_index.size()/3;
+        return this->tmp_R_index.size();
     }
     /**
      * start a new iteration of loop_R
@@ -389,40 +483,38 @@ size_t HContainer<T>::size_R_loop() const
     for (auto it = this->atom_pairs.begin(); it != this->atom_pairs.end(); ++it)
     {
         /**
-         * search (rx, ry, rz) with (it->R_values[i*3+0], it->R_values[i*3+1], it->R_values[i*3+2])
+         * search (rx, ry, rz) with (it->R_values[i].x, it->R_values[i].y, it->R_values[i].z)
          * if (rx, ry, rz) not found in this->tmp_R_index,
          * insert the (rx, ry, rz) into end of this->tmp_R_index
          * no need to sort this->tmp_R_index, using find_R() to find the (rx, ry, rz) -> int in tmp_R_index
          */
         for (int iR = 0; iR < it->get_R_size(); iR++)
         {
-            int* R_pointer = it->get_R_index(iR);
-            int it_tmp = this->find_R(R_pointer[0], R_pointer[1], R_pointer[2]);
+            const ModuleBase::Vector3<int> r_vec = it->get_R_index(iR);
+            int it_tmp = this->find_R(r_vec);
             if (it_tmp == -1)
             {
-                this->tmp_R_index.push_back(R_pointer[0]);
-                this->tmp_R_index.push_back(R_pointer[1]);
-                this->tmp_R_index.push_back(R_pointer[2]);
+                this->tmp_R_index.push_back(ModuleBase::Vector3<int>(r_vec));
             }
         }
     }
-    return this->tmp_R_index.size() / 3;
+    return this->tmp_R_index.size();
 }
 
 template <typename T>
 void HContainer<T>::loop_R(const size_t& index, int& rx, int& ry, int& rz) const
 {
 #ifdef __DEBUG
-    if (index >= this->tmp_R_index.size() / 3)
+    if (index >= this->tmp_R_index.size())
     {
         std::cout << "Error: index out of range in loop_R" << std::endl;
         exit(1);
     }
 #endif
     // set rx, ry, rz
-    rx = this->tmp_R_index[index * 3];
-    ry = this->tmp_R_index[index * 3 + 1];
-    rz = this->tmp_R_index[index * 3 + 2];
+    rx = this->tmp_R_index[index].x;
+    ry = this->tmp_R_index[index].y;
+    rz = this->tmp_R_index[index].z;
     return;
 }
 
@@ -564,7 +656,11 @@ size_t HContainer<T>::get_memory_size() const
         memory += this->sparse_ap_index[i].capacity() * sizeof(int);
     }
     memory += this->tmp_atom_pairs.capacity() * sizeof(AtomPair<T>*);
-    memory += this->tmp_R_index.capacity() * sizeof(int);
+    memory += this->tmp_R_index.capacity() * sizeof(ModuleBase::Vector3<int>);
+    if(this->allocated)
+    {
+        memory += this->get_nnr() * sizeof(T);
+    }
     return memory;
 }
 
@@ -593,17 +689,80 @@ void HContainer<T>::shape_synchron( const HContainer<T>& other)
         {
             for(int ir = 0;ir < other.atom_pairs[i].get_R_size();++ir)
             {
-                int* R_pointer = other.atom_pairs[i].get_R_index(ir);
-                if(tmp_pointer->find_R(R_pointer[0], R_pointer[1], R_pointer[2]) != -1)
+                const ModuleBase::Vector3<int> R_vec = other.atom_pairs[i].get_R_index(ir);
+                if(tmp_pointer->find_R(R_vec) != -1)
                 {
                     // do nothing
                 }
                 else
                 {
                     // insert the new BaseMatrix
-                    tmp_pointer->get_HR_values(R_pointer[0], R_pointer[1], R_pointer[2]);
+                    tmp_pointer->get_HR_values(R_vec.x, R_vec.y, R_vec.z);
                 }
             }
+        }
+    }
+}
+
+// get_IJR_info
+template <typename T>
+std::vector<int> HContainer<T>::get_ijr_info() const
+{
+    // get number of atom pairs
+    std::vector<int> ijr_info;
+    ijr_info.push_back(this->atom_pairs.size());
+    // loop atom pairs
+    for (int i = 0; i < this->atom_pairs.size(); ++i)
+    {
+        // get atom_i and atom_j
+        const int atom_i = this->atom_pairs[i].get_atom_i();
+        const int atom_j = this->atom_pairs[i].get_atom_j();
+        // push back atom_i, atom_j
+        ijr_info.push_back(atom_i);
+        ijr_info.push_back(atom_j);
+        // get number of R
+        const int number_R = this->atom_pairs[i].get_R_size();
+        ijr_info.push_back(number_R);
+        // loop R
+        for (int ir = 0; ir < number_R; ++ir)
+        {
+            const ModuleBase::Vector3<int> R_vec = this->atom_pairs[i].get_R_index(ir);
+            ijr_info.push_back(R_vec.x);
+            ijr_info.push_back(R_vec.y);
+            ijr_info.push_back(R_vec.z);
+        }
+    }
+    return ijr_info;
+}
+
+template<typename T>
+void HContainer<T>::insert_ijrs(const std::vector<int>* ijrs)
+{
+    if (this->paraV == nullptr)
+    {
+        ModuleBase::WARNING_QUIT("HContainer::insert_ijrs", "paraV pointer can not be nullptr!");
+    }
+    // get number of atom pairs
+    const int number_ap = (*ijrs)[0];
+    // loop AtomPairs and unpack values
+    const int* ijr_p = ijrs->data() + 1;
+    for (int i = 0; i < number_ap; ++i)
+    {
+        // get atom_i and atom_j
+        const int atom_i = *ijr_p++;
+        const int atom_j = *ijr_p++;
+        // get number of R
+        const int number_R = *ijr_p++;
+        for (int k = 0; k < number_R; ++k)
+        {
+            int r_index[3];
+            // get R index
+            r_index[0] = *ijr_p++;
+            r_index[1] = *ijr_p++;
+            r_index[2] = *ijr_p++;
+            //insert this IJ AtomPair
+            AtomPair<T> tmp_ap(atom_i, atom_j, r_index[0], r_index[1], r_index[2], this->paraV);
+            this->insert_pair(tmp_ap);
         }
     }
 }

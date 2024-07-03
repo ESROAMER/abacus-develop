@@ -9,7 +9,7 @@ calculation		md
 esolver_type    tddft
 
 #Parameter (Accuracy)
-ecutwfc			100
+ecutwfc			20
 scf_nmax		50
 
 ks_solver		scalapack_gvx
@@ -19,6 +19,7 @@ md_nstep		2
 
 mixing_type		broyden
 mixing_beta		0.7
+mixing_gg0      0.0
 scf_thr			1.0e-6
 
 cal_stress          1

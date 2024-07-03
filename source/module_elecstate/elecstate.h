@@ -66,8 +66,14 @@ class ElecState
 
     // calculate wg from ekb
     virtual void calculate_weights();
+
     // use occupied weights from INPUT and skip calculate_weights
-    void fixed_weights(const std::vector<double>& ocp_kb);
+    // mohan updated on 2024-06-08
+	void fixed_weights(
+			const std::vector<double>& ocp_kb,
+			const int &nbands,
+			const double &nelec);
+
     // if nupdown is not 0(TWO_EFERMI case), 
     // nelec_spin will be fixed and weights will be constrained 
     void init_nelec_spin();
@@ -123,6 +129,10 @@ class ElecState
     double get_solvent_model_Ael();
     double get_solvent_model_Acav();
 
+    virtual double get_spin_constrain_energy() {
+        return 0.0;
+    }
+
 #ifdef __LCAO
     double get_dftu_energy();
 #endif
@@ -148,6 +158,7 @@ class ElecState
     void print_etot(const bool converged,
                     const int& iter,
                     const double& scf_thr,
+                    const double& scf_thr_kin,
                     const double& duration,
                     const int printe,
                     const double& pw_diag_thr = 0,
@@ -159,11 +170,10 @@ class ElecState
 
     void print_eigenvalue(std::ofstream& ofs);
 
-  protected:
+  public:
     // calculate ebands for all k points and all occupied bands
     void calEBand();
 
-  private:
     bool skip_weights = false;
 };
 

@@ -1,6 +1,7 @@
 #include "print_info.h"
 #include "module_io/input.h"
 #include "../module_base/global_variable.h"
+//#include "../module_cell/klist.h"
 
 Print_Info::Print_Info(){}
 
@@ -71,7 +72,7 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 		     << std::setw(16) << "KPOINTS"
 		     << std::setw(12) << "PROCESSORS";
 
-		if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw")
+		if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw" || (GlobalV::BASIS_TYPE=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
 		{
 			std::cout << std::setw(12) << "NBASE";
 		}
@@ -97,18 +98,18 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 			if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
 			{
 				// zi
-				printf( "\e[35m%-16d\e[0m", kv.nkstot);
-				//printf( "[35m%-16d[0m", kv.nkstot);
+				printf( "\e[35m%-16d\e[0m", kv.get_nkstot());
+				//printf( "[35m%-16d[0m", kv.get_nkstot());
 			}
 			else
 			{
-				std::cout << std::setw(16) << kv.nkstot;
+				std::cout << std::setw(16) << kv.get_nkstot();
 			}
 		}
 
 		std::cout << std::setw(12) << GlobalV::NPROC;
 
-		if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw")
+		if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw" || (GlobalV::BASIS_TYPE=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
 		{
 			std::cout << std::setw(12) << GlobalV::NLOCAL;
 		}
@@ -173,7 +174,7 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 				std::cout << " " << std::setw(8) << ucell.atoms[it].label;
 			}
 
-			if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw")
+			if(GlobalV::BASIS_TYPE=="lcao" || GlobalV::BASIS_TYPE=="lcao_in_pw" || (GlobalV::BASIS_TYPE=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
 			{
 				std::stringstream orb;
 

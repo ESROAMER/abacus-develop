@@ -11,6 +11,7 @@
 #include "module_basis/module_pw/pw_basis_k.h"
 #include "module_cell/klist.h"
 #include "module_elecstate/module_charge/charge.h"
+#include "module_hamilt_pw/hamilt_pwdft/VNL_in_pw.h"
 #include "module_hamilt_pw/hamilt_pwdft/kernels/stress_op.h"
 #include "module_hamilt_pw/hamilt_pwdft/structure_factor.h"
 #include "module_hsolver/kernels/math_kernel_op.h"
@@ -51,7 +52,7 @@
 // 8) the stress from ionic contributions (for molecular dynamics)
 //----------------------------------------------------------------
 
-template <typename FPTYPE, typename Device = psi::DEVICE_CPU>
+template <typename FPTYPE, typename Device = base_device::DEVICE_CPU>
 class Stress_Func
 {
   public:
@@ -94,9 +95,14 @@ class Stress_Func
                     FPTYPE* dvloc,
                     ModulePW::PW_Basis* rho_basis); // used in local pseudopotential stress
 
-    void dvloc_coul(const FPTYPE& zp,
-                    FPTYPE* dvloc,
-                    ModulePW::PW_Basis* rho_basis); // used in local pseudopotential stress
+    /**
+     * @brief compute the derivative of the coulomb potential in reciprocal space
+     *        D V(g^2) / D g^2 = 4pi e^2/omegai /G^4
+     *
+     */
+    void dvloc_coulomb(const FPTYPE& zp,
+                       FPTYPE* dvloc,
+                       ModulePW::PW_Basis* rho_basis); // used in local pseudopotential stress
 
     // 5) the stress from the non-linear core correction (if any)
     void stress_cc(ModuleBase::matrix& sigma,
@@ -123,67 +129,121 @@ class Stress_Func
                      const Charge* const chr,
                      K_Vectors* p_kv,
                      ModulePW::PW_Basis_K* wfc_basis,
-                     const psi::Psi<complex<FPTYPE>>* psi_in = nullptr); // gga part in PW basis
+                     const psi::Psi<complex<FPTYPE>, Device>* psi_in); // gga part in PW basis
 
     // 7) the stress from the non-local pseudopotentials
+    /**
+     * @brief This routine computes the atomic force of non-local pseudopotential
+     *    Stress^{NL}_{ij} = -1/\Omega \sum_{n,k}f_{nk}\sum_I \sum_{lm,l'm'}D_{l,l'}^{I} [
+     *               \sum_G \langle c_{nk}(\mathbf{G+K})|\beta_{lm}^I(\mathbf{G+K})\rangle *
+     *               \sum_{G'}\langle \partial \beta_{lm}^I(\mathbf{G+K})/\partial \varepsilon_{ij}
+     * |c_{nk}(\mathbf{G+K})\rangle ] there would be three parts in the above equation: (1) sum over becp and dbecp with
+     * D_{l,l'}^{I} ----- first line in the above equation (2) calculate becp = <psi | beta> ----- second line in the
+     * above equation (3) calculate dbecp = <psi | dbeta> ----- third line in the above equation
+     */
     void stress_nl(ModuleBase::matrix& sigma,
                    const ModuleBase::matrix& wg,
+                   const ModuleBase::matrix& ekb,
                    Structure_Factor* p_sf,
                    K_Vectors* p_kv,
                    ModuleSymmetry::Symmetry* p_symm,
                    ModulePW::PW_Basis_K* wfc_basis,
-                   const psi::Psi<complex<FPTYPE>, Device>* psi_in); // nonlocal part in PW basis
+                   const psi::Psi<complex<FPTYPE>, Device>* psi_in,
+                   pseudopot_cell_vnl* nlpp_in,
+                   const UnitCell& ucell_in); // nonlocal part in PW basis
 
     void get_dvnl1(ModuleBase::ComplexMatrix& vkb,
                    const int ik,
                    const int ipol,
                    Structure_Factor* p_sf,
                    ModulePW::PW_Basis_K* wfc_basis); // used in nonlocal part in PW basis
-    void dylmr2(const int nylm,
-                const int ngy,
-                ModuleBase::Vector3<FPTYPE>* gk,
-                ModuleBase::matrix& dylm,
-                const int ipol); // used in get_dvnl1()
     void get_dvnl2(ModuleBase::ComplexMatrix& vkb,
                    const int ik,
                    Structure_Factor* p_sf,
                    ModulePW::PW_Basis_K* wfc_basis); // used in nonlocal part in PW basis
+
     FPTYPE Polynomial_Interpolation_nl(const ModuleBase::realArray& table,
                                        const int& dim1,
                                        const int& dim2,
+                                       const int& dim3,
                                        const FPTYPE& table_interval,
-                                       const FPTYPE& x); // used in get_dvnl2()
+                                       const FPTYPE& x);
 
-    static FPTYPE stress_invalid_threshold_ev;
-    static FPTYPE output_acc;
+    /**
+     * @brief Compute the derivatives of the radial Fourier transform of the Q functions
+     *
+     * This routine computes the derivatives of the Fourier transform of
+     * the Q function needed in stress assuming that the radial fourier
+     * transform is already computed and stored in table qrad.
+     * The formula implemented here is:
+     *
+     *   dq(g,i,j) = sum_lm (-i)^l ap(lm,i,j) *
+     *              ( yr_lm(g^) dqrad(g,l,i,j) + dyr_lm(g^) qrad(g,l,i,j))
+     *
+     * @param ih [in] the first index of Q
+     * @param jh [in] the second index of Q
+     * @param itype [in] the atomic type
+     * @param ipol [in] the polarization of the derivative
+     * @param ng [in] the number of G vectors
+     * @param g [in] the G vectors
+     * @param qnorm [in] the norm of q+g vectors
+     * @param tpiba [in] 2pi/a factor, multiplies G vectors
+     * @param ylmk0 [in] the real spherical harmonics
+     * @param dylmk0 [in] derivetives of spherical harmonics
+     * @param dqg [out] the Fourier transform of interest
+     */
+    void dqvan2(const pseudopot_cell_vnl* ppcell_in,
+                const int ih,
+                const int jh,
+                const int itype,
+                const int ipol,
+                const int ng,
+                const ModuleBase::Vector3<FPTYPE>* g,
+                const FPTYPE* qnorm,
+                const FPTYPE& tpiba,
+                const ModuleBase::matrix& ylmk0,
+                const ModuleBase::matrix& dylmk0,
+                std::complex<FPTYPE>* dqg);
 
   private:
     Device* ctx = {};
-    psi::DEVICE_CPU* cpu_ctx = {};
-    psi::AbacusDevice_t device = {};
+    base_device::DEVICE_CPU* cpu_ctx = {};
+    base_device::AbacusDevice_t device = {};
     using gemm_op = hsolver::gemm_op<std::complex<FPTYPE>, Device>;
     using cal_stress_nl_op = hamilt::cal_stress_nl_op<FPTYPE, Device>;
     using cal_dbecp_noevc_nl_op = hamilt::cal_dbecp_noevc_nl_op<FPTYPE, Device>;
 
-    using resmem_complex_op = psi::memory::resize_memory_op<std::complex<FPTYPE>, Device>;
-    using resmem_complex_h_op = psi::memory::resize_memory_op<std::complex<FPTYPE>, psi::DEVICE_CPU>;
-    using setmem_complex_op = psi::memory::set_memory_op<std::complex<FPTYPE>, Device>;
-    using delmem_complex_op = psi::memory::delete_memory_op<std::complex<FPTYPE>, Device>;
-    using delmem_complex_h_op = psi::memory::delete_memory_op<std::complex<FPTYPE>, psi::DEVICE_CPU>;
-    using syncmem_complex_h2d_op = psi::memory::synchronize_memory_op<std::complex<FPTYPE>, Device, psi::DEVICE_CPU>;
-    using syncmem_complex_d2h_op = psi::memory::synchronize_memory_op<std::complex<FPTYPE>, psi::DEVICE_CPU, Device>;
+    using resmem_complex_op = base_device::memory::resize_memory_op<std::complex<FPTYPE>, Device>;
+    using resmem_complex_h_op = base_device::memory::resize_memory_op<std::complex<FPTYPE>, base_device::DEVICE_CPU>;
+    using setmem_complex_op = base_device::memory::set_memory_op<std::complex<FPTYPE>, Device>;
+    using delmem_complex_op = base_device::memory::delete_memory_op<std::complex<FPTYPE>, Device>;
+    using delmem_complex_h_op = base_device::memory::delete_memory_op<std::complex<FPTYPE>, base_device::DEVICE_CPU>;
+    using syncmem_complex_h2d_op
+        = base_device::memory::synchronize_memory_op<std::complex<FPTYPE>, Device, base_device::DEVICE_CPU>;
+    using syncmem_complex_d2h_op
+        = base_device::memory::synchronize_memory_op<std::complex<FPTYPE>, base_device::DEVICE_CPU, Device>;
 
-    using resmem_var_op = psi::memory::resize_memory_op<FPTYPE, Device>;
-    using resmem_var_h_op = psi::memory::resize_memory_op<FPTYPE, psi::DEVICE_CPU>;
-    using setmem_var_op = psi::memory::set_memory_op<FPTYPE, Device>;
-    using delmem_var_op = psi::memory::delete_memory_op<FPTYPE, Device>;
-    using delmem_var_h_op = psi::memory::delete_memory_op<FPTYPE, psi::DEVICE_CPU>;
-    using syncmem_var_h2d_op = psi::memory::synchronize_memory_op<FPTYPE, Device, psi::DEVICE_CPU>;
-    using syncmem_var_d2h_op = psi::memory::synchronize_memory_op<FPTYPE, psi::DEVICE_CPU, Device>;
+    using resmem_var_op = base_device::memory::resize_memory_op<FPTYPE, Device>;
+    using resmem_var_h_op = base_device::memory::resize_memory_op<FPTYPE, base_device::DEVICE_CPU>;
+    using setmem_var_op = base_device::memory::set_memory_op<FPTYPE, Device>;
+    using delmem_var_op = base_device::memory::delete_memory_op<FPTYPE, Device>;
+    using delmem_var_h_op = base_device::memory::delete_memory_op<FPTYPE, base_device::DEVICE_CPU>;
+    using syncmem_var_h2d_op = base_device::memory::synchronize_memory_op<FPTYPE, Device, base_device::DEVICE_CPU>;
+    using syncmem_var_d2h_op = base_device::memory::synchronize_memory_op<FPTYPE, base_device::DEVICE_CPU, Device>;
 
-    using resmem_int_op = psi::memory::resize_memory_op<int, Device>;
-    using delmem_int_op = psi::memory::delete_memory_op<int, Device>;
-    using syncmem_int_h2d_op = psi::memory::synchronize_memory_op<int, Device, psi::DEVICE_CPU>;
+    using resmem_int_op = base_device::memory::resize_memory_op<int, Device>;
+    using delmem_int_op = base_device::memory::delete_memory_op<int, Device>;
+    using syncmem_int_h2d_op = base_device::memory::synchronize_memory_op<int, Device, base_device::DEVICE_CPU>;
+
+    using cal_vq_op = hamilt::cal_vq_op<FPTYPE, Device>;
+    using cal_vq_deri_op = hamilt::cal_vq_deri_op<FPTYPE, Device>;
+
+    using cal_vkb_op = hamilt::cal_vkb_op<FPTYPE, Device>;
+    using cal_vkb_deri_op = hamilt::cal_vkb_deri_op<FPTYPE, Device>;
+
+  protected:
+    pseudopot_cell_vnl* nlpp = nullptr;
+    const UnitCell* ucell = nullptr;
 };
 
 #endif

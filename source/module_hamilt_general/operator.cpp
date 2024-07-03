@@ -38,7 +38,7 @@ Operator<T, Device>::~Operator()
 template<typename T, typename Device>
 typename Operator<T, Device>::hpsi_info Operator<T, Device>::hPsi(hpsi_info& input) const
 {
-    using syncmem_op = psi::memory::synchronize_memory_op<T, Device, Device>;
+    using syncmem_op = base_device::memory::synchronize_memory_op<T, Device, Device>;
     auto psi_input = std::get<0>(input);
     std::tuple<const T*, int> psi_info = psi_input->to_range(std::get<1>(input));
     int nbands = std::get<1>(psi_info);
@@ -61,10 +61,12 @@ typename Operator<T, Device>::hpsi_info Operator<T, Device>::hPsi(hpsi_info& inp
     }
 
     auto call_act = [&, this](const Operator* op) -> void {
-        switch (act_type)
+        // a "psi" with the bands of needed range
+        psi::Psi<T, Device> psi_wrapper(const_cast<T*>(tmpsi_in), 1, nbands, psi_input->get_nbasis());
+        switch (op->get_act_type())
         {
         case 2:
-            op->act(*psi_input, *this->hpsi);
+            op->act(psi_wrapper, *this->hpsi, nbands);
             break;
         default:
             op->act(nbands, psi_input->get_nbasis(), psi_input->npol, tmpsi_in, this->hpsi->get_pointer(), psi_input->get_ngk(op->ik));
@@ -165,14 +167,14 @@ T* Operator<T, Device>::get_hpsi(const hpsi_info& info) const
 }
 
 namespace hamilt {
-template class Operator<float, psi::DEVICE_CPU>;
-template class Operator<std::complex<float>, psi::DEVICE_CPU>;
-template class Operator<double, psi::DEVICE_CPU>;
-template class Operator<std::complex<double>, psi::DEVICE_CPU>;
+template class Operator<float, base_device::DEVICE_CPU>;
+template class Operator<std::complex<float>, base_device::DEVICE_CPU>;
+template class Operator<double, base_device::DEVICE_CPU>;
+template class Operator<std::complex<double>, base_device::DEVICE_CPU>;
 #if ((defined __CUDA) || (defined __ROCM))
-template class Operator<float, psi::DEVICE_GPU>;
-template class Operator<std::complex<float>, psi::DEVICE_GPU>;
-template class Operator<double, psi::DEVICE_GPU>;
-template class Operator<std::complex<double>, psi::DEVICE_GPU>;
+template class Operator<float, base_device::DEVICE_GPU>;
+template class Operator<std::complex<float>, base_device::DEVICE_GPU>;
+template class Operator<double, base_device::DEVICE_GPU>;
+template class Operator<std::complex<double>, base_device::DEVICE_GPU>;
 #endif
 }

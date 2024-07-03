@@ -1,8 +1,8 @@
 #ifndef PSI_H
 #define PSI_H
 
-#include "module_psi/kernels/memory_op.h"
-#include "module_psi/kernels/types.h"
+#include "module_base/module_device/memory_op.h"
+#include "module_base/module_device/types.h"
 
 #include <tuple>
 
@@ -31,7 +31,8 @@ struct Range
 
 // there is the structure of electric wavefunction coefficient
 // the basic operations defined in the Operator Class
-template <typename T, typename Device = DEVICE_CPU> class Psi
+template <typename T, typename Device = base_device::DEVICE_CPU>
+class Psi
 {
   public:
     // Constructor 1: basic
@@ -50,6 +51,8 @@ template <typename T, typename Device = DEVICE_CPU> class Psi
     // Constructor 7: initialize a new psi from the given psi_in with a different class template
     // in this case, psi_in may have a different device type.
     template <typename T_in, typename Device_in = Device> Psi(const Psi<T_in, Device_in>& psi_in);
+    // Constructor 8: a pointer version of constructor 3
+    Psi(T* psi_pointer, const int nk_in, const int nbd_in, const int nbs_in, const int* ngk_in = nullptr, const bool k_first_in = true);
     // Destructor for deleting the psi array manually
     ~Psi();
 
@@ -117,7 +120,7 @@ template <typename T, typename Device = DEVICE_CPU> class Psi
   private:
     T* psi = nullptr; // avoid using C++ STL
 
-    AbacusDevice_t device = {}; // track the device type (CPU, GPU and SYCL are supported currented)
+    base_device::AbacusDevice_t device = {}; // track the device type (CPU, GPU and SYCL are supported currented)
     Device* ctx = {}; // an context identifier for obtaining the device variable
 
     // dimensions
@@ -138,10 +141,12 @@ template <typename T, typename Device = DEVICE_CPU> class Psi
 
     bool k_first = true;
 
-    using set_memory_op = psi::memory::set_memory_op<T, Device>;
-    using delete_memory_op = psi::memory::delete_memory_op<T, Device>;
-    using resize_memory_op = psi::memory::resize_memory_op<T, Device>;
-    using synchronize_memory_op = psi::memory::synchronize_memory_op<T, Device, Device>;
+    bool allocate_inside = true;  ///<whether allocate psi inside Psi class
+
+    using set_memory_op = base_device::memory::set_memory_op<T, Device>;
+    using delete_memory_op = base_device::memory::delete_memory_op<T, Device>;
+    using resize_memory_op = base_device::memory::resize_memory_op<T, Device>;
+    using synchronize_memory_op = base_device::memory::synchronize_memory_op<T, Device, Device>;
 };
 
 } // end of namespace psi

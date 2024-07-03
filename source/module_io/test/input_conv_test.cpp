@@ -2,6 +2,8 @@
 #include "gmock/gmock.h"
 #include "module_io/input_conv.h"
 #include "module_base/global_variable.h"
+#include "module_hsolver/hsolver_pw.h"
+#include "module_hsolver/diago_elpa.h"
 #include "for_testing_input_conv.h"
 
 /************************************************
@@ -56,7 +58,6 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(GlobalV::DFT_FUNCTIONAL,"hse");
 	EXPECT_DOUBLE_EQ(GlobalV::XC_TEMPERATURE,0.0);
 	EXPECT_EQ(GlobalV::NSPIN,1);
-	EXPECT_EQ(GlobalV::CURRENT_SPIN,0);
 	EXPECT_EQ(GlobalV::CAL_FORCE,0);
 	EXPECT_NEAR(GlobalV::FORCE_THR,0.001,0.0000001);
     EXPECT_DOUBLE_EQ(GlobalV::STRESS_THR, 0.01);
@@ -88,7 +89,9 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(GlobalV::DIAGO_PROC,4);
 	EXPECT_EQ(GlobalV::PW_DIAG_NMAX,50);
 	EXPECT_EQ(GlobalV::DIAGO_CG_PREC,1);
-	EXPECT_EQ(GlobalV::PW_DIAG_NDIM,4);
+    EXPECT_EQ(GlobalV::PW_DIAG_NDIM, 4);
+    EXPECT_EQ(hsolver::HSolverPW<std::complex<float>>::diago_full_acc, false);
+    EXPECT_EQ(hsolver::HSolverPW<std::complex<double>>::diago_full_acc, false);
 	EXPECT_DOUBLE_EQ(GlobalV::PW_DIAG_THR,0.01);
 	EXPECT_EQ(GlobalV::NB2D,0);
 	EXPECT_EQ(GlobalV::NURSE,0);
@@ -116,6 +119,7 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(elecstate::Efield::efield_amp,0);
 	EXPECT_EQ(GlobalV::GATE_FLAG,0);
 	EXPECT_EQ(GlobalV::nelec,0);
+	EXPECT_EQ(GlobalV::nelec_delta,0);
 	EXPECT_DOUBLE_EQ(elecstate::Gatefield::zgate,0.5);
 	EXPECT_EQ(elecstate::Gatefield::relax,0);
 	EXPECT_EQ(elecstate::Gatefield::block,0);
@@ -138,21 +142,26 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(GlobalV::OUT_FREQ_ION,0);
 	EXPECT_EQ(GlobalV::init_chg,"atomic");
 	EXPECT_EQ(GlobalV::chg_extrap,"atomic");
-	EXPECT_EQ(GlobalV::out_chg,false);
-	EXPECT_EQ(GlobalV::nelec,0.0);
+	EXPECT_EQ(GlobalV::out_chg, 0);
     EXPECT_EQ(GlobalV::out_pot, 2);
     EXPECT_EQ(GlobalV::out_app_flag, false);
     EXPECT_EQ(GlobalV::out_bandgap, false);
     EXPECT_EQ(Local_Orbital_Charge::out_dm,false);
 	EXPECT_EQ(Local_Orbital_Charge::out_dm1,false);
-    EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_hs, false);
-    EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs, false);
+    EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_hs[0], false);
+    EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_hs[0], false);
     EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_hsR, false);
     EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_hsR, false);
     EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_t, false);
     EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_t, false);
     EXPECT_EQ(hsolver::HSolverLCAO<double>::out_mat_dh, INPUT.out_mat_dh);
     EXPECT_EQ(hsolver::HSolverLCAO<std::complex<double>>::out_mat_dh, INPUT.out_mat_dh);
+	EXPECT_EQ(hsolver::DiagoElpa<double>::elpa_num_thread,-1);
+	EXPECT_EQ(hsolver::DiagoElpa<std::complex<double>>::elpa_num_thread,-1);
+    EXPECT_EQ(GlobalV::out_mat_xc, false);
+	EXPECT_EQ(GlobalV::out_hr_npz, false);
+	EXPECT_EQ(GlobalV::out_dm_npz, false);
+	EXPECT_EQ(GlobalV::dm_to_rho, false);
     EXPECT_EQ(GlobalV::out_interval, 1);
     EXPECT_EQ(elecstate::ElecStateLCAO<double>::out_wfc_lcao, false);
     EXPECT_EQ(berryphase::berry_phase_flag, false);
@@ -179,6 +188,14 @@ TEST_F(InputConvTest, Conv)
 	EXPECT_EQ(GlobalV::of_read_kernel,false);
 	EXPECT_EQ(GlobalV::of_kernel_file,"WTkernel.txt");
 	EXPECT_EQ(GlobalV::global_readin_dir,GlobalV::global_out_dir);
+	EXPECT_EQ(GlobalV::sc_mag_switch,0);
+	
+    EXPECT_TRUE(GlobalV::decay_grad_switch);
+    EXPECT_EQ(GlobalV::sc_file, "sc.json");
+	EXPECT_EQ(GlobalV::MIXING_RESTART,0.0);
+	EXPECT_EQ(GlobalV::MIXING_DMR,false);
+
+	EXPECT_EQ(GlobalV::NUM_STREAM,4);
 }
 
 TEST_F(InputConvTest, ConvRelax)
@@ -254,13 +271,7 @@ TEST_F(InputConvTest, ConvRelax)
 		testing::internal::CaptureStdout();
 		EXPECT_EXIT(Input_Conv::Convert(), ::testing::ExitedWithCode(0),"");
 		output2 = testing::internal::GetCapturedStdout();
-		EXPECT_THAT(output2,testing::HasSubstr("INPUT device setting does not match the request!"
-			"\n Input device = gpu"
-			"\n Input basis_type = pw"
-			"\n Input ks_solver = cg"
-			"\n Compile setting = host"
-			"\n Environment device_num = -1"
-			"\n"));
+		EXPECT_THAT(output2,testing::HasSubstr("The GPU is not supported in this build!"));
   }
 
 TEST_F(InputConvTest, dftplus)
@@ -268,9 +279,9 @@ TEST_F(InputConvTest, dftplus)
 	INPUT.Default();
 	std::string input_file = "./support/INPUT";
 	INPUT.Read(input_file);
-	INPUT.dft_plus_u=true;
+	INPUT.dft_plus_u=1;
 	Input_Conv::Convert();
-	EXPECT_EQ(GlobalV::dft_plus_u,true);
+	EXPECT_EQ(GlobalV::dft_plus_u,1);
 	EXPECT_EQ(GlobalC::dftu.Yukawa,false);
 	EXPECT_EQ(GlobalC::dftu.omc,false);//
 	EXPECT_EQ(GlobalC::dftu.orbital_corr,INPUT.orbital_corr);
@@ -295,30 +306,13 @@ TEST_F(InputConvTest, nspin)
     EXPECT_EQ(GlobalV::soc_lambda, INPUT.soc_lambda);
 }
 
-TEST_F(InputConvTest, nspinbeta)
-{
-	INPUT.Default();
-	std::string input_file = "./support/INPUT";
-	INPUT.Read(input_file);
-	INPUT.noncolin=true;
-	INPUT.cal_stress=true;
-	std::string output2;
-	testing::internal::CaptureStdout();
-	EXPECT_EXIT(Input_Conv::Convert(), ::testing::ExitedWithCode(0),"");
-	output2 = testing::internal::GetCapturedStdout();
-	EXPECT_THAT(output2,testing::HasSubstr("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"));
-	EXPECT_THAT(output2,testing::HasSubstr("                         NOTICE                          "));
-	EXPECT_THAT(output2,testing::HasSubstr("force & stress not ready for soc yet!"));
-	EXPECT_THAT(output2,testing::HasSubstr("CHECK IN FILE : warning.log"));
-	EXPECT_THAT(output2,testing::HasSubstr("TIME STATISTICS"));
-}
-
 TEST_F(InputConvTest, nupdown)
 {
 	INPUT.Default();
 	std::string input_file = "./support/INPUT";
 	INPUT.Read(input_file);
 	INPUT.nupdown=0.1;
+	INPUT.two_fermi=true;
 	Input_Conv::Convert();
 	EXPECT_EQ(GlobalV::TWO_EFERMI,true);
 	EXPECT_EQ(GlobalV::nupdown,0.1);
@@ -360,7 +354,8 @@ TEST_F(InputConvTest, restart_load)
 	INPUT.dft_functional = "hf";
 	Input_Conv::Convert();
 	EXPECT_EQ( GlobalC::restart.folder,GlobalV::global_readin_dir + "restart/");
-	EXPECT_EQ(GlobalC::restart.info_load.load_charge,true);
+    EXPECT_EQ(GlobalC::restart.info_load.load_charge, true);
+    EXPECT_EQ(GlobalC::restart.info_load.load_H, true);
 }
 
 TEST_F(InputConvTest,restart_load2 )
@@ -371,8 +366,7 @@ TEST_F(InputConvTest,restart_load2 )
 	INPUT.restart_load=true;
 	INPUT.dft_functional="b3lyp";
 	Input_Conv::Convert();
-	EXPECT_EQ(GlobalC::restart.info_load.load_charge,true);
-	EXPECT_EQ(GlobalC::restart.info_load.load_H,true);
+    EXPECT_EQ(GlobalC::restart.info_load.load_charge, true);
 }
 
 TEST_F(InputConvTest,cell_factor  )
@@ -453,7 +447,7 @@ TEST_F(InputConvTest,parse )
     EXPECT_EQ(module_tddft::Evolve_elec::td_vext_dire_case.size(), 0);
 }
 
-TEST_F(InputConvTest,parse2 )
+TEST_F(InputConvTest, parse2)
 {
 	INPUT.Default();
 	std::string input_file = "./support/INPUT";
@@ -532,6 +526,40 @@ TEST_F(InputConvTest, ReadTdEfieldTest)
     EXPECT_EQ(elecstate::H_TDDFT_pw::heavi_t0[0], 100);
     EXPECT_NEAR(elecstate::H_TDDFT_pw::heavi_amp[0], 1.00 * ModuleBase::BOHR_TO_A / ModuleBase::Ry_to_eV, 1e-8);
 }
+
+#ifdef __PEXSI
+TEST_F(InputConvTest, PEXSI)
+{
+	INPUT.Default();
+	std::string input_file = "./support/INPUT";
+	INPUT.Read(input_file);
+	Input_Conv::Convert();
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_npole, 40);
+	EXPECT_TRUE(pexsi::PEXSI_Solver::pexsi_inertia);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_nmax, 80);
+	EXPECT_TRUE(pexsi::PEXSI_Solver::pexsi_comm);
+	EXPECT_TRUE(pexsi::PEXSI_Solver::pexsi_storage);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_ordering, 0);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_row_ordering, 1);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_nproc, 1);
+	EXPECT_TRUE(pexsi::PEXSI_Solver::pexsi_symm);
+	EXPECT_FALSE(pexsi::PEXSI_Solver::pexsi_trans);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_method, 1);
+	EXPECT_EQ(pexsi::PEXSI_Solver::pexsi_nproc_pole, 1);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_temp, 0.015);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_gap, 0);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_delta_e, 20);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu_lower, -10);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu_upper, 10);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu, 0);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu_thr, 0.05);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu_expand, 0.3);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_mu_guard, 0.2);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_elec_thr, 0.001);
+	EXPECT_DOUBLE_EQ(pexsi::PEXSI_Solver::pexsi_zero_thr, 1e-10);
+}
+#endif
+
 #endif
 
 #undef private

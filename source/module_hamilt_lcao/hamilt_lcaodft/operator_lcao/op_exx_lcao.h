@@ -1,8 +1,11 @@
 #ifndef OPEXXLCAO_H
 #define OPEXXLCAO_H
-#include "module_base/timer.h"
-#include "module_cell/klist.h"
+
+#ifdef __EXX
+
+#include <RI/global/Tensor.h>
 #include "operator_lcao.h"
+#include "module_cell/klist.h"
 
 namespace hamilt
 {
@@ -20,26 +23,39 @@ class OperatorEXX : public T
 template <typename TK, typename TR>
 class OperatorEXX<OperatorLCAO<TK, TR>> : public OperatorLCAO<TK, TR>
 {
-  public:
+    using TAC = std::pair<int, std::array<int, 3>>;
+public:
     OperatorEXX<OperatorLCAO<TK, TR>>(LCAO_Matrix* LM_in,
-                                 hamilt::HContainer<TR>* hR_in,
-                                 std::vector<TK>* hK_in,
-                                 const K_Vectors& kv_in)
-        : kv(kv_in), OperatorLCAO<TK, TR>(LM_in, kv_in.kvec_d, hR_in, hK_in)
-    {
-        this->cal_type = lcao_exx;
-    }
-
-    virtual void contributeHR() override;
+        hamilt::HContainer<TR>* hR_in,
+        std::vector<TK>* hK_in,
+        const K_Vectors& kv_in,
+        std::vector<std::map<int, std::map<TAC, RI::Tensor<double>>>>* Hexxd_in = nullptr,
+        std::vector<std::map<int, std::map<TAC, RI::Tensor<std::complex<double>>>>>* Hexxc_in = nullptr,
+        int* two_level_step_in = nullptr,
+        const bool restart_in = false);
 
     virtual void contributeHk(int ik) override;
 
   private:
 
-    bool HR_fixed_done = false;
+      bool HR_fixed_done = false;
 
-    const K_Vectors& kv;
+      std::vector<std::map<int, std::map<TAC, RI::Tensor<double>>>>* Hexxd = nullptr;
+      std::vector<std::map<int, std::map<TAC, RI::Tensor<std::complex<double>>>>>* Hexxc = nullptr;
+
+      /// @brief  the step of the outer loop.
+      /// nullptr: no dependence on the number of two_level_step, contributeHk will do enerything normally.
+      /// 0: the first outer loop. If restart, contributeHk will directly add Hexx to Hloc. else, do nothing.
+      /// >0: not the first outer loop. contributeHk will do enerything normally.
+      int* two_level_step = nullptr;
+      /// @brief if restart, read and save Hexx, and directly use it during the first outer loop.
+      bool restart = false;
+
+      void add_loaded_Hexx(const int ik);
+      const K_Vectors& kv;
 };
 
 } // namespace hamilt
-#endif
+#endif // __EXX
+#include "op_exx_lcao.hpp"
+#endif // OPEXXLCAO_H

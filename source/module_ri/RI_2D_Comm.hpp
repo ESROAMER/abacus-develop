@@ -84,7 +84,7 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors& kv,
                 };
                 // if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
                 //     set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5)));
-                if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.nkstot_full)) == 2)
+                if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.get_nkstot_full())) == 2)
                     set_mR_2D(tensor_real(mk_2D * frac));
                 else
                     set_mR_2D(mk_2D * frac);
@@ -119,68 +119,49 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors& kv,
     return mRs_a2D;
 }
 
-template <typename Tdata>
-void RI_2D_Comm::add_Hexx(const K_Vectors& kv,
-                          const int ik,
-                          const double alpha,
-                          const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>& Hs,
-                          LCAO_Matrix& lm)
+
+template<typename Tdata, typename TK>
+void RI_2D_Comm::add_Hexx(
+	const K_Vectors &kv,
+	const int ik,
+	const double alpha,
+	const std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>> &Hs,
+    const Parallel_Orbitals& pv,
+    std::vector<TK>& Hloc)
 {
-    ModuleBase::TITLE("RI_2D_Comm", "add_Hexx");
-    ModuleBase::timer::tick("RI_2D_Comm", "add_Hexx");
+	ModuleBase::TITLE("RI_2D_Comm","add_Hexx");
+	ModuleBase::timer::tick("RI_2D_Comm", "add_Hexx");
 
-    const Parallel_Orbitals& pv = *lm.ParaV;
-
-    const std::map<int, std::vector<int>> is_list = {
-        {1, {0}         },
-        {2, {kv.isk[ik]}},
-        {4, {0, 1, 2, 3}}
-    };
-    for (const int is_b: is_list.at(GlobalV::NSPIN))
-    {
-        int is0_b, is1_b;
-        std::tie(is0_b, is1_b) = RI_2D_Comm::split_is_block(is_b);
-        for (const auto& Hs_tmpA: Hs[is_b])
-        {
-            const TA& iat0 = Hs_tmpA.first;
-            for (const auto& Hs_tmpB: Hs_tmpA.second)
-            {
-                const TA& iat1 = Hs_tmpB.first.first;
-                const TC& cell1 = Hs_tmpB.first.second;
-                const std::complex<double> frac
-                    = alpha
-                      * std::exp(ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT
-                                 * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec)));
-                const RI::Tensor<Tdata>& H = Hs_tmpB.second;
-                for (size_t iw0_b = 0; iw0_b < H.shape[0]; ++iw0_b)
-                {
-                    const int iwt0 = RI_2D_Comm::get_iwt(iat0, iw0_b, is0_b);
-                    if (pv.global2local_row(iwt0) < 0)
-                        continue;
-                    for (size_t iw1_b = 0; iw1_b < H.shape[1]; ++iw1_b)
-                    {
-                        const int iwt1 = RI_2D_Comm::get_iwt(iat1, iw1_b, is1_b);
-                        if (pv.global2local_col(iwt1) < 0)
-                            continue;
-
-                        if (GlobalV::GAMMA_ONLY_LOCAL)
-                            lm.set_HSgamma(iwt0,
-                                           iwt1,
-                                           RI::Global_Func::convert<double>(H(iw0_b, iw1_b))
-                                               * RI::Global_Func::convert<double>(frac),
-                                           lm.Hloc.data());
-                        else
-                            lm.set_HSk(iwt0,
-                                       iwt1,
-                                       RI::Global_Func::convert<std::complex<double>>(H(iw0_b, iw1_b)) * frac,
-                                       'L',
-                                       -1);
-                    }
-                }
-            }
-        }
-    }
-    ModuleBase::timer::tick("RI_2D_Comm", "add_Hexx");
+	const std::map<int, std::vector<int>> is_list = {{1,{0}}, {2,{kv.isk[ik]}}, {4,{0,1,2,3}}};
+	for(const int is_b : is_list.at(GlobalV::NSPIN))
+	{
+		int is0_b, is1_b;
+		std::tie(is0_b,is1_b) = RI_2D_Comm::split_is_block(is_b);
+		for(const auto &Hs_tmpA : Hs[is_b])
+		{
+			const TA &iat0 = Hs_tmpA.first;
+			for(const auto &Hs_tmpB : Hs_tmpA.second)
+			{
+				const TA &iat1 = Hs_tmpB.first.first;
+				const TC &cell1 = Hs_tmpB.first.second;
+				const std::complex<double> frac = alpha
+					* std::exp( ModuleBase::TWO_PI*ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell1)*GlobalC::ucell.latvec)) );
+				const RI::Tensor<Tdata> &H = Hs_tmpB.second;
+				for(size_t iw0_b=0; iw0_b<H.shape[0]; ++iw0_b)
+				{
+					const int iwt0 = RI_2D_Comm::get_iwt(iat0, iw0_b, is0_b);
+                    if (pv.global2local_row(iwt0) < 0)	continue;
+					for(size_t iw1_b=0; iw1_b<H.shape[1]; ++iw1_b)
+					{
+						const int iwt1 = RI_2D_Comm::get_iwt(iat1, iw1_b, is1_b);
+                        if (pv.global2local_col(iwt1) < 0)	continue;
+                        LCAO_Matrix::set_mat2d(iwt0, iwt1, RI::Global_Func::convert<TK>(H(iw0_b, iw1_b)) * RI::Global_Func::convert<TK>(frac), pv, Hloc.data());
+					}
+				}
+			}
+		}
+	}
+	ModuleBase::timer::tick("RI_2D_Comm", "add_Hexx");
 }
 
 std::tuple<int, int, int> RI_2D_Comm::get_iat_iw_is_block(const int iwt)

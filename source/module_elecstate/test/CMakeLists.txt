@@ -54,7 +54,8 @@ AddTest(
     ../elecstate.cpp
     ../occupy.cpp
     ../../module_psi/psi.cpp
-    ../../module_psi/kernels/psi_memory_op.cpp
+    # ../../module_psi/kernels/psi_memory_op.cpp
+    ../../module_base/module_device/memory_op.cpp
 )
 
 AddTest(
@@ -70,7 +71,7 @@ AddTest(
 
 AddTest(
   TARGET potentials_new
-  LIBS ${math_libs} base device
+  LIBS ${math_libs} base device planewave_serial
   SOURCES potential_new_test.cpp ../potentials/potential_new.cpp
 )
 

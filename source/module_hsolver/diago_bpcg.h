@@ -5,9 +5,8 @@
 #include "module_base/complexmatrix.h"
 #include "module_hamilt_pw/hamilt_pwdft/structure_factor.h"
 
-#include "module_psi/kernels/types.h"
-#include "module_psi/kernels/device.h"
-#include "module_psi/kernels/memory_op.h"
+#include "module_base/module_device/types.h"
+#include "module_base/module_device/memory_op.h"
 
 #include "module_hsolver/kernels/math_kernel_op.h"
 #include "module_hsolver/kernels/dngvd_op.h"
@@ -24,7 +23,7 @@ namespace hsolver {
  * @tparam T The floating-point type used for calculations.
  * @tparam Device The device used for calculations (e.g., cpu or gpu).
  */
-template<typename T = std::complex<double>, typename Device = psi::DEVICE_CPU>
+template <typename T = std::complex<double>, typename Device = base_device::DEVICE_CPU>
 class DiagoBPCG : public DiagH<T, Device>
 {
   private:
@@ -116,7 +115,8 @@ class DiagoBPCG : public DiagH<T, Device>
      *
      * @note prec[dim: n_band]
      *
-     * @param dev Reference to the AbacusDevice_t object, speciy which device used in the calc_prec function.
+     * @param dev Reference to the base_device::AbacusDevice_t object, speciy which device used in the calc_prec
+     * function.
      * @param prec Pointer to the host precondition array with [dim: n_band, column major]
      * @param h_prec Pointer to the host precondition array with [dim: n_band, column major].
      * @param d_prec Pointer to the device precondition array with [dim: n_band, column major].
@@ -318,16 +318,16 @@ class DiagoBPCG : public DiagH<T, Device>
     using hpsi_info = typename hamilt::Operator<T, Device>::hpsi_info;
 
     using ct_Device = typename ct::PsiToContainer<Device>::type;
-    using setmem_var_op = ct::op::set_memory_op<Real, ct_Device>;
-    using resmem_var_op = ct::op::resize_memory_op<Real, ct_Device>;
-    using delmem_var_op = ct::op::delete_memory_op<Real, ct_Device>;
-    using syncmem_var_h2d_op = ct::op::synchronize_memory_op<Real, ct_Device, ct::DEVICE_CPU>;
-    using syncmem_var_d2h_op = ct::op::synchronize_memory_op<Real, ct::DEVICE_CPU, ct_Device>;
+    using setmem_var_op = ct::kernels::set_memory<Real, ct_Device>;
+    using resmem_var_op = ct::kernels::resize_memory<Real, ct_Device>;
+    using delmem_var_op = ct::kernels::delete_memory<Real, ct_Device>;
+    using syncmem_var_h2d_op = ct::kernels::synchronize_memory<Real, ct_Device, ct::DEVICE_CPU>;
+    using syncmem_var_d2h_op = ct::kernels::synchronize_memory<Real, ct::DEVICE_CPU, ct_Device>;
 
-    using setmem_complex_op = ct::op::set_memory_op<T, ct_Device>;
-    using delmem_complex_op = ct::op::delete_memory_op<T, ct_Device>;
-    using resmem_complex_op = ct::op::resize_memory_op<T, ct_Device>;
-    using syncmem_complex_op = ct::op::synchronize_memory_op<T, ct_Device, ct_Device>;
+    using setmem_complex_op = ct::kernels::set_memory<T, ct_Device>;
+    using delmem_complex_op = ct::kernels::delete_memory<T, ct_Device>;
+    using resmem_complex_op = ct::kernels::resize_memory<T, ct_Device>;
+    using syncmem_complex_op = ct::kernels::synchronize_memory<T, ct_Device, ct_Device>;
 
     using calc_grad_with_block_op = hsolver::calc_grad_with_block_op<T, Device>;
     using line_minimize_with_block_op = hsolver::line_minimize_with_block_op<T, Device>;

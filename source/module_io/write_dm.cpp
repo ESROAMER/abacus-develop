@@ -42,11 +42,14 @@ void ModuleIO::write_dm(
 	const int &is, 
 	const int &iter, 
 	const std::string &fn, 
-	const int &precision,
-	const int &out_dm,
+	int precision,
+	int out_dm,
 	double*** DM,
 	const double& ef,
-	const UnitCell* ucell)
+	const UnitCell* ucell,
+    const int my_rank,
+    const int nspin,
+    const int nlocal)
 {
     ModuleBase::TITLE("ModuleIO","write_dm");
 
@@ -60,7 +63,7 @@ void ModuleIO::write_dm(
 	time_t start, end;
 	std::ofstream ofs;
 
-	if(GlobalV::MY_RANK==0)
+	if(my_rank==0)
 	{
 		start = time(NULL);
 
@@ -101,10 +104,10 @@ void ModuleIO::write_dm(
 			}
 		}
 
-		ofs << "\n " << GlobalV::NSPIN;
+		ofs << "\n " << nspin;
 		ofs << "\n " << ef << " (fermi energy)";
 
-		ofs << "\n  " << GlobalV::NLOCAL << " " << GlobalV::NLOCAL << std::endl;
+		ofs << "\n  " << nlocal << " " << nlocal << std::endl;
 
 		ofs << std::setprecision(precision);
 		ofs << std::scientific;
@@ -114,9 +117,9 @@ void ModuleIO::write_dm(
     //ofs << "\n " << GlobalV::GAMMA_ONLY_LOCAL << " (GAMMA ONLY LOCAL)" << std::endl;
 #ifndef __MPI
 
-    for(int i=0; i<GlobalV::NLOCAL; ++i)
+    for(int i=0; i<nlocal; ++i)
     {
-        for(int j=0; j<GlobalV::NLOCAL; ++j)
+        for(int j=0; j<nlocal; ++j)
         {
             if(j%8==0) ofs << "\n";
             ofs << " " << DM[is][i][j];
@@ -125,17 +128,16 @@ void ModuleIO::write_dm(
 
 #else
     //xiaohui modify 2014-06-18
-    
-    double* tmp = new double[GlobalV::NLOCAL];
-    int* count = new int[GlobalV::NLOCAL];
-    for (int i=0; i<GlobalV::NLOCAL; ++i)
+    std::vector<double> tmp(nlocal,0);
+    std::vector<int> count(nlocal,0);
+    for (int i=0; i<nlocal; ++i)
     {
         // when reduce, there may be 'redundance', we need to count them.
-        ModuleBase::GlobalFunc::ZEROS(count, GlobalV::NLOCAL);
+        count.assign(count.size(),0);
         const int mu = trace_lo[i];
         if (mu >= 0)
         {
-            for (int j=0; j<GlobalV::NLOCAL; ++j)
+            for (int j=0; j<nlocal; ++j)
             {
                 const int nu = trace_lo[j];
                 if (nu >= 0)
@@ -144,13 +146,13 @@ void ModuleIO::write_dm(
                 }
             }
         }
-        Parallel_Reduce::reduce_all(count, GlobalV::NLOCAL);
+        Parallel_Reduce::reduce_all(count.data(), nlocal);
 
         // reduce the density matrix for 'i' line.
-        ModuleBase::GlobalFunc::ZEROS(tmp, GlobalV::NLOCAL);
+        tmp.assign(tmp.size(),0);
         if (mu >= 0)
         {
-            for (int j=0; j<GlobalV::NLOCAL; j++)
+            for (int j=0; j<nlocal; j++)
             {
                 const int nu = trace_lo[j];
                 if (nu >=0)
@@ -160,11 +162,11 @@ void ModuleIO::write_dm(
                 }
             }
         }
-        Parallel_Reduce::reduce_all(tmp, GlobalV::NLOCAL);
+        Parallel_Reduce::reduce_all(tmp.data(), nlocal);
 
-        if(GlobalV::MY_RANK==0)
+        if(my_rank==0)
         {
-            for (int j=0; j<GlobalV::NLOCAL; j++)
+            for (int j=0; j<nlocal; j++)
             {
                 if(j%8==0) ofs << "\n";
                 if(count[j]>0)
@@ -178,10 +180,10 @@ void ModuleIO::write_dm(
             }
         }
     }
-    delete[] tmp;
-    delete[] count;
+    std::vector<double>().swap(tmp);
+    std::vector<int>().swap(count);
 #endif
-	if(GlobalV::MY_RANK==0)
+	if(my_rank==0)
 	{
 		end = time(NULL);
 		ModuleBase::GlobalFunc::OUT_TIME("write_dm",start,end);

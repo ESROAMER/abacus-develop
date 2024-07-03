@@ -7,28 +7,27 @@
 #define EXX_LRI_H
 
 #include <RI/physics/Exx.h>
-#include <mpi.h>
 
-#include <array>
-#include <deque>
-#include <map>
-#include <vector>
 
 #include "LRI_CV.h"
 #include "ewald_Vq.h"
-#include "module_base/matrix.h"
-#include "module_basis/module_ao/ORB_atomic_lm.h"
 #include "module_hamilt_general/module_xc/exx_info.h"
-#include "module_ri/Mix_DMk_2D.h"
+#include "module_basis/module_ao/ORB_atomic_lm.h"
+#include "module_base/matrix.h"
 
-class Local_Orbital_Charge;
-class Parallel_Orbitals;
+#include <vector>
+#include <array>
+#include <map>
+#include <deque>
+#include <mpi.h>
 
-template <typename T, typename Tdata>
-class RPA_LRI;
+	class Parallel_Orbitals;
+	
+	template<typename T, typename Tdata>
+	class RPA_LRI;
 
-template <typename T, typename Tdata>
-class Exx_LRI_Interface;
+	template<typename T, typename Tdata>
+	class Exx_LRI_Interface;
 
 template <typename Tdata>
 class Exx_LRI
@@ -49,16 +48,16 @@ class Exx_LRI
     void cal_exx_force();
     void cal_exx_stress();
 
-    std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Hexxs;
-    Tdata Eexx;
-    ModuleBase::matrix force_exx;
-    ModuleBase::matrix stress_exx;
+	std::vector< std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Hexxs;
+    double Eexx;
+	ModuleBase::matrix force_exx;
+	ModuleBase::matrix stress_exx;
 
   private:
     const Exx_Info::Exx_Info_RI& info;
     const Exx_Info::Exx_Info_Ewald& info_ewald;
-    MPI_Comm mpi_comm;
-    const K_Vectors* p_kv;
+	MPI_Comm mpi_comm;
+	const K_Vectors* p_kv = nullptr;
 
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
@@ -67,18 +66,15 @@ class Exx_LRI
     RI::Exx<TA, Tcell, Ndim, Tdata> exx_lri;
     Ewald_Vq<Tdata> evq;
 
-    void cal_exx_ions();
-    void cal_exx_elec(const Parallel_Orbitals& pv);
-    void post_process_Hexx(std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>& Hexxs_io) const;
-    Tdata post_process_Eexx(const Tdata& Eexx_in) const;
+	void cal_exx_ions();
+	void cal_exx_elec(const std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>> &Ds, const Parallel_Orbitals &pv);
+	void post_process_Hexx( std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> &Hexxs_io ) const;
+    double post_process_Eexx(const double& Eexx_in) const;
 
-    int two_level_step = 0;
-    Mix_DMk_2D mix_DMk_2D;
-
-    friend class RPA_LRI<double, Tdata>;
-    friend class RPA_LRI<std::complex<double>, Tdata>;
-    friend class Exx_LRI_Interface<double, Tdata>;
-    friend class Exx_LRI_Interface<std::complex<double>, Tdata>;
+	friend class RPA_LRI<double, Tdata>;
+	friend class RPA_LRI<std::complex<double>, Tdata>;
+	friend class Exx_LRI_Interface<double, Tdata>;
+	friend class Exx_LRI_Interface<std::complex<double>, Tdata>;
 };
 
 #include "Exx_LRI.hpp"

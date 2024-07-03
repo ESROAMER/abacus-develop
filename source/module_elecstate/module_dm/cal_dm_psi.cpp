@@ -23,6 +23,7 @@ void cal_dm_psi(const Parallel_Orbitals* ParaV,
 
     // dm = wfc.T * wg * wfc.conj()
     // dm[is](iw1,iw2) = \sum_{ib} wfc[is](ib,iw1).T * wg(is,ib) * wfc[is](ib,iw2).conj()
+
     for (int ik = 0; ik < wfc.get_nk(); ++ik)
     {
         double* dmk_pointer = DM.get_DMK_pointer(ik);
@@ -44,9 +45,12 @@ void cal_dm_psi(const Parallel_Orbitals* ParaV,
                     ModuleBase::WARNING_QUIT("ElecStateLCAO::cal_dm", "please check global2local_col!");
                 }
             }
-            if (ib_global >= wg.nc)
-                continue;
+			if (ib_global >= wg.nc)
+			{
+				continue;
+			}
             const double wg_local = wg(ik, ib_global);
+
             double* wg_wfc_pointer = &(wg_wfc(0, ib_local, 0));
             BlasConnector::scal(nbasis_local, wg_local, wg_wfc_pointer, 1);
         }
@@ -107,16 +111,25 @@ void cal_dm_psi(const Parallel_Orbitals* ParaV,
                     ModuleBase::WARNING_QUIT("ElecStateLCAO::cal_dm", "please check global2local_col!");
                 }
             }
-            if (ib_global >= wg.nc)
-                continue;
-            const double wg_local = wg(ik, ib_global);
+			if (ib_global >= wg.nc)
+			{
+				continue;
+			}
+			const double wg_local = wg(ik, ib_global);
             std::complex<double>* wg_wfc_pointer = &(wg_wfc(0, ib_local, 0));
             BlasConnector::scal(nbasis_local, wg_local, wg_wfc_pointer, 1);
         }
 
         // C++: dm(iw1,iw2) = wfc(ib,iw1).T * wg_wfc(ib,iw2)
 #ifdef __MPI
-        psiMulPsiMpi(wg_wfc, wfc, dmk_pointer, ParaV->desc_wfc, ParaV->desc);
+
+        if (GlobalV::KS_SOLVER == "cg_in_lcao")
+        {
+            psiMulPsi(wg_wfc, wfc, dmk_pointer);
+        } else 
+        {
+            psiMulPsiMpi(wg_wfc, wfc, dmk_pointer, ParaV->desc_wfc, ParaV->desc);
+        }
 #else
         psiMulPsi(wg_wfc, wfc, dmk_pointer);
 #endif
@@ -126,7 +139,7 @@ void cal_dm_psi(const Parallel_Orbitals* ParaV,
     return;
 }
 
-#ifdef __MPI
+// #ifdef __MPI
 void psiMulPsiMpi(const psi::Psi<double>& psi1,
                          const psi::Psi<double>& psi2,
                          double* dm_out,
@@ -139,6 +152,7 @@ void psiMulPsiMpi(const psi::Psi<double>& psi1,
     const char N_char = 'N', T_char = 'T';
     const int nlocal = desc_dm[2];
     const int nbands = desc_psi[3];
+
     pdgemm_(&N_char,
             &T_char,
             &nlocal,
@@ -195,7 +209,7 @@ void psiMulPsiMpi(const psi::Psi<std::complex<double>>& psi1,
     ModuleBase::timer::tick("psiMulPsiMpi", "pdgemm");
 }
 
-#else
+// #else
 void psiMulPsi(const psi::Psi<double>& psi1, const psi::Psi<double>& psi2, double* dm_out)
 {
     const double one_float = 1.0, zero_float = 0.0;
@@ -226,7 +240,8 @@ void psiMulPsi(const psi::Psi<std::complex<double>>& psi1,
     const char N_char = 'N', T_char = 'T';
     const int nlocal = psi1.get_nbasis();
     const int nbands = psi1.get_nbands();
-    const std::complex<double> one_complex = {1.0, 0.0}, zero_complex = {0.0, 0.0};
+    const std::complex<double> one_complex = {1.0, 0.0};
+    const std::complex<double> zero_complex = {0.0, 0.0};
     zgemm_(&N_char,
            &T_char,
            &nlocal,
@@ -241,6 +256,6 @@ void psiMulPsi(const psi::Psi<std::complex<double>>& psi1,
            dm_out,
            &nlocal);
 }
-#endif
+// #endif
 
 } // namespace elecstate

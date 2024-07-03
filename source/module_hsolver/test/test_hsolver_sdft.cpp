@@ -35,19 +35,16 @@ Stochastic_Iter::~Stochastic_Iter()
     delete[] chiallorder;
 }
 
-void Stochastic_Iter::init(int *nchip_in, const int method_in, K_Vectors* pkv, ModulePW::PW_Basis_K *wfc_basis, Stochastic_WF &stowf)
+void Stochastic_Iter::init(const int method_in, K_Vectors* pkv, ModulePW::PW_Basis_K *wfc_basis, Stochastic_WF &stowf)
 {
-    this->nchip = nchip_in;
+    this->nchip = stowf.nchip;;
     this->targetne = 1;
     this->method = method_in;
-
 }
 
-void Stochastic_Iter::orthog(
-    const int &ik, 
-    psi::Psi<ModuleBase::ComplexMatrix::type, psi::DEVICE_CPU> &psi, 
-    Stochastic_WF &stowf
-)
+void Stochastic_Iter::orthog(const int& ik,
+                             psi::Psi<ModuleBase::ComplexMatrix::type, base_device::DEVICE_CPU>& psi,
+                             Stochastic_WF& stowf)
 {
     //do something to verify this function has been called
     for(int i=0;i<psi.size();i++)
@@ -96,12 +93,10 @@ void Stochastic_Iter::calHsqrtchi(Stochastic_WF &stowf)
     return;
 }
 
-void Stochastic_Iter::sum_stoband(
-    Stochastic_WF &stowf, 
-    elecstate::ElecState *pes, 
-    hamilt::Hamilt<std::complex<double>, psi::DEVICE_CPU> *pHamilt,
-    ModulePW::PW_Basis_K* wfc_basis
-)
+void Stochastic_Iter::sum_stoband(Stochastic_WF& stowf,
+                                  elecstate::ElecState* pes,
+                                  hamilt::Hamilt<std::complex<double>, base_device::DEVICE_CPU>* pHamilt,
+                                  ModulePW::PW_Basis_K* wfc_basis)
 {
     //do something to verify this function has been called
     stowf.nbands_total ++;

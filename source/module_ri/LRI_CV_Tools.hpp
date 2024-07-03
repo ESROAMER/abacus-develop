@@ -292,16 +292,17 @@ std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> LRI_CV_Tools::change_ord
 template <typename Tcell>
 std::array<Tcell, 3> LRI_CV_Tools::cal_latvec_range(const double& rcut_times)
 {
-    double Rcut_max = 0;
-    for (int T = 0; T < GlobalC::ucell.ntype; ++T)
-        Rcut_max = std::max(Rcut_max, GlobalC::ORB.Phi[T].getRcut());
-    const ModuleBase::Vector3<double> proj = ModuleBase::Mathzone::latvec_projection(
-        std::array<ModuleBase::Vector3<double>, 3>{GlobalC::ucell.a1, GlobalC::ucell.a2, GlobalC::ucell.a3});
-    const ModuleBase::Vector3<double> latvec_times = Rcut_max * rcut_times / (proj * GlobalC::ucell.lat0);
-    const ModuleBase::Vector3<Tcell> latvec_times_ceil
-        = {std::ceil(latvec_times.x), std::ceil(latvec_times.y), std::ceil(latvec_times.z)};
-    const ModuleBase::Vector3<Tcell> period = 2 * latvec_times_ceil + ModuleBase::Vector3<Tcell>{1, 1, 1};
-    return std::array<Tcell, 3>{period.x, period.y, period.z};
+	double Rcut_max = 0;
+	for(int T=0; T<GlobalC::ucell.ntype; ++T)
+		Rcut_max = std::max(Rcut_max, GlobalC::ORB.Phi[T].getRcut());
+	const ModuleBase::Vector3<double> proj = ModuleBase::Mathzone::latvec_projection(
+		std::array<ModuleBase::Vector3<double>,3>{GlobalC::ucell.a1, GlobalC::ucell.a2, GlobalC::ucell.a3});
+	const ModuleBase::Vector3<double> latvec_times = Rcut_max * rcut_times / (proj * GlobalC::ucell.lat0);
+    const ModuleBase::Vector3<Tcell> latvec_times_ceil = {static_cast<Tcell>(std::ceil(latvec_times.x)),
+                                                          static_cast<Tcell>(std::ceil(latvec_times.y)),
+                                                          static_cast<Tcell>(std::ceil(latvec_times.z))};
+    const ModuleBase::Vector3<Tcell> period = 2 * latvec_times_ceil + ModuleBase::Vector3<Tcell>{1,1,1};
+	return std::array<Tcell,3>{period.x, period.y, period.z};
 }
 
 template <typename TA, typename Tcell, typename Tdata>

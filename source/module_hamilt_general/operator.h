@@ -10,7 +10,7 @@
 namespace hamilt
 {
 
-enum calculation_type
+enum class calculation_type
 {
     no,
     pw_ekinetic, 
@@ -23,13 +23,15 @@ enum calculation_type
     lcao_deepks,
     lcao_exx,
     lcao_dftu,
+    lcao_sc_lambda,
+    lcao_tddft_velocity,
 };
 
 // Basic class for operator module, 
 // it is designed for "O|psi>" and "<psi|O|psi>"
 // Operator "O" might have several different types, which should be calculated one by one.
-// In basic class , function add() is designed for combine all operators together with a chain. 
-template<typename T, typename Device = psi::DEVICE_CPU>
+// In basic class , function add() is designed for combine all operators together with a chain.
+template <typename T, typename Device = base_device::DEVICE_CPU>
 class Operator
 {
     public:
@@ -64,12 +66,18 @@ class Operator
 
     /// developer-friendly interfaces for act() function
     /// interface type 2: input and change the Psi-type HPsi
-    virtual void act(const psi::Psi<T, Device>& psi_in, psi::Psi<T, Device>& psi_out) const {};
+    // virtual void act(const psi::Psi<T, Device>& psi_in, psi::Psi<T, Device>& psi_out) const {};
+    virtual void act(const psi::Psi<T, Device>& psi_in, psi::Psi<T, Device>& psi_out, const int nbands) const {};
     /// interface type 3: return a Psi-type HPsi
     // virtual psi::Psi<T> act(const psi::Psi<T,Device>& psi_in) const { return psi_in; };
 
     Operator* next_op = nullptr;
 
+    /// type 1 (default): pointer-only
+    ///         act(const T* psi_in, T* psi_out)
+    /// type 2: use the `Psi`class 
+    ///         act(const Psi& psi_in, Psi& psi_out)
+    int get_act_type() const { return this->act_type; }
 protected:
     int ik = 0;
     int act_type = 1;   ///< determine which act() interface would be called in hPsi()
@@ -94,8 +102,7 @@ protected:
     T* get_hpsi(const hpsi_info& info)const;
 
     Device *ctx = {};
-    using set_memory_op = psi::memory::set_memory_op<T, Device>;
-
+    using set_memory_op = base_device::memory::set_memory_op<T, Device>;
 };
 
 }//end namespace hamilt

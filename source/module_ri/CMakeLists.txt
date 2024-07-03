@@ -17,7 +17,7 @@ if (ENABLE_LIBRI)
         exx_abfs-construct_orbs.cpp
         exx_abfs-io.cpp
         exx_abfs-jle.cpp
-        exx_abfs-pca.cpp
+        ABFs_Construct-PCA.cpp
         exx_opt_orb-print.cpp
         exx_opt_orb.cpp
         gaussian_abfs.cpp
