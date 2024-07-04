@@ -94,12 +94,15 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
 			}
 		}
 		// cal H(k) from H(R) normally
-
+		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam)
+                                 ? 1.0
+                                 : GlobalC::exx_info.info_global.hybrid_alpha;
 		if (GlobalC::exx_info.info_ri.real_number)
 			RI_2D_Comm::add_Hexx(
 				this->kv,
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				this->Hexxd == nullptr ? *this->LM->Hexxd : *this->Hexxd,
 				*this->LM->ParaV,
 				*this->hK);
@@ -107,7 +110,7 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
 			RI_2D_Comm::add_Hexx(
 				this->kv,
 				ik,
-				GlobalC::exx_info.info_global.hybrid_alpha,
+				coeff,
 				this->Hexxc == nullptr ? *this->LM->Hexxc : *this->Hexxc,
 				*this->LM->ParaV,
 				*this->hK);

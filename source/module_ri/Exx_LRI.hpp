@@ -133,6 +133,9 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                           this->info.kmesh_times,
                           this->info.ccp_rmesh_times);
 
+    if (this->info_ewald.use_ewald)
+        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
+
     ModuleBase::timer::tick("Exx_LRI", "init");
 }
 
