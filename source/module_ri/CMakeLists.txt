@@ -7,6 +7,7 @@ if (ENABLE_LIBRI)
         exx_lip.cpp
         Mix_DMk_2D.cpp
         Mix_Matrix.cpp
+        gaussian_abfs.cpp
   )
 
   if(ENABLE_LCAO)
@@ -20,7 +21,6 @@ if (ENABLE_LIBRI)
         ABFs_Construct-PCA.cpp
         exx_opt_orb-print.cpp
         exx_opt_orb.cpp
-        gaussian_abfs.cpp
         singular_value.cpp
     )
   endif()
