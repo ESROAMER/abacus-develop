@@ -187,7 +187,6 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
                           {{"writable_Vws", true}});
 
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
-
     if (this->info_ewald.use_ewald) {
         this->evq.init_ions(period_Vs, list_As_Vs);
         double chi = this->evq.get_singular_chi();
