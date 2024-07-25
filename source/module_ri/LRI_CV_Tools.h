@@ -141,31 +141,6 @@ struct TinType<std::array<RI::Tensor<T>, N>> {
     using type = T;
 };
 
-template <typename T>
-inline typename std::enable_if<std::is_floating_point<T>::value>::type
-    check_and_set_zero(T& value) {
-    if (std::abs(value) < 1e-10) {
-        value = 0;
-    }
-}
-
-template <typename T>
-inline
-    typename std::enable_if<std::is_same<T, std::complex<double>>::value>::type
-    check_and_set_zero(T& value) {
-    if (std::abs(value.real()) < 1e-10) {
-        value.real(0);
-    }
-    if (std::abs(value.imag()) < 1e-10) {
-        value.imag(0);
-    }
-}
-
-template <typename Tdata>
-void check_and_set_zero(RI::Tensor<Tdata>& t);
-template <typename T, std::size_t N>
-void check_and_set_zero(std::array<RI::Tensor<T>, N>& t);
-
 template <typename Tdata,
           typename = std::enable_if_t<!is_std_array<Tdata>::value>>
 inline void init_elem(Tdata& data, const size_t ndim0, const size_t ndim1) {
@@ -193,7 +168,6 @@ inline void add_elem(const Tdata& data,
                      const typename TinType<Tdata>::type& val,
                      const typename TinType<Tdata>::type& frac) {
     data(lmp, lmq) += frac * val;
-    check_and_set_zero(data(lmp, lmq));
 };
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data,
@@ -210,7 +184,6 @@ inline void add_elem(Tdata& data,
                      const int lmq1,
                      const typename TinType<Tdata>::type& frac) {
     data(lmp0, lmq0) += frac * val(lmp1, lmq1);
-    check_and_set_zero(data(lmp0, lmq0));
 };
 template <typename T, std::size_t N>
 extern void add_elem(std::array<RI::Tensor<T>, N>& data,

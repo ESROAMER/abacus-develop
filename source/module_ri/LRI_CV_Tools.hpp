@@ -388,7 +388,6 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const T& frac) {
     for (size_t i = 0; i < N; ++i) {
         data[i](lmp, lmq) += frac * val[i];
-        check_and_set_zero(data[i](lmp, lmq));
     }
 }
 
@@ -402,7 +401,6 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const T& frac) {
     for (size_t i = 0; i < N; ++i) {
         data[i](lmp0, lmq0) += frac * val[i](lmp1, lmq1);
-        check_and_set_zero(data[i](lmp0, lmq0));
     }
 }
 
@@ -418,18 +416,6 @@ std::array<RI::Tensor<Tout>, N>
     for (size_t i = 0; i != N; ++i)
         out[i] = RI::Global_Func::convert<Tout>(data[i]);
     return out;
-}
-
-template <typename Tdata>
-void LRI_CV_Tools::check_and_set_zero(RI::Tensor<Tdata>& t) {
-    for (int i = 0; i < t.data->size(); ++i)
-        check_and_set_zero((*t.data)[i]);
-}
-
-template <typename T, std::size_t N>
-void LRI_CV_Tools::check_and_set_zero(std::array<RI::Tensor<T>, N>& t) {
-    for (int i = 0; i < N; ++i)
-        check_and_set_zero(t[i]);
 }
 
 #endif
