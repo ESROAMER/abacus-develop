@@ -101,7 +101,8 @@ extern std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>> change_order(
     std::array<std::map<TkeyA, std::map<TkeyB, Tvalue>>, N>&& ds_in);
 
 template <typename Tcell>
-extern std::array<Tcell, 3> cal_latvec_range(const double& rcut_times);
+extern std::array<Tcell, 3> cal_latvec_range(const double& rcut_times,
+                                             const double& Rcut_max);
 
 template <typename TA, typename Tcell, typename Tdata>
 extern std::map<
