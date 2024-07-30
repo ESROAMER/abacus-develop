@@ -282,10 +282,8 @@ std::map<TkeyA, std::map<TkeyB, std::array<Tvalue, N>>>
 }
 
 template <typename Tcell>
-std::array<Tcell, 3> LRI_CV_Tools::cal_latvec_range(const double& rcut_times) {
-    double Rcut_max = 0;
-    for (int T = 0; T < GlobalC::ucell.ntype; ++T)
-        Rcut_max = std::max(Rcut_max, GlobalC::ORB.Phi[T].getRcut());
+std::array<Tcell, 3> LRI_CV_Tools::cal_latvec_range(const double& rcut_times,
+                                                    const double& Rcut_max) {
     const ModuleBase::Vector3<double> proj
         = ModuleBase::Mathzone::latvec_projection(
             std::array<ModuleBase::Vector3<double>, 3>{GlobalC::ucell.a1,
