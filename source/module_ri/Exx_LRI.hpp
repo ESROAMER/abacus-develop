@@ -131,10 +131,14 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                           this->abfs,
                           this->abfs_ccp,
                           this->info.kmesh_times,
-                          this->info.ccp_rmesh_times);
+                          true);
 
     if (this->info_ewald.use_ewald)
-        this->evq.init(this->mpi_comm, this->lcaos, this->abfs, this->p_kv);
+        this->evq.init(this->mpi_comm,
+                       this->p_kv,
+                       this->lcaos,
+                       this->abfs,
+                       get_ccp_parameter());
 
     ModuleBase::timer::tick("Exx_LRI", "init");
 }
@@ -167,12 +171,13 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
 
     this->exx_lri.set_parallel(this->mpi_comm, atoms_pos, latvec, period);
 
-    const double lcaos_rmax = Exx_Abfs::Construct_Orbs::get_Rmax(this->lcaos);
-    // std::max(3) for gamma_only, list_A2 should contain cell {-1,0,1}. In the
-    // future distribute will be neighbour.
+    const double Rmax = Exx_Abfs::Construct_Orbs::get_Rmax(this->lcaos);
+    // std::max(3) for gamma_only, list_A2 should contain cell {-1,0,1}. In
+    // the future distribute will be neighbour.
     const std::array<Tcell, Ndim> period_Vs
         = LRI_CV_Tools::cal_latvec_range<Tcell>(1 + this->info.ccp_rmesh_times,
-                                                lcaos_rmax);
+                                                Rmax);
+
     const std::pair<
         std::vector<TA>,
         std::vector<std::vector<std::pair<TA, std::array<Tcell, Ndim>>>>>
@@ -190,7 +195,7 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
 
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     if (this->info_ewald.use_ewald) {
-        this->evq.init_ions(period_Vs, list_As_Vs);
+        this->evq.init_ions(period_Vs);
         double chi = this->evq.get_singular_chi();
         Vs = this->evq.cal_Vs(chi, Vs);
     }
@@ -215,7 +220,7 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
     }
 
     const std::array<Tcell, Ndim> period_Cs
-        = LRI_CV_Tools::cal_latvec_range<Tcell>(2, lcaos_rmax);
+        = LRI_CV_Tools::cal_latvec_range<Tcell>(2, Rmax);
     const std::pair<
         std::vector<TA>,
         std::vector<std::vector<std::pair<TA, std::array<Tcell, Ndim>>>>>
