@@ -662,7 +662,7 @@ void Input_Conv::Convert(void)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
             GlobalC::exx_info.info_ewald.fq_type = Singular_Value::Fq_type(INPUT.exx_fq_type);
-            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam;
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
         }
         else
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
