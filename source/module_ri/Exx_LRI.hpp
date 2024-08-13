@@ -131,28 +131,29 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                           this->abfs,
                           this->abfs_ccp,
                           this->info.kmesh_times,
+                          this->MGT,
                           true);
 
-    if (this->info_ewald.use_ewald)
-    {
-        if(this->info.cam_beta)
-        {
-        this->abfs_ccp_sr
-        = Conv_Coulomb_Pot_K::cal_orbs_ccp(this->abfs,
-                                           Conv_Coulomb_Pot_K::Ccp_Type::Hse,
-                                           {{"hse_omega", this->info.hse_omega}},
-                                           this->info.ccp_rmesh_times);
-        this->sr_cv.set_orbitals(this->lcaos,
-                          this->abfs,
-                          this->abfs_ccp_sr,
-                          this->info.kmesh_times,
-                          false);
+    if (this->info_ewald.use_ewald) {
+        if (this->info.cam_beta) {
+            this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(
+                this->abfs,
+                Conv_Coulomb_Pot_K::Ccp_Type::Hse,
+                {{"hse_omega", this->info.hse_omega}},
+                this->info.ccp_rmesh_times);
+            this->sr_cv.set_orbitals(this->lcaos,
+                                     this->abfs,
+                                     this->abfs_ccp_sr,
+                                     this->info.kmesh_times,
+                                     this->MGT,
+                                     false);
         }
         this->evq.init(this->mpi_comm,
                        this->p_kv,
                        this->lcaos,
                        this->abfs,
-                       get_ccp_parameter());
+                       get_ccp_parameter(),
+                       this->MGT);
     }
 
     ModuleBase::timer::tick("Exx_LRI", "init");
@@ -211,20 +212,24 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     if (this->info_ewald.use_ewald) {
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_sr;
-        if (this->info.cam_beta)
-        {
-         Vs_sr
-        = this->sr_cv.cal_Vs(list_As_Vs.first,
-                          list_As_Vs.second[0],
-                          {{"writable_Vws", true}});
-        Vs_sr = LRI_CV_Tools::mul2(RI::Global_Func::convert<Tdata>(-this->info.cam_beta), Vs_sr);
-        this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
+        if (this->info.cam_beta) {
+            Vs_sr = this->sr_cv.cal_Vs(list_As_Vs.first,
+                                       list_As_Vs.second[0],
+                                       {{"writable_Vws", true}});
+            Vs_sr = LRI_CV_Tools::mul2(
+                RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                Vs_sr);
+            this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
         }
         this->evq.init_ions(period_Vs);
         double chi = this->evq.get_singular_chi();
-        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full = this->evq.cal_Vs(chi, Vs);
-        Vs_full = LRI_CV_Tools::mul2(RI::Global_Func::convert<Tdata>(this->info.cam_alpha), Vs_full);
-        Vs = this->info.cam_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr) : Vs_full;
+        std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
+            = this->evq.cal_Vs(chi, Vs);
+        Vs_full = LRI_CV_Tools::mul2(
+            RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+            Vs_full);
+        Vs = this->info.cam_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr)
+                                 : Vs_full;
     }
 
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);

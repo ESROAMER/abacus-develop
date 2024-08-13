@@ -89,8 +89,12 @@ namespace PCA
 			GlobalC::exx_info.info_ri.abfs_Lmax = std::max( GlobalC::exx_info.info_ri.abfs_Lmax, static_cast<int>(abfs[T].size())-1 );
 
 		Matrix_Orbs21 m_abfslcaos_lcaos;
-		m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
-		m_abfslcaos_lcaos.init_radial( abfs, lcaos, lcaos );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_abfslcaos_lcaos.init( 1, kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_abfslcaos_lcaos.init_radial( abfs, lcaos, lcaos, MGT );
 
 		std::map<std::size_t,std::map<std::size_t,std::set<double>>> delta_R;
 		for( std::size_t it=0; it!=abfs.size(); ++it )

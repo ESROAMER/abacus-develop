@@ -40,7 +40,8 @@ void LRI_CV<Tdata>::set_orbitals(
     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
         abfs_ccp_in,
     const double& kmesh_times,
-    const bool& cal_C) {
+    ORB_gaunt_table& MGT,
+    const bool& init_MGT) {
     ModuleBase::TITLE("LRI_CV", "set_orbitals");
     ModuleBase::timer::tick("LRI_CV", "set_orbitals");
 
@@ -65,18 +66,25 @@ void LRI_CV<Tdata>::set_orbitals(
         = ModuleBase::Element_Basis_Index::construct_index(range_abfs);
 
     // this->m_abfs_abfs.init( 2, kmesh_times, (1+this->ccp_rmesh_times)/2.0 );
-    this->m_abfs_abfs.init(2, kmesh_times, lcaos_rmax + abfs_ccp_rmax);
-    this->m_abfs_abfs.init_radial(this->abfs_ccp, this->abfs);
-    this->m_abfs_abfs.init_radial_table();
+    int Lmax_v;
+    this->m_abfs_abfs.init(2, kmesh_times, lcaos_rmax + abfs_ccp_rmax, Lmax_v);
+    // this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
+    int Lmax_c;
+    this->m_abfslcaos_lcaos.init(1, kmesh_times, lcaos_rmax, Lmax_c);
+    int Lmax = std::max(Lmax_v, Lmax_c);
 
-    if (cal_C) {
-        // this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
-        this->m_abfslcaos_lcaos.init(1, kmesh_times, lcaos_rmax);
-        this->m_abfslcaos_lcaos.init_radial(this->abfs_ccp,
-                                            this->lcaos,
-                                            this->lcaos);
-        this->m_abfslcaos_lcaos.init_radial_table();
+    if (init_MGT) {
+        MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
     }
+
+    this->m_abfs_abfs.init_radial(this->abfs_ccp, this->abfs, MGT);
+    this->m_abfs_abfs.init_radial_table();
+    this->m_abfslcaos_lcaos.init_radial(this->abfs_ccp,
+                                        this->lcaos,
+                                        this->lcaos,
+                                        MGT);
+    this->m_abfslcaos_lcaos.init_radial_table();
 
     ModuleBase::timer::tick("LRI_CV", "set_orbitals");
 }
