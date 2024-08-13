@@ -132,6 +132,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                           this->abfs_ccp,
                           this->info.kmesh_times,
                           this->MGT,
+                          true,
                           true);
 
     if (this->info_ewald.use_ewald) {
@@ -146,6 +147,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm& mpi_comm_in, const K_Vectors& kv_in) {
                                      this->abfs_ccp_sr,
                                      this->info.kmesh_times,
                                      this->MGT,
+                                     false,
                                      false);
         }
         this->evq.init(this->mpi_comm,
