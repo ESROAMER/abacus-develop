@@ -204,7 +204,7 @@ void Exx_LRI_Interface<T, Tdata>::exx_hamilt2density(elecstate::ElecState& elec,
     if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
     {
         const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
-                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam)
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
                                  ? 1.0
                                  : GlobalC::exx_info.info_global.hybrid_alpha;
         // add exx

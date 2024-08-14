@@ -22,9 +22,7 @@ class Gaussian_Abfs {
     void init(const int& Lmax,
               const std::vector<ModuleBase::Vector3<double>>& kvec_c,
               const ModuleBase::Matrix3& G,
-              const double& lambda,
-              const Conv_Coulomb_Pot_K::Ccp_Type& ccp_type,
-              const std::map<std::string, double>& parameter);
+              const double& lambda);
 
     RI::Tensor<std::complex<double>> get_Vq(
         const int& lp_max,
@@ -32,14 +30,14 @@ class Gaussian_Abfs {
         const size_t& ik,
         const double& chi, // Singularity corrected value at q=0.
         const ModuleBase::Vector3<double>& tau,
-        const ORB_gaunt_table& MGT);
+        const ModuleBase::realArray& gaunt);
 
     std::array<RI::Tensor<std::complex<double>>, 3> get_dVq(
         const int& lp_max,
         const int& lq_max, // Maximum L for which to calculate interaction.
         const size_t& ik,
         const ModuleBase::Vector3<double>& tau,
-        const ORB_gaunt_table& MGT);
+        const ModuleBase::realArray& gaunt);
 
     /*
 Calculate the lattice sum over a Gaussian:
@@ -70,8 +68,6 @@ Calculate the lattice sum over a Gaussian:
 
   private:
     double lambda;
-    Conv_Coulomb_Pot_K::Ccp_Type ccp_type;
-    std::map<std::string, double> parameter;
     std::vector<ModuleBase::Vector3<double>> kvec_c;
     std::vector<std::vector<ModuleBase::Vector3<double>>> qGvecs;
     std::vector<int> n_cells;
@@ -95,7 +91,7 @@ Calculate the lattice sum over a Gaussian:
         const size_t& ik,
         const double& chi, // Singularity corrected value at q=0.
         const ModuleBase::Vector3<double>& tau,
-        const ORB_gaunt_table& MGT,
+        const ModuleBase::realArray& gaunt,
         const T_func_DPcal_lattice_sum<Tin>& func_DPcal_lattice_sum);
 
     template <typename Tresult>

@@ -53,6 +53,9 @@ template <typename T1, typename T2>
 extern std::array<T2, 3> mul2(const T1& t1, const std::array<T2, 3>& t2);
 template <typename T>
 extern RI::Tensor<T> mul2(const T& t1, const RI::Tensor<T>& t2);
+template <typename T, typename TkeyA, typename TkeyB, typename Tvalue>
+extern std::map<TkeyA, std::map<TkeyB, Tvalue>>
+    mul2(const T& t1, const std::map<TkeyA, std::map<TkeyB, Tvalue>>& t2);
 
 // template<typename T, std::size_t N>
 // std::array<T,N> operator-(const std::array<T,N> &v1, const std::array<T,N>

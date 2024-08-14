@@ -27,11 +27,13 @@ public:
 	void init(
 		const int mode,
 		const double kmesh_times,  		// extend Kcut, keep dK
-		const double rmax);		// extend Rcut, keep dR
+		const double rmax,
+        int& Lmax);		// extend Rcut, keep dR
 
     void init_radial(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_A,
-                     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_B);
-    void init_radial(const LCAO_Orbitals& orb_A, const LCAO_Orbitals& orb_B);
+                     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_B,
+                     const ORB_gaunt_table& MGT);
+    void init_radial(const LCAO_Orbitals& orb_A, const LCAO_Orbitals& orb_B, const ORB_gaunt_table& MGT);
 
     void init_radial_table();
     void init_radial_table(const std::map<size_t, std::map<size_t, std::set<double>>>& Rs); // unit: ucell.lat0
@@ -67,7 +69,6 @@ public:
 
   private:
     ModuleBase::Sph_Bessel_Recursive::D2* psb_ = nullptr;
-    ORB_gaunt_table MGT;
     const double lcao_dr_ = 0.01;
 
     std::map<size_t,                                              // TA

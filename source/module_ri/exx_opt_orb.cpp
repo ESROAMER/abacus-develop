@@ -71,8 +71,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_lcaoslcaos_lcaoslcaos = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,RI::Tensor<double>>>>> 
 	{
 		Matrix_Orbs22 m_lcaoslcaos_lcaoslcaos;
-		m_lcaoslcaos_lcaoslcaos.init( 1, this->kmesh_times, 1 );
-		m_lcaoslcaos_lcaoslcaos.init_radial( lcaos, lcaos, lcaos, lcaos );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_lcaoslcaos_lcaoslcaos.init( 1, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_lcaoslcaos_lcaoslcaos.init_radial( lcaos, lcaos, lcaos, lcaos, MGT );
 		#if TEST_EXX_RADIAL>=1
 		m_lcaoslcaos_lcaoslcaos.init_radial_table(radial_R);
 		#else
@@ -87,8 +91,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_lcaoslcaos_jys = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,std::vector<RI::Tensor<double>>>>>>
 	{
 		Matrix_Orbs21 m_jyslcaos_lcaos;
-		m_jyslcaos_lcaos.init( 1, this->kmesh_times, 1 );
-		m_jyslcaos_lcaos.init_radial( jle.jle, lcaos, lcaos );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_jyslcaos_lcaos.init( 1, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_jyslcaos_lcaos.init_radial( jle.jle, lcaos, lcaos, MGT);
 		#if TEST_EXX_RADIAL>=1
 		m_jyslcaos_lcaos.init_radial_table(radial_R);
 		#else
@@ -103,8 +111,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_jys_jys = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,RI::Tensor<double>>>>>
 	{
 		Matrix_Orbs11 m_jys_jys;
-		m_jys_jys.init( 2, this->kmesh_times, 1 );
-		m_jys_jys.init_radial( jle.jle, jle.jle );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_jys_jys.init( 2, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_jys_jys.init_radial( jle.jle, jle.jle, MGT );
 		#if TEST_EXX_RADIAL>=1
 		m_jys_jys.init_radial_table(radial_R);
 		#else
@@ -119,8 +131,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_abfs_abfs = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,RI::Tensor<double>>>>>
 	{
 		Matrix_Orbs11 m_abfs_abfs;
-		m_abfs_abfs.init( 2, this->kmesh_times, 1 );
-		m_abfs_abfs.init_radial( abfs, abfs );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_abfs_abfs.init( 2, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_abfs_abfs.init_radial( abfs, abfs, MGT );
 		#if TEST_EXX_RADIAL>=1
 		m_abfs_abfs.init_radial_table(radial_R);
 		#else
@@ -135,8 +151,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_lcaoslcaos_abfs = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,std::vector<RI::Tensor<double>>>>>>
 	{
 		Matrix_Orbs21 m_abfslcaos_lcaos;
-		m_abfslcaos_lcaos.init( 1, this->kmesh_times, 1 );
-		m_abfslcaos_lcaos.init_radial( abfs, lcaos, lcaos );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_abfslcaos_lcaos.init( 1, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_abfslcaos_lcaos.init_radial( abfs, lcaos, lcaos, MGT );
 		#if TEST_EXX_RADIAL>=1
 		m_abfslcaos_lcaos.init_radial_table(radial_R);
 		#else
@@ -151,8 +171,12 @@ void Exx_Opt_Orb::generate_matrix(const K_Vectors &kv) const
 	const auto ms_jys_abfs = [&]() -> std::map<size_t,std::map<size_t,std::map<size_t,std::map<size_t,RI::Tensor<double>>>>>
 	{
 		Matrix_Orbs11 m_jys_abfs;
-		m_jys_abfs.init( 2, this->kmesh_times, 1 );
-		m_jys_abfs.init_radial( jle.jle, abfs );
+		ORB_gaunt_table MGT;
+		int Lmax;
+		m_jys_abfs.init( 2, this->kmesh_times, 1, Lmax );
+		MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+		m_jys_abfs.init_radial( jle.jle, abfs, MGT );
 		#if TEST_EXX_RADIAL>=1
 		m_jys_abfs.init_radial_table(radial_R);
 		#else

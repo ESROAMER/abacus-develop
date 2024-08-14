@@ -23,9 +23,7 @@
 void Gaussian_Abfs::init(const int& Lmax,
                          const std::vector<ModuleBase::Vector3<double>>& kvec_c,
                          const ModuleBase::Matrix3& G,
-                         const double& lambda,
-                         const Conv_Coulomb_Pot_K::Ccp_Type& ccp_type,
-                         const std::map<std::string, double>& parameter) {
+                         const double& lambda) {
     ModuleBase::TITLE("Gaussian_Abfs", "init");
     ModuleBase::timer::tick("Gaussian_Abfs", "init");
 
@@ -33,8 +31,6 @@ void Gaussian_Abfs::init(const int& Lmax,
     const int nks0 = kvec_c.size();
 
     this->lambda = lambda;
-    this->ccp_type = ccp_type;
-    this->parameter = parameter;
     const double eta = 35;
     std::vector<ModuleBase::Vector3<double>> Gvec;
     Gvec.resize(3);
@@ -106,31 +102,13 @@ void Gaussian_Abfs::init(const int& Lmax,
     ModuleBase::timer::tick("Gaussian_Abfs", "init");
 }
 
-double Gaussian_Abfs::get_ccp_kernel(const double& vec_sq) {
-    switch (ccp_type) {
-    case Conv_Coulomb_Pot_K::Ccp_Type::Ccp:
-        return 1.0;
-    case Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam:
-        return this->parameter.at("cam_alpha")
-               + this->parameter.at("cam_beta")
-                     * (1
-                        - std::exp(-vec_sq
-                                   / (4 * this->parameter.at("hse_omega")
-                                      * this->parameter.at("hse_omega"))));
-    default:
-        throw std::domain_error(std::string(__FILE__) + " line "
-                                + std::to_string(__LINE__));
-        break;
-    }
-};
-
 auto Gaussian_Abfs::get_Vq(
     const int& lp_max,
     const int& lq_max, // Maximum L for which to calculate interaction.
     const size_t& ik,
     const double& chi, // Singularity corrected value at q=0.
     const ModuleBase::Vector3<double>& tau,
-    const ORB_gaunt_table& MGT) -> RI::Tensor<std::complex<double>> {
+    const ModuleBase::realArray& gaunt) -> RI::Tensor<std::complex<double>> {
     ModuleBase::TITLE("Gaussian_Abfs", "get_Vq");
     ModuleBase::timer::tick("Gaussian_Abfs", "get_Vq");
 
@@ -149,7 +127,7 @@ auto Gaussian_Abfs::get_Vq(
         ik,
         chi,
         tau,
-        MGT,
+        gaunt,
         func_DPcal_lattice_sum);
 
     ModuleBase::timer::tick("Gaussian_Abfs", "get_Vq");
@@ -161,7 +139,7 @@ auto Gaussian_Abfs::get_dVq(
     const int& lq_max, // Maximum L for which to calculate interaction.
     const size_t& ik,
     const ModuleBase::Vector3<double>& tau,
-    const ORB_gaunt_table& MGT)
+    const ModuleBase::realArray& gaunt)
     -> std::array<RI::Tensor<std::complex<double>>, 3> {
     ModuleBase::TITLE("Gaussian_Abfs", "get_dVq");
     ModuleBase::timer::tick("Gaussian_Abfs", "get_dVq");
@@ -183,7 +161,7 @@ auto Gaussian_Abfs::get_dVq(
             ik,
             exponent,
             tau,
-            MGT,
+            gaunt,
             func_DPcal_d_lattice_sum);
 
     ModuleBase::timer::tick("Gaussian_Abfs", "get_Vq");
@@ -197,7 +175,7 @@ auto Gaussian_Abfs::DPcal_Vq_dVq(
     const size_t& ik,
     const double& chi, // Singularity corrected value at q=0.
     const ModuleBase::Vector3<double>& tau,
-    const ORB_gaunt_table& MGT,
+    const ModuleBase::realArray& gaunt,
     const T_func_DPcal_lattice_sum<Tin>& func_DPcal_lattice_sum) -> Tout {
     const int Lmax = lp_max + lq_max;
     const int n_LM = (Lmax + 1) * (Lmax + 1);
@@ -265,13 +243,13 @@ auto Gaussian_Abfs::DPcal_Vq_dVq(
             {
                 const int i_add_ksq = (lp + lq - L) / 2;
                 for (int mp = 0; mp != 2 * lp + 1; ++mp) {
-                    const int lmp = MGT.get_lm_index(lp, mp);
+                    const int lmp = lp*lp+mp;
                     for (int mq = 0; mq != 2 * lq + 1; ++mq) {
-                        const int lmq = MGT.get_lm_index(lq, mq);
+                        const int lmq = lq*lq+mq;
                         for (int m = 0; m != 2 * L + 1; ++m) {
-                            const int lm = MGT.get_lm_index(L, m);
+                            const int lm = L*L+m;
                             double triple_Y
-                                = MGT.Gaunt_Coefficients(lmp, lmq, lm);
+                                = gaunt(lmp, lmq, lm);
                             std::complex<double> fac = triple_Y * cfac;
                             LRI_CV_Tools::add_elem(Vq_dVq,
                                                    lmp,
@@ -442,9 +420,8 @@ auto Gaussian_Abfs::DPcal_lattice_sum(
         const double vec_sq = vec.norm2() * GlobalC::ucell.tpiba2;
         const double vec_abs = std::sqrt(vec_sq);
 
-        const double val_s = std::exp(-exponent * vec_sq)
-                             * std::pow(vec_abs, power)
-                             * this->get_ccp_kernel(vec_sq);
+        const double val_s
+            = std::exp(-exponent * vec_sq) * std::pow(vec_abs, power);
 
         Tresult phase = func_DPcal_phase(vec);
         for (int L = 0; L != lmax + 1; ++L) {

@@ -114,6 +114,28 @@ RI::Tensor<T> LRI_CV_Tools::mul2(const T& t1, const RI::Tensor<T>& t2) {
     return t1 * t2;
 }
 
+template <typename T, typename TkeyA, typename TkeyB, typename Tvalue>
+std::map<TkeyA, std::map<TkeyB, Tvalue>>
+    LRI_CV_Tools::mul2(const T& t1,
+                       const std::map<TkeyA, std::map<TkeyB, Tvalue>>& t2) {
+    std::map<TkeyA, std::map<TkeyB, Tvalue>> res;
+    for (const auto& outerPair: t2) {
+        TkeyA keyA = outerPair.first;
+        const std::map<TkeyB, Tvalue>& innerMap = outerPair.second;
+        std::map<TkeyB, Tvalue> newInnerMap;
+
+        for (const auto& innerPair: innerMap) {
+            TkeyB keyB = innerPair.first;
+            Tvalue value = innerPair.second;
+            newInnerMap[keyB] = value * t1;
+        }
+
+        res[keyA] = newInnerMap;
+    }
+
+    return res;
+}
+
 /*
 template<typename T, std::size_t N>
 std::array<T,N> LRI_CV_Tools::operator-(const std::array<T,N> &v1, const

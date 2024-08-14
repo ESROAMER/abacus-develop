@@ -30,7 +30,8 @@ void Ewald_Vq<Tdata>::init(
     const K_Vectors* kv_in,
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& lcaos_in,
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_in,
-    const std::map<std::string, double>& parameter) {
+    const std::map<std::string, double>& parameter,
+    ORB_gaunt_table& MGT_in) {
     ModuleBase::TITLE("Ewald_Vq", "init");
     ModuleBase::timer::tick("Ewald_Vq", "init");
 
@@ -62,10 +63,11 @@ void Ewald_Vq<Tdata>::init(
                           this->g_abfs,
                           this->g_abfs_ccp,
                           this->info.kmesh_times,
+                          MGT_in,
+                          true,
                           false);
-
-    this->MGT.init_Gaunt_CH(GlobalC::exx_info.info_ri.abfs_Lmax);
-    this->MGT.init_Gaunt(GlobalC::exx_info.info_ri.abfs_Lmax);
+    this->gaunt.create(MGT_in.Gaunt_Coefficients.getBound1(), MGT_in.Gaunt_Coefficients.getBound2(), MGT_in.Gaunt_Coefficients.getBound3());
+    this->gaunt = MGT_in.Gaunt_Coefficients;
 
     this->atoms_vec.resize(GlobalC::ucell.nat);
     std::iota(this->atoms_vec.begin(), this->atoms_vec.end(), 0);
@@ -157,9 +159,7 @@ void Ewald_Vq<Tdata>::init_ions(const std::array<Tcell, Ndim>& period_Vs_NAO) {
     this->gaussian_abfs.init(2 * GlobalC::exx_info.info_ri.abfs_Lmax + 1,
                              neg_kvec,
                              GlobalC::ucell.G,
-                             this->ewald_lambda,
-                             this->info.ccp_type,
-                             this->parameter);
+                             this->ewald_lambda);
 
     ModuleBase::timer::tick("Ewald_Vq", "init_ions");
 }
@@ -204,7 +204,6 @@ auto Ewald_Vq<Tdata>::cal_Vs_gauss(const std::vector<TA>& list_A0,
     ModuleBase::timer::tick("Ewald_Vq", "cal_Vs_gauss");
 
     std::map<std::string, bool> flags = {{"writable_Vws", true}};
-
     std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_gauss
         = this->cv.cal_Vs(list_A0, list_A1, flags);
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs_gauss);
@@ -389,7 +388,7 @@ auto Ewald_Vq<Tdata>::cal_Vq_gauss(const std::vector<TA>& list_A0_k,
                     std::placeholders::_3,
                     chi,
                     std::placeholders::_4,
-                    this->MGT);
+                    this->gaunt);
     auto res = this->set_Vq_dVq_gauss(list_A0_k,
                                       list_A1_k,
                                       shift_for_mpi,
@@ -417,7 +416,7 @@ auto Ewald_Vq<Tdata>::cal_dVq_gauss(const std::vector<TA>& list_A0_k,
                                    std::placeholders::_2,
                                    std::placeholders::_3,
                                    std::placeholders::_4,
-                                   this->MGT);
+                                   this->gaunt);
     auto res = this->set_Vq_dVq_gauss(list_A0_k,
                                       list_A1_k,
                                       shift_for_mpi,

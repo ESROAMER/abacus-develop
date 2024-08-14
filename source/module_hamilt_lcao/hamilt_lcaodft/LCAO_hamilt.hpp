@@ -37,7 +37,7 @@ void sparse_format::cal_HR_exx(
     ModuleBase::timer::tick("sparse_format", "cal_HR_exx");
 
 	const Tdata frac = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
-                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam)
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
                                  ? 1.0
                                  : GlobalC::exx_info.info_global.hybrid_alpha;
 

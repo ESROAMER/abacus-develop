@@ -95,7 +95,7 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
 		}
 		// cal H(k) from H(R) normally
 		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
-                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam)
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
                                  ? 1.0
                                  : GlobalC::exx_info.info_global.hybrid_alpha;
 		if (GlobalC::exx_info.info_ri.real_number)

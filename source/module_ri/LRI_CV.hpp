@@ -40,7 +40,9 @@ void LRI_CV<Tdata>::set_orbitals(
     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
         abfs_ccp_in,
     const double& kmesh_times,
-    const bool& cal_C) {
+    ORB_gaunt_table& MGT,
+    const bool& init_MGT,
+    const bool& init_C) {
     ModuleBase::TITLE("LRI_CV", "set_orbitals");
     ModuleBase::timer::tick("LRI_CV", "set_orbitals");
 
@@ -65,16 +67,27 @@ void LRI_CV<Tdata>::set_orbitals(
         = ModuleBase::Element_Basis_Index::construct_index(range_abfs);
 
     // this->m_abfs_abfs.init( 2, kmesh_times, (1+this->ccp_rmesh_times)/2.0 );
-    this->m_abfs_abfs.init(2, kmesh_times, lcaos_rmax + abfs_ccp_rmax);
-    this->m_abfs_abfs.init_radial(this->abfs_ccp, this->abfs);
-    this->m_abfs_abfs.init_radial_table();
+    int Lmax_v = std::numeric_limits<double>::min();
+    this->m_abfs_abfs.init(2, kmesh_times, lcaos_rmax + abfs_ccp_rmax, Lmax_v);
+    // this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
+    int Lmax_c = std::numeric_limits<double>::min();
+    if (init_C)
+        this->m_abfslcaos_lcaos.init(1, kmesh_times, lcaos_rmax, Lmax_c);
+    int Lmax = std::max(Lmax_v, Lmax_c);
 
-    if (cal_C) {
-        // this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
-        this->m_abfslcaos_lcaos.init(1, kmesh_times, lcaos_rmax);
+    if (init_MGT) {
+        MGT.init_Gaunt_CH(Lmax);
+        MGT.init_Gaunt(Lmax);
+    }
+
+    this->m_abfs_abfs.init_radial(this->abfs_ccp, this->abfs, MGT);
+    this->m_abfs_abfs.init_radial_table();
+    if (init_C)
+    {
         this->m_abfslcaos_lcaos.init_radial(this->abfs_ccp,
-                                            this->lcaos,
-                                            this->lcaos);
+                                        this->lcaos,
+                                        this->lcaos,
+                                        MGT);
         this->m_abfslcaos_lcaos.init_radial_table();
     }
 
@@ -121,7 +134,8 @@ auto LRI_CV<Tdata>::cal_datas(const std::vector<TA>& list_A0,
                 = GlobalC::ucell.atoms[it1].tau[ia1];
             // const double Rcut = std::min(
             // 	GlobalC::ORB.Phi[it0].getRcut() * rmesh_times +
-            // GlobalC::ORB.Phi[it1].getRcut(), 	GlobalC::ORB.Phi[it1].getRcut()
+            // GlobalC::ORB.Phi[it1].getRcut(),
+            // GlobalC::ORB.Phi[it1].getRcut()
             // * rmesh_times + GlobalC::ORB.Phi[it0].getRcut());
             const double Rcut
                 = std::min(func_cal_Rcut(it0, it1), func_cal_Rcut(it1, it0));
@@ -150,6 +164,7 @@ auto LRI_CV<Tdata>::cal_Vs(
     const std::map<std::string, bool>& flags) // + "writable_Vws"
     -> std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> {
     ModuleBase::TITLE("LRI_CV", "cal_Vs");
+
     const T_func_DPcal_data<RI::Tensor<Tdata>> func_DPcal_V
         = std::bind(&LRI_CV<Tdata>::DPcal_V,
                     this,

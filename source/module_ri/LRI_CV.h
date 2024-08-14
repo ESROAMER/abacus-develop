@@ -37,7 +37,9 @@ class LRI_CV
                       const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_in,
                       const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_ccp_in,
                       const double& kmesh_times,
-                      const bool& cal_C = true);
+                      ORB_gaunt_table& MGT,
+                      const bool& init_MGT,
+                      const bool& init_C);
 
     inline std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> cal_Vs(
         const std::vector<TA>& list_A0,
