@@ -64,7 +64,7 @@ void Ewald_Vq<Tdata>::init(
                           this->g_abfs_ccp,
                           this->info.kmesh_times,
                           MGT_in,
-                          true,
+                          false,
                           false);
     this->gaunt.create(MGT_in.Gaunt_Coefficients.getBound1(), MGT_in.Gaunt_Coefficients.getBound2(), MGT_in.Gaunt_Coefficients.getBound3());
     this->gaunt = MGT_in.Gaunt_Coefficients;
