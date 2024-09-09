@@ -151,11 +151,9 @@ inline void init_elem(Tdata& data, const size_t ndim0, const size_t ndim1) {
     data = Tdata({ndim0, ndim1});
 };
 template <typename T, std::size_t N>
-inline void init_elem(std::array<RI::Tensor<T>, N>& data,
+extern void init_elem(std::array<RI::Tensor<T>, N>& data,
                       const size_t ndim0,
-                      const size_t ndim1) {
-    data.fill(RI::Tensor<T>({ndim0, ndim1}));
-};
+                      const size_t ndim1);
 
 template <typename Tdata,
           typename = std::enable_if_t<!is_std_array<Tdata>::value

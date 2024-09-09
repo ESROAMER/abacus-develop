@@ -393,6 +393,15 @@ std::map<int,
 }
 
 template <typename T, std::size_t N>
+void LRI_CV_Tools::init_elem(std::array<RI::Tensor<T>, N>& data,
+                             const size_t ndim0,
+                             const size_t ndim1) {
+    for (size_t i = 0; i < N; ++i) {
+        data[i] = RI::Tensor<T>({ndim0, ndim1});
+    }
+}
+
+template <typename T, std::size_t N>
 void LRI_CV_Tools::add_elem(std::array<T, N>& data,
                             const T& val,
                             const T& frac) {
@@ -420,7 +429,11 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const int lmq1,
                             const T& frac) {
     for (size_t i = 0; i < N; ++i) {
+        std::cout << "i: " << i << std::endl;
+        std::cout << "add_data: " << data[i](lmp0, lmq0) << " frac: " << frac
+                  << " val: " << val[i](lmp1, lmq1) << std::endl;
         data[i](lmp0, lmq0) += frac * val[i](lmp1, lmq1);
+        std::cout << "new_add_data: " << data[i](lmp0, lmq0) << std::endl;
     }
 }
 
