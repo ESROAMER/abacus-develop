@@ -243,8 +243,26 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
                                {{"writable_dVws", true}});
         this->cv.dVws = LRI_CV_Tools::get_dCVws(dVs);
 
-        if (this->info_ewald.use_ewald)
-            dVs = this->evq.cal_dVs(dVs);
+        if (this->info_ewald.use_ewald) {
+            std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
+                dVs_sr;
+            if (this->info.cam_beta) {
+                dVs_sr = this->sr_cv.cal_dVs(list_As_Vs.first,
+                                             list_As_Vs.second[0],
+                                             {{"writable_dVws", true}});
+                dVs_sr = LRI_CV_Tools::mul2(
+                    RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                    dVs_sr);
+                this->sr_cv.dVws = LRI_CV_Tools::get_dCVws(dVs_sr);
+            }
+            // dVs = this->evq.cal_dVs(dVs);
+            std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
+                dVs_full = LRI_CV_Tools::mul2(
+                    RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+                    dVs);
+            dVs = this->info.cam_beta ? LRI_CV_Tools::minus(dVs_full, dVs_sr)
+                                      : dVs_full;
+        }
 
         std::array<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>, Ndim>
             dVs_order = LRI_CV_Tools::change_order(std::move(dVs));

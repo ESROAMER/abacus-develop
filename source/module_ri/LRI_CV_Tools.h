@@ -202,6 +202,30 @@ template <typename Tout, typename Tin, std::size_t N>
 extern std::array<RI::Tensor<Tout>, N>
     convert(std::array<RI::Tensor<Tin>, N>&& data);
 
+// template <typename T>
+// typename std::enable_if<!RI::Global_Func::is_complex<T>::value, T>::type
+// inline check_zero(T value) {
+//     return (std::abs(value) < 1e-8) ? static_cast<T>(0) : value;
+// }
+
+// template <typename T>
+// typename std::enable_if<RI::Global_Func::is_complex<T>::value, T>::type
+// inline check_zero(const T& value) {
+//     using RealType = typename T::value_type;
+//     RealType real_part = std::real(value);
+//     RealType imag_part = std::imag(value);
+
+//     real_part = (std::abs(real_part) < 1e-8) ? 0 : real_part;
+//     imag_part = (std::abs(imag_part) < 1e-8) ? 0 : imag_part;
+
+//     return std::complex<RealType>(real_part, imag_part);
+// }
+
+// template <typename T>
+// extern RI::Tensor<T> check_zero(RI::Tensor<T>&& data);
+// template <typename T, std::size_t N>
+// extern std::array<RI::Tensor<T>, N> check_zero(std::array<RI::Tensor<T>, N>&& data);
+
 template <typename T>
 struct plus {
     T operator()(const T& lhs, const T& rhs) const {

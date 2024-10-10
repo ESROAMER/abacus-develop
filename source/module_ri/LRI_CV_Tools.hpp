@@ -120,14 +120,14 @@ std::map<TkeyA, std::map<TkeyB, Tvalue>>
                        const std::map<TkeyA, std::map<TkeyB, Tvalue>>& t2) {
     std::map<TkeyA, std::map<TkeyB, Tvalue>> res;
     for (const auto& outerPair: t2) {
-        TkeyA keyA = outerPair.first;
+        const TkeyA keyA = outerPair.first;
         const std::map<TkeyB, Tvalue>& innerMap = outerPair.second;
         std::map<TkeyB, Tvalue> newInnerMap;
 
         for (const auto& innerPair: innerMap) {
-            TkeyB keyB = innerPair.first;
-            Tvalue value = innerPair.second;
-            newInnerMap[keyB] = value * t1;
+            const TkeyB keyB = innerPair.first;
+            const Tvalue value = innerPair.second;
+            newInnerMap[keyB] = mul2(t1, value);
         }
 
         res[keyA] = newInnerMap;
@@ -429,11 +429,7 @@ void LRI_CV_Tools::add_elem(std::array<RI::Tensor<T>, N>& data,
                             const int lmq1,
                             const T& frac) {
     for (size_t i = 0; i < N; ++i) {
-        std::cout << "i: " << i << std::endl;
-        std::cout << "add_data: " << data[i](lmp0, lmq0) << " frac: " << frac
-                  << " val: " << val[i](lmp1, lmq1) << std::endl;
         data[i](lmp0, lmq0) += frac * val[i](lmp1, lmq1);
-        std::cout << "new_add_data: " << data[i](lmp0, lmq0) << std::endl;
     }
 }
 
@@ -450,5 +446,32 @@ std::array<RI::Tensor<Tout>, N>
         out[i] = RI::Global_Func::convert<Tout>(data[i]);
     return out;
 }
+
+// template <typename T>
+// RI::Tensor<T> LRI_CV_Tools::check_zero(RI::Tensor<T>&& data) {
+//     RI::Tensor<T> result(data.shape);
+
+//     const std::size_t rows = data.shape[0];
+//     const std::size_t cols = data.shape[1];
+
+//     for (std::size_t i = 0; i < rows; ++i) {
+//         for (std::size_t j = 0; j < cols; ++j) {
+//             result(i, j) = LRI_CV_Tools::check_zero(data(i, j));
+//         }
+//     }
+
+//     return result;
+// }
+
+// template <typename T, std::size_t N>
+// std::array<RI::Tensor<T>, N>
+//     LRI_CV_Tools::check_zero(std::array<RI::Tensor<T>, N>&& data) {
+//     std::array<RI::Tensor<T>, N> result;
+
+//     for (size_t i = 0; i != N; ++i)
+//         result[i] = LRI_CV_Tools::check_zero(std::move(data[i]));
+
+//     return result;
+// }
 
 #endif

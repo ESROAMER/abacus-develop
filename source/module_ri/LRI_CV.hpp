@@ -82,12 +82,11 @@ void LRI_CV<Tdata>::set_orbitals(
 
     this->m_abfs_abfs.init_radial(this->abfs_ccp, this->abfs, MGT);
     this->m_abfs_abfs.init_radial_table();
-    if (init_C)
-    {
+    if (init_C) {
         this->m_abfslcaos_lcaos.init_radial(this->abfs_ccp,
-                                        this->lcaos,
-                                        this->lcaos,
-                                        MGT);
+                                            this->lcaos,
+                                            this->lcaos,
+                                            MGT);
         this->m_abfslcaos_lcaos.init_radial_table();
     }
 
