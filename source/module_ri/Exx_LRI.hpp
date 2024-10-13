@@ -224,7 +224,8 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
             this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
         }
         this->evq.init_ions(period_Vs);
-        double chi = this->evq.get_singular_chi();
+        double chi = this->evq.get_singular_chi(this->info_ewald.fq_type,
+                                                this->info_ewald.ewald_qdiv);
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
             = this->evq.cal_Vs(chi, Vs);
         Vs_full = LRI_CV_Tools::mul2(
@@ -255,7 +256,8 @@ void Exx_LRI<Tdata>::cal_exx_ions() {
                     dVs_sr);
                 this->sr_cv.dVws = LRI_CV_Tools::get_dCVws(dVs_sr);
             }
-            // dVs = this->evq.cal_dVs(dVs);
+            // const double chi = 1.0 / this->lambda;
+            // dVs = this->evq.cal_dVs(chi, dVs);
             std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
                 dVs_full = LRI_CV_Tools::mul2(
                     RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
