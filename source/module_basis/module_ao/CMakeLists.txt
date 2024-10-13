@@ -4,7 +4,6 @@ if(ENABLE_LCAO)
       OBJECT
       ORB_atomic.cpp
       ORB_atomic_lm.cpp
-      ORB_control.cpp
       ORB_gaunt_table.cpp
       ORB_nonlocal.cpp
       ORB_nonlocal_lm.cpp
@@ -18,6 +17,8 @@ if(ENABLE_LCAO)
   endif()
 
   if(BUILD_TESTING)
-    add_subdirectory(test)
+    if(ENABLE_MPI)
+      add_subdirectory(test)
+    endif()
   endif()
 endif()

@@ -2,9 +2,7 @@
 #define W_ABACUS_DEVELOP_ABACUS_DEVELOP_SOURCE_MODULE_ESOLVER_ESOLVER_KS_LCAO_TDDFT_H
 #include "esolver_ks.h"
 #include "esolver_ks_lcao.h"
-#include "module_basis/module_ao/ORB_control.h"
 #include "module_elecstate/elecstate_lcao_tddft.h"
-#include "module_hamilt_lcao/hamilt_lcaodft/local_orbital_charge.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/record_adj.h"
 #include "module_psi/psi.h"
 
@@ -18,7 +16,7 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
 
     ~ESolver_KS_LCAO_TDDFT();
 
-    void before_all_runners(Input& inp, UnitCell& cell) override;
+    void before_all_runners(const Input_para& inp, UnitCell& cell) override;
 
     psi::Psi<std::complex<double>>* psi_laststep = nullptr;
 
