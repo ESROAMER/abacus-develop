@@ -43,6 +43,12 @@ void ReadInput::item_exx()
         this->add_item(item);
     }
     {
+        Input_Item item("exx_use_ewald");
+        item.annotation = "if 1, use Ewald method to construct V matrix";
+        read_sync_bool(input.exx_use_ewald);
+        this->add_item(item);
+    }
+    {
         Input_Item item("exx_cam_alpha");
         item.annotation = "fraction of the full-range parts of Fock exchange in range-separated hybrid funtionals";
         read_sync_string(input.exx_cam_alpha);
