@@ -69,6 +69,22 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
     // 1) run "before_all_runners" in ESolver_KS
     ESolver_KS::before_all_runners(inp, ucell);
 
+#ifdef __EXX
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
+        XC_Functional::set_xc_first_loop(ucell);
+        // initialize 2-center radial tables for EXX-LRI
+        if (GlobalC::exx_info.info_ri.real_number)
+        {
+            this->exx_lri_double->init(MPI_COMM_WORLD, this->kv, orb_);
+        }
+        else
+        {
+            this->exx_lri_complex->init(MPI_COMM_WORLD, this->kv, orb_);
+        }
+    }
+#endif
+
     // 2) initialize the local pseudopotential with plane wave basis set
     GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, pw_rho);
 
@@ -209,9 +225,9 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
 
 #ifdef __EXX
     if (GlobalC::exx_info.info_ri.real_number)
-        this->exd->exx_hamilt2density(*this->pelec,  this->pv, iter);
+        this->exd->exx_hamilt2density(*this->pelec, this->pv, iter);
     else
-        this->exc->exx_hamilt2density(*this->pelec,  this->pv, iter);
+        this->exc->exx_hamilt2density(*this->pelec, this->pv, iter);
 #endif
 
     // using new charge density.
@@ -412,6 +428,8 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
 
 void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
 {
+    ESolver_KS_LCAO<std::complex<double>, double>::after_scf(istep);
+
     for (int is = 0; is < PARAM.inp.nspin; is++)
     {
         if (module_tddft::Evolve_elec::out_dipole == 1)
@@ -435,7 +453,6 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                 orb_,
                                 this->RA);
     }
-    ESolver_KS_LCAO<std::complex<double>, double>::after_scf(istep);
 }
 
 } // namespace ModuleESolver
