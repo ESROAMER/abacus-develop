@@ -1,8 +1,8 @@
 #include "init_info.h"
 
+#include "module_parameter/parameter.h"
 #include "../para_json.h"
 #include "abacusjson.h"
-#include "module_io/input.h"
 
 // Add json objects to init
 namespace Json
@@ -22,17 +22,17 @@ void gen_init(UnitCell* ucell)
 
     int numAtoms = ucell->nat;
     AbacusJson::add_json({"init", "natom"}, numAtoms, false);
-    AbacusJson::add_json({"init", "nband"}, GlobalV::NBANDS, false);
+    AbacusJson::add_json({"init", "nband"}, PARAM.inp.nbands, false);
 
     // Json::AbacusJson::add_Json(numAtoms,false,"init", "natom");
-    // Json::AbacusJson::add_Json(GlobalV::NBANDS,false,"init", "nband");
+    // Json::AbacusJson::add_Json(PARAM.inp.nbands,false,"init", "nband");
 
     int ntype = ucell->ntype, nelec_total = 0;
     for (int it = 0; it < ntype; it++)
     {
         std::string label = ucell->atoms[it].label;
         int atom_number = ucell->atoms[it].na;
-        int number = ucell->atoms[it].ncpp.zv;
+        double number = ucell->atoms[it].ncpp.zv;
 
         nelec_total += ucell->atoms[it].ncpp.zv * ucell->atoms[it].na;
         AbacusJson::add_json({"init", "natom_each_type", label}, atom_number, false);
@@ -77,7 +77,7 @@ void gen_stru(UnitCell* ucell)
 
         Json::AbacusJson::add_json({"init", "element", atom_label}, atom_element, false);
 
-        std::string orbital_str = GlobalV::global_orbital_dir + orbital_fn[i];
+        std::string orbital_str = PARAM.inp.orbital_dir + orbital_fn[i];
         if (!orbital_str.compare(""))
         {
             Json::jsonValue nullValue;

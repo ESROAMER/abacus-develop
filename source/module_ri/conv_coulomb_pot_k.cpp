@@ -1,6 +1,7 @@
 #include "conv_coulomb_pot_k.h"
 
 #include "../module_base/constants.h"
+#include "module_parameter/parameter.h"
 #include "../module_basis/module_ao/ORB_atomic_lm.h"
 #include "../module_hamilt_pw/hamilt_pwdft/global.h"
 #include "Faddeeva.hh"
@@ -143,24 +144,24 @@ Numerical_Orbital_Lm cal_orbs_ccp<Numerical_Orbital_Lm>(
         r_radial[ir]
             = orbs.get_r_radial().back() + (ir - orbs.getNr() + 1) * dr;
 
-    Numerical_Orbital_Lm orbs_ccp;
-    orbs_ccp.set_orbital_info(orbs.getLabel(),
-                              orbs.getType(),
-                              orbs.getL(),
-                              orbs.getChi(),
-                              Nr,
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
-                              Numerical_Orbital_Lm::Psi_Type::Psik2,
-                              ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
-                              orbs.getNk(),
-                              orbs.getDk(),
-                              orbs.getDruniform(),
-                              false,
-                              true,
-                              GlobalV::CAL_FORCE);
-    return orbs_ccp;
-}
+		Numerical_Orbital_Lm orbs_ccp;
+		orbs_ccp.set_orbital_info(
+			orbs.getLabel(),
+			orbs.getType(),
+			orbs.getL(),
+			orbs.getChi(),
+			Nr,
+			ModuleBase::GlobalFunc::VECTOR_TO_PTR(rab),
+			ModuleBase::GlobalFunc::VECTOR_TO_PTR(r_radial),
+			Numerical_Orbital_Lm::Psi_Type::Psik2,
+			ModuleBase::GlobalFunc::VECTOR_TO_PTR(psik2_ccp),
+			orbs.getNk(),
+			orbs.getDk(),
+			orbs.getDruniform(),
+			false,
+			true, PARAM.inp.cal_force);
+		return orbs_ccp;
+	}
 
 template <>
 double get_rmesh_proportion(const Numerical_Orbital_Lm& orbs,

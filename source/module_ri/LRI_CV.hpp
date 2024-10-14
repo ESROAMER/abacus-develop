@@ -9,11 +9,12 @@
 #include "LRI_CV.h"
 #include "LRI_CV_Tools.h"
 #include "RI_Util.h"
-#include "exx_abfs-construct_orbs.h"
-#include "module_base/timer.h"
-#include "module_base/tool_title.h"
-#include "module_ri/exx_abfs-abfs_index.h"
+#include "../module_ri/exx_abfs-construct_orbs.h"
+#include "../module_base/timer.h"
+#include "../module_base/tool_title.h"
+#include "../module_ri/exx_abfs-abfs_index.h"
 
+#include "../module_hamilt_pw/hamilt_pwdft/global.h"
 #include <RI/global/Global_Func-1.h>
 #include <algorithm>
 
@@ -35,6 +36,7 @@ LRI_CV<Tdata>::~LRI_CV() {
 
 template <typename Tdata>
 void LRI_CV<Tdata>::set_orbitals(
+    const LCAO_Orbitals& orb,
     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& lcaos_in,
     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_in,
     const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
@@ -46,11 +48,11 @@ void LRI_CV<Tdata>::set_orbitals(
     ModuleBase::TITLE("LRI_CV", "set_orbitals");
     ModuleBase::timer::tick("LRI_CV", "set_orbitals");
 
+    this->orb_cutoff_ = orb.cutoffs();
     this->lcaos = lcaos_in;
     this->abfs = abfs_in;
     this->abfs_ccp = abfs_ccp_in;
 
-    this->lcaos_rcut = Exx_Abfs::Construct_Orbs::get_Rcut(this->lcaos);
     this->abfs_ccp_rcut = Exx_Abfs::Construct_Orbs::get_Rcut(this->abfs_ccp);
     const double lcaos_rmax = Exx_Abfs::Construct_Orbs::get_Rmax(this->lcaos);
     const double abfs_ccp_rmax
@@ -68,11 +70,11 @@ void LRI_CV<Tdata>::set_orbitals(
 
     // this->m_abfs_abfs.init( 2, kmesh_times, (1+this->ccp_rmesh_times)/2.0 );
     int Lmax_v = std::numeric_limits<double>::min();
-    this->m_abfs_abfs.init(2, kmesh_times, lcaos_rmax + abfs_ccp_rmax, Lmax_v);
+    this->m_abfs_abfs.init(2, orb, kmesh_times, lcaos_rmax + abfs_ccp_rmax, Lmax_v);
     // this->m_abfslcaos_lcaos.init( 1, kmesh_times, 1 );
     int Lmax_c = std::numeric_limits<double>::min();
     if (init_C)
-        this->m_abfslcaos_lcaos.init(1, kmesh_times, lcaos_rmax, Lmax_c);
+        this->m_abfslcaos_lcaos.init(1, orb, kmesh_times, lcaos_rmax, Lmax_c);
     int Lmax = std::max(Lmax_v, Lmax_c);
 
     if (init_MGT) {
@@ -95,13 +97,13 @@ void LRI_CV<Tdata>::set_orbitals(
 
 template <typename Tdata>
 double LRI_CV<Tdata>::cal_V_Rcut(const int it0, const int it1) {
-    return this->abfs_ccp_rcut[it0] + this->lcaos_rcut[it1];
+    return this->abfs_ccp_rcut[it0] + this->orb_cutoff_[it1];
 }
 
 template <typename Tdata>
 double LRI_CV<Tdata>::cal_C_Rcut(const int it0, const int it1) {
-    return std::min(this->abfs_ccp_rcut[it0], this->lcaos_rcut[it0])
-           + this->lcaos_rcut[it1];
+    return std::min(this->abfs_ccp_rcut[it0], this->orb_cutoff_[it0])
+           + this->orb_cutoff_[it1];
 }
 
 template <typename Tdata>

@@ -26,9 +26,10 @@ public:
 	//    2: <jYs|jYs>  <abfs|abfs>
 	void init(
 		const int mode,
+        const LCAO_Orbitals& orb,
 		const double kmesh_times,  		// extend Kcut, keep dK
 		const double rmax,
-        int& Lmax);		// extend Rcut, keep dR
+        int Lmax);		// extend Rcut, keep dR
 
     void init_radial(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_A,
                      const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_B,

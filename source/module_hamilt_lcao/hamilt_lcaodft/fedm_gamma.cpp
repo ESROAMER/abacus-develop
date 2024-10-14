@@ -1,5 +1,6 @@
 #include "FORCE.h"
 #include "module_elecstate/elecstate_lcao.h"
+#include "module_parameter/parameter.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_base/parallel_reduce.h"
 #include "module_base/timer.h"
@@ -19,7 +20,6 @@ void Force_LCAO<double>::cal_fedm(
     const psi::Psi<double>* psi,
     const Parallel_Orbitals& pv,
     const elecstate::ElecState *pelec,
-    LCAO_Matrix &lm,
     ModuleBase::matrix &foverlap,
     ModuleBase::matrix& soverlap,
     const K_Vectors* kv,
@@ -28,9 +28,9 @@ void Force_LCAO<double>::cal_fedm(
     ModuleBase::TITLE("Force_LCAO","cal_fedm");
     ModuleBase::timer::tick("Force_LCAO","cal_fedm");
 
-    const int nspin = GlobalV::NSPIN;
-    const int nbands = GlobalV::NBANDS;
-    const int nlocal = GlobalV::NLOCAL;
+    const int nspin = PARAM.inp.nspin;
+    const int nbands = PARAM.inp.nbands;
+    const int nlocal = PARAM.globalv.nlocal;
 
     ModuleBase::matrix wg_ekb;
     wg_ekb.create(nspin, nbands);
@@ -47,12 +47,12 @@ void Force_LCAO<double>::cal_fedm(
     elecstate::DensityMatrix<double, double> edm(&pv, nspin);
     
 #ifdef __PEXSI
-    if (GlobalV::KS_SOLVER == "pexsi")
+    if (PARAM.inp.ks_solver == "pexsi")
     {
         auto pes = dynamic_cast<const elecstate::ElecStateLCAO<double>*>(pelec);
         for (int ik = 0; ik < nspin; ik++)
         {
-            edm.set_DMK_pointer(ik, pes->get_DM()->pexsi_edm[ik]);
+            edm.set_DMK_pointer(ik, pes->get_DM()->pexsi_EDM[ik]);
         }
         
     }

@@ -24,6 +24,7 @@ public:
 	//    1: <lcaos lcaos|lcaos lcaos>
 	void init(
 		const int mode,
+              const LCAO_Orbitals& orb,
 		const double kmesh_times, 		// extend Kcut, keep dK
 		const double rmax,
               int& Lmax);		// extend Rcut, keep dR

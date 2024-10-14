@@ -171,6 +171,20 @@ class HContainer
     HContainer(const Parallel_Orbitals* paraV, T* data_pointer = nullptr, const std::vector<int>* ijr_info = nullptr);
 
     /**
+* @brief set parallel orbital pointer to check parallel information
+*/
+    void set_paraV(const Parallel_Orbitals* paraV_in)
+    {
+        this->paraV = paraV_in;
+        for (auto& ap : atom_pairs) ap.set_paraV(paraV_in);
+    };
+    /**
+ * @brief get parallel orbital pointer to check parallel information
+ * @return const Parallel_Orbitals* , if return is nullptr, it means HContainer is not in parallel mode
+ */
+    const Parallel_Orbitals* get_paraV() const { return this->paraV; };
+
+    /**
      * @brief allocate memory for all <IJR> matrix
      * if data_array is not nullptr,
      *     use memory after data_array for each BaseMatrix;
@@ -218,6 +232,14 @@ class HContainer
     const BaseMatrix<T>* find_matrix(int i, int j, int rx, int ry, int rz) const;
     BaseMatrix<T>* find_matrix(int i, int j, const ModuleBase::Vector3<int>& R_index);
     const BaseMatrix<T>* find_matrix(int i, int j, const ModuleBase::Vector3<int>& R_index) const;
+
+    /**
+     * @brief find the offset of BaseMatrix with atom index atom_i and atom_j and R index (rx, ry, rz)
+     * if found, return this->find_matrix(i, j, rx, ry, rz)->get_pointer() - this->get_wrapper();
+     * if not found, return -1
+     */
+    int find_matrix_offset(int i, int j, int rx, int ry, int rz) const;
+    int find_matrix_offset(int i, int j, const ModuleBase::Vector3<int>& R_index) const;
 
     /**
      * @brief return a reference of AtomPair with index of atom I and J in atom_pairs

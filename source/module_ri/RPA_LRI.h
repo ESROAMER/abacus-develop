@@ -19,7 +19,6 @@
 #include <mpi.h>
 #include <vector>
 
-class Local_Orbital_Charge;
 class Parallel_Orbitals;
 class K_Vectors;
 
@@ -37,11 +36,12 @@ template <typename T, typename Tdata> class RPA_LRI
     RPA_LRI(const Exx_Info::Exx_Info_RI &info_in, const Exx_Info::Exx_Info_Ewald &info_ewald_in)
         :info(info_in), info_ewald(info_ewald_in){};
     ~RPA_LRI(){};
-    void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in);
+    void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, const std::vector<double>& orb_cutoff);
     void cal_rpa_cv();
     void cal_postSCF_exx(const elecstate::DensityMatrix<T, Tdata>& dm,
         const MPI_Comm& mpi_comm_in,
-        const K_Vectors& kv);
+        const K_Vectors& kv,
+        const LCAO_Orbitals& orb);
     void out_for_RPA(const Parallel_Orbitals& parav,
         const psi::Psi<T>& psi,
         const elecstate::ElecState* pelec);
@@ -55,7 +55,6 @@ template <typename T, typename Tdata> class RPA_LRI
     // void print_complex_matrix(char *desc, const ModuleBase::ComplexMatrix &mat);
     // void init(const MPI_Comm &mpi_comm_in);
     // void cal_rpa_ions();
-    // void cal_rpa_elec(const Local_Orbital_Charge &loc, const Parallel_Orbitals &pv);
 
     Tdata Erpa;
 
@@ -64,6 +63,8 @@ template <typename T, typename Tdata> class RPA_LRI
     const Exx_Info::Exx_Info_Ewald &info_ewald;
     const K_Vectors *p_kv=nullptr;
     MPI_Comm mpi_comm;
+    std::vector<double> orb_cutoff_;
+
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;

@@ -307,7 +307,7 @@ Numerical_Orbital_Lm Gaussian_Abfs::Gauss(const Numerical_Orbital_Lm& orb,
                               orb.getDruniform(),
                               false,
                               true,
-                              GlobalV::CAL_FORCE);
+                              PARAM.inp.cal_force);
 
     return gaussian;
 }

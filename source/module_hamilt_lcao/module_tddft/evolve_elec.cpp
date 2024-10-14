@@ -18,7 +18,6 @@ bool Evolve_elec::td_vext;
 std::vector<int> Evolve_elec::td_vext_dire_case;
 bool Evolve_elec::out_dipole;
 bool Evolve_elec::out_efield;
-bool Evolve_elec::out_current;
 double Evolve_elec::td_print_eij; // the threshold to output Eij elements
 int Evolve_elec::td_edm;          // 0: new edm method   1: old edm method
 
@@ -37,8 +36,8 @@ void Evolve_elec::solve_psi(const int& istep,
                             int propagator,
                             const int& nks)
 {
-    ModuleBase::TITLE("Evolve_elec", "eveolve_psi");
-    ModuleBase::timer::tick("Evolve_elec", "evolve_psi");
+    ModuleBase::TITLE("Evolve_elec", "solve_psi");
+    ModuleBase::timer::tick("Evolve_elec", "solve_psi");
 
     for (int ik = 0; ik < nks; ik++)
     {
@@ -83,7 +82,7 @@ void Evolve_elec::solve_psi(const int& istep,
         ModuleBase::timer::tick("Efficience", "evolve_k");
     } // end k
 
-    ModuleBase::timer::tick("Evolve_elec", "evolve_psi");
+    ModuleBase::timer::tick("Evolve_elec", "solve_psi");
     return;
 }
 } // namespace module_tddft

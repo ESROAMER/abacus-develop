@@ -33,7 +33,8 @@ class LRI_CV
     LRI_CV();
     ~LRI_CV();
 
-    void set_orbitals(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& lcaos_in,
+    void set_orbitals(const LCAO_Orbitals& orb,
+                      const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& lcaos_in,
                       const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_in,
                       const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs_ccp_in,
                       const double& kmesh_times,
@@ -62,13 +63,12 @@ class LRI_CV
     }
 
   private:
+    std::vector<double> orb_cutoff_;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
     std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
     ModuleBase::Element_Basis_Index::IndexLNM index_lcaos;
     ModuleBase::Element_Basis_Index::IndexLNM index_abfs;
-    std::vector<double> lcaos_rcut;
-    // std::vector<double> abfs_rcut;
     std::vector<double> abfs_ccp_rcut;
 
   public:

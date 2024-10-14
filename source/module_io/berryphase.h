@@ -8,6 +8,7 @@
 #include "module_basis/module_pw/pw_basis_k.h"
 #include "module_cell/klist.h"
 #include "module_psi/psi.h"
+#include "module_basis/module_ao/parallel_orbitals.h"
 
 class berryphase
 {
@@ -15,7 +16,7 @@ class berryphase
   public:
     berryphase(); // for pw-line
 #ifdef __LCAO
-    berryphase(Local_Orbital_Charge& loc_in); // for lcao-line
+    berryphase(const Parallel_Orbitals* paraV_in); // for lcao-line
 #endif
     ~berryphase();
 
@@ -24,7 +25,7 @@ class berryphase
     unkOverlap_pw pw_method;
 #ifdef __LCAO
     unkOverlap_lcao lcao_method;
-    Local_Orbital_Charge* loc;
+    const Parallel_Orbitals* paraV;
 #endif
 
     int total_string;
@@ -36,7 +37,7 @@ class berryphase
 
     void get_occupation_bands();
 #ifdef __LCAO
-    void lcao_init(const K_Vectors& kv, const Grid_Technique& grid_tech);
+    void lcao_init(const K_Vectors& kv, const Grid_Technique& grid_tech, const LCAO_Orbitals& orb);
 #endif
     void set_kpoints(const K_Vectors& kv, const int direction);
 

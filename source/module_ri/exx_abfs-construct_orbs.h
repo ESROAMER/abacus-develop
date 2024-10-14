@@ -19,6 +19,7 @@ class Exx_Abfs::Construct_Orbs {
 
     static std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>
         abfs_same_atom(
+            const LCAO_Orbitals& orb,
             const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
                 lcaos,
             const double kmesh_times_mot,
@@ -43,11 +44,6 @@ class Exx_Abfs::Construct_Orbs {
     static std::vector<double> get_Rcut(
         const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
             orb_in);
-    static std::vector<double> get_Rcut(
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            orb_in,
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            g_orb_in);
     static inline double get_Rmax(const std::vector<double>& rcut) {
         return *std::max_element(rcut.begin(), rcut.end());
     }
@@ -75,25 +71,24 @@ class Exx_Abfs::Construct_Orbs {
             lcaos,
         const double norm_threshold = std::numeric_limits<double>::min());
 
-    static std::vector<std::vector<std::vector<std::vector<double>>>> pca(
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& abfs,
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orbs,
-        const double kmesh_times_mot,
-        const double times_threshold);
-
-    static std::vector<std::vector<std::vector<std::vector<double>>>> div_r(
-        const std::vector<std::vector<std::vector<std::vector<double>>>>& psirs,
-        const std::vector<double>& r_radial);
-
-    static std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> orbital(
-        const std::vector<std::vector<std::vector<std::vector<double>>>>& psis,
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            orbs_info,
-        const double kmesh_times);
-
-    static std::vector<std::vector<std::vector<std::vector<double>>>> get_psi(
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            orbs);
+	static std::vector<std::vector<std::vector<std::vector<double>>>> pca(
+        const LCAO_Orbitals& orb,
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs,
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
+		const double kmesh_times_mot,
+		const double times_threshold );
+		
+	static std::vector<std::vector<std::vector<std::vector<double>>>> div_r( 
+		const std::vector<std::vector<std::vector<std::vector<double>>>> &psirs,
+		const std::vector<double> &r_radial );		
+		
+	static std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> orbital(
+		const std::vector<std::vector<std::vector<std::vector<double>>>> &psis,
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs_info,
+		const double kmesh_times);		
+		
+	static std::vector<std::vector<std::vector<std::vector<double>>>> get_psi(
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs );
 };
 
 #endif // EXX_ABFS_IO_ASA_H

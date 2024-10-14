@@ -109,7 +109,6 @@ Calculate the lattice sum over a Gaussian:
     static double double_factorial(const int& n);
     static std::vector<int> get_n_supercells(const ModuleBase::Matrix3& G,
                                              const double& Gmax);
-    double get_ccp_kernel(const double& vec_sq);
 };
 
 #endif

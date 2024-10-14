@@ -1,5 +1,6 @@
 #include "gint_k.h"
 #include "grid_technique.h"
+#include "module_parameter/parameter.h"
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
 #include "module_base/memory.h"
@@ -15,19 +16,18 @@ void Gint_k::distribute_pvdpR_sparseMatrix(
     const int dim,
     const double& sparse_threshold,
     const std::map<Abfs::Vector3_Order<int>, std::map<size_t, std::map<size_t, double>>>& pvdpR_sparseMatrix,
-    LCAO_Matrix* LM,
     LCAO_HS_Arrays& HS_Arrays,
-    Parallel_Orbitals* pv)
+    const Parallel_Orbitals* pv)
 {
     ModuleBase::TITLE("Gint_k", "distribute_pvdpR_sparseMatrix");
 
-    int total_R_num = LM->all_R_coor.size();
+    int total_R_num = HS_Arrays.all_R_coor.size();
     int* nonzero_num = new int[total_R_num];
     int* minus_nonzero_num = new int[total_R_num];
     ModuleBase::GlobalFunc::ZEROS(nonzero_num, total_R_num);
     ModuleBase::GlobalFunc::ZEROS(minus_nonzero_num, total_R_num);
     int count = 0;
-    for (auto& R_coor: LM->all_R_coor)
+    for (auto& R_coor: HS_Arrays.all_R_coor)
     {
         auto iter = pvdpR_sparseMatrix.find(R_coor);
         if (iter != pvdpR_sparseMatrix.end())
@@ -58,18 +58,18 @@ void Gint_k::distribute_pvdpR_sparseMatrix(
     // Parallel_Reduce::reduce_pool(minus_nonzero_num, total_R_num);
 
     double* tmp = nullptr;
-    tmp = new double[GlobalV::NLOCAL];
+    tmp = new double[PARAM.globalv.nlocal];
 
     count = 0;
-    for (auto& R_coor: LM->all_R_coor)
+    for (auto& R_coor: HS_Arrays.all_R_coor)
     {
         if (nonzero_num[count] != 0 || minus_nonzero_num[count] != 0)
         {
             auto minus_R_coor = -1 * R_coor;
 
-            for (int row = 0; row < GlobalV::NLOCAL; ++row)
+            for (int row = 0; row < PARAM.globalv.nlocal; ++row)
             {
-                ModuleBase::GlobalFunc::ZEROS(tmp, GlobalV::NLOCAL);
+                ModuleBase::GlobalFunc::ZEROS(tmp, PARAM.globalv.nlocal);
 
                 auto iter = pvdpR_sparseMatrix.find(R_coor);
                 if (iter != pvdpR_sparseMatrix.end())
@@ -108,11 +108,11 @@ void Gint_k::distribute_pvdpR_sparseMatrix(
                     }
                 }
 
-                Parallel_Reduce::reduce_pool(tmp, GlobalV::NLOCAL);
+                Parallel_Reduce::reduce_pool(tmp, PARAM.globalv.nlocal);
 
                 if (pv->global2local_row(row) >= 0)
                 {
-                    for (int col = 0; col < GlobalV::NLOCAL; ++col)
+                    for (int col = 0; col < PARAM.globalv.nlocal; ++col)
                     {
                         if (pv->global2local_col(col) >= 0)
                         {
@@ -170,19 +170,18 @@ void Gint_k::distribute_pvdpR_soc_sparseMatrix(
     const double& sparse_threshold,
     const std::map<Abfs::Vector3_Order<int>, std::map<size_t, std::map<size_t, std::complex<double>>>>&
         pvdpR_soc_sparseMatrix,
-    LCAO_Matrix* LM,
     LCAO_HS_Arrays& HS_Arrays,
-    Parallel_Orbitals* pv)
+    const Parallel_Orbitals* pv)
 {
     ModuleBase::TITLE("Gint_k", "distribute_pvdpR_soc_sparseMatrix");
 
-    int total_R_num = LM->all_R_coor.size();
+    int total_R_num = HS_Arrays.all_R_coor.size();
     int* nonzero_num = new int[total_R_num];
     int* minus_nonzero_num = new int[total_R_num];
     ModuleBase::GlobalFunc::ZEROS(nonzero_num, total_R_num);
     ModuleBase::GlobalFunc::ZEROS(minus_nonzero_num, total_R_num);
     int count = 0;
-    for (auto& R_coor: LM->all_R_coor)
+    for (auto& R_coor: HS_Arrays.all_R_coor)
     {
         auto iter = pvdpR_soc_sparseMatrix.find(R_coor);
         if (iter != pvdpR_soc_sparseMatrix.end())
@@ -213,18 +212,18 @@ void Gint_k::distribute_pvdpR_soc_sparseMatrix(
     // Parallel_Reduce::reduce_pool(minus_nonzero_num, total_R_num);
 
     std::complex<double>* tmp_soc = nullptr;
-    tmp_soc = new std::complex<double>[GlobalV::NLOCAL];
+    tmp_soc = new std::complex<double>[PARAM.globalv.nlocal];
 
     count = 0;
-    for (auto& R_coor: LM->all_R_coor)
+    for (auto& R_coor: HS_Arrays.all_R_coor)
     {
         if (nonzero_num[count] != 0 || minus_nonzero_num[count] != 0)
         {
             auto minus_R_coor = -1 * R_coor;
 
-            for (int row = 0; row < GlobalV::NLOCAL; ++row)
+            for (int row = 0; row < PARAM.globalv.nlocal; ++row)
             {
-                ModuleBase::GlobalFunc::ZEROS(tmp_soc, GlobalV::NLOCAL);
+                ModuleBase::GlobalFunc::ZEROS(tmp_soc, PARAM.globalv.nlocal);
 
                 auto iter = pvdpR_soc_sparseMatrix.find(R_coor);
                 if (iter != pvdpR_soc_sparseMatrix.end())
@@ -262,11 +261,11 @@ void Gint_k::distribute_pvdpR_soc_sparseMatrix(
                     }
                 }
 
-                Parallel_Reduce::reduce_pool(tmp_soc, GlobalV::NLOCAL);
+                Parallel_Reduce::reduce_pool(tmp_soc, PARAM.globalv.nlocal);
 
                 if (pv->global2local_row(row) >= 0)
                 {
-                    for (int col = 0; col < GlobalV::NLOCAL; ++col)
+                    for (int col = 0; col < PARAM.globalv.nlocal; ++col)
                     {
                         if (pv->global2local_col(col) >= 0)
                         {
@@ -321,9 +320,8 @@ void Gint_k::distribute_pvdpR_soc_sparseMatrix(
 
 void Gint_k::cal_dvlocal_R_sparseMatrix(const int& current_spin,
                                         const double& sparse_threshold,
-                                        LCAO_Matrix* LM,
                                         LCAO_HS_Arrays& HS_Arrays,
-                                        Parallel_Orbitals* pv,
+                                        const Parallel_Orbitals* pv,
                                         UnitCell& ucell,
                                         Grid_Driver& gdriver)
 {
@@ -381,16 +379,16 @@ void Gint_k::cal_dvlocal_R_sparseMatrix(const int& current_spin,
 
                             int ixxx = DM_start + this->gridt->find_R2st[iat][nad2];
 
-                            for (int iw = 0; iw < atom1->nw * GlobalV::NPOL; iw++)
+                            for (int iw = 0; iw < atom1->nw * PARAM.globalv.npol; iw++)
                             {
-                                for (int iw2 = 0; iw2 < atom2->nw * GlobalV::NPOL; iw2++)
+                                for (int iw2 = 0; iw2 < atom2->nw * PARAM.globalv.npol; iw2++)
                                 {
                                     const int nw = atom2->nw;
-                                    const int mug0 = iw / GlobalV::NPOL;
-                                    const int nug0 = iw2 / GlobalV::NPOL;
+                                    const int mug0 = iw / PARAM.globalv.npol;
+                                    const int nug0 = iw2 / PARAM.globalv.npol;
                                     const int iw_nowg = ixxx + mug0 * nw + nug0;
 
-                                    if (GlobalV::NSPIN == 4)
+                                    if (PARAM.inp.nspin == 4)
                                     {
                                         // pvp is symmetric, only half is calculated.
 
@@ -457,7 +455,7 @@ void Gint_k::cal_dvlocal_R_sparseMatrix(const int& current_spin,
                                         else if (iw % 2 == 0 && iw2 % 2 == 1)
                                         {
                                             // spin = 1;
-                                            if (!GlobalV::DOMAG)
+                                            if (!PARAM.globalv.domag)
                                             {
                                                 // do nothing
                                             }
@@ -492,7 +490,7 @@ void Gint_k::cal_dvlocal_R_sparseMatrix(const int& current_spin,
                                         else if (iw % 2 == 1 && iw2 % 2 == 0)
                                         {
                                             // spin = 2;
-                                            if (!GlobalV::DOMAG)
+                                            if (!PARAM.globalv.domag)
                                             {
                                                 // do nothing
                                             }
@@ -559,17 +557,17 @@ void Gint_k::cal_dvlocal_R_sparseMatrix(const int& current_spin,
         }
     }
 
-    if (GlobalV::NSPIN != 4)
+    if (PARAM.inp.nspin != 4)
     {
-        distribute_pvdpR_sparseMatrix(current_spin, 0, sparse_threshold, pvdpRx_sparseMatrix, LM, HS_Arrays, pv);
-        distribute_pvdpR_sparseMatrix(current_spin, 1, sparse_threshold, pvdpRy_sparseMatrix, LM, HS_Arrays, pv);
-        distribute_pvdpR_sparseMatrix(current_spin, 2, sparse_threshold, pvdpRz_sparseMatrix, LM, HS_Arrays, pv);
+        distribute_pvdpR_sparseMatrix(current_spin, 0, sparse_threshold, pvdpRx_sparseMatrix, HS_Arrays, pv);
+        distribute_pvdpR_sparseMatrix(current_spin, 1, sparse_threshold, pvdpRy_sparseMatrix, HS_Arrays, pv);
+        distribute_pvdpR_sparseMatrix(current_spin, 2, sparse_threshold, pvdpRz_sparseMatrix, HS_Arrays, pv);
     }
     else
     {
-        distribute_pvdpR_soc_sparseMatrix(0, sparse_threshold, pvdpRx_soc_sparseMatrix, LM, HS_Arrays, pv);
-        distribute_pvdpR_soc_sparseMatrix(1, sparse_threshold, pvdpRy_soc_sparseMatrix, LM, HS_Arrays, pv);
-        distribute_pvdpR_soc_sparseMatrix(2, sparse_threshold, pvdpRz_soc_sparseMatrix, LM, HS_Arrays, pv);
+        distribute_pvdpR_soc_sparseMatrix(0, sparse_threshold, pvdpRx_soc_sparseMatrix, HS_Arrays, pv);
+        distribute_pvdpR_soc_sparseMatrix(1, sparse_threshold, pvdpRy_soc_sparseMatrix, HS_Arrays, pv);
+        distribute_pvdpR_soc_sparseMatrix(2, sparse_threshold, pvdpRz_soc_sparseMatrix, HS_Arrays, pv);
     }
 
     return;

@@ -21,6 +21,7 @@ struct Exx_Info
 
         bool separate_loop = true;
         size_t hybrid_step = 1;
+        bool exx_symmetry_realspace = true;
     };
     Exx_Info_Global info_global;
 
@@ -28,7 +29,7 @@ struct Exx_Info
     {
         const Conv_Coulomb_Pot_K::Ccp_Type& ccp_type;
         const double& hse_omega;
-        double lambda;
+        double lambda = 0.3;
 
         Exx_Info_Lip(const Exx_Info::Exx_Info_Global& info_global)
             : ccp_type(info_global.ccp_type), hse_omega(info_global.hse_omega)
@@ -67,18 +68,17 @@ struct Exx_Info
         double cauchy_threshold = 0;
         double C_grad_threshold = 0;
         double V_grad_threshold = 0;
+        double C_grad_R_threshold = 0;
+        double V_grad_R_threshold = 0;
         double cauchy_force_threshold = 0;
         double cauchy_stress_threshold = 0;
-        double ccp_threshold = 0;
         double ccp_rmesh_times = 10;
         double kmesh_times = 4;
 
         int abfs_Lmax = 0; // tmp
 
         Exx_Info_RI(const Exx_Info::Exx_Info_Global& info_global)
-            : ccp_type(info_global.ccp_type),
-              hse_omega(info_global.hse_omega),
-              cam_alpha(info_global.cam_alpha),
+            : ccp_type(info_global.ccp_type), hse_omega(info_global.hse_omega), cam_alpha(info_global.cam_alpha),
               cam_beta(info_global.cam_beta)
         {
         }

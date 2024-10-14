@@ -12,6 +12,7 @@
 #include "module_cell/klist.h"
 
 #include <array>
+#include <RI/global/Tensor.h>
 
 namespace RI_Util
 {

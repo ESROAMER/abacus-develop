@@ -1,5 +1,6 @@
 #include "wavefunc_in_pw.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_parameter/parameter.h"
 #include <cstring>		// Peize Lin fix bug about strcmp 2016-08-02
 #include "module_base/math_integral.h"
 #include "module_base/math_sphbes.h"
@@ -131,11 +132,11 @@ void Wavefunc_in_pw::make_table_q(
 						 }
 					}
 				}
-				double* table = new double[GlobalV::NQX];
+				double* table = new double[PARAM.globalv.nqx];
 				Wavefunc_in_pw::integral(meshr, psir, radial, rab, L, table);
-				for(int iq=0; iq<GlobalV::NQX; iq++)
+				for(int iq=0; iq<PARAM.globalv.nqx; iq++)
 				{
-					//double energy_q = pow(iq * GlobalV::DQ,2);
+					//double energy_q = pow(iq * PARAM.globalv.dq,2);
 					table_local(it,ic,iq) = table[iq];//* Wavefunc_in_pw::smearing(energy_q,150,0.666666);
 				}
 				delete[] table;
@@ -148,53 +149,18 @@ void Wavefunc_in_pw::make_table_q(
 		}// L
 	}// T
 
-	std::string filename = "/LOCAL_G.dat";
-	write_table_local(table_local, filename);
-	// if(GlobalV::MY_RANK==0)
-	// {
-	// 	for(int it=0; it<GlobalC::ucell.ntype; it++)
-	// 	{
-	// 		std::stringstream ss;
-	// 		ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << "/LOCAL_G.dat";
-	// 		std::ofstream ofs(ss.str().c_str());
-	// 		for(int iq=0; iq<GlobalV::NQX; iq++)
-	// 		{
-	// 			int ic=0;
-	// 			double energy_q = pow((double)iq*GlobalV::DQ,2);
-	// 			ofs << energy_q; // unit (Ry)
-	// 			for(int L=0; L<GlobalC::ucell.atoms[it].nwl+1; L++)
-	// 			{
-	// 				for(int N=0; N<GlobalC::ucell.atoms[it].l_nchi[L]; N++)
-	// 				{
-	// 					ofs << " " << table_local(it,ic,iq);
-	// 					++ic;
-	// 				}
-	// 			}
-	// 			ofs << std::endl;
-	// 		}
-	// 		ofs.close();
-	// 	}
-	// }
 
-	return;
-}
-
-void Wavefunc_in_pw::write_table_local(
-	const ModuleBase::realArray &table_local,
-	std::string &filename
-)
-{
 	if(GlobalV::MY_RANK==0)
 	{
 		for(int it=0; it<GlobalC::ucell.ntype; it++)
 		{
 			std::stringstream ss;
-			ss << GlobalV::global_out_dir << GlobalC::ucell.atoms[it].label << filename;
+			ss << PARAM.globalv.global_out_dir << GlobalC::ucell.atoms[it].label << "/LOCAL_G.dat";
 			std::ofstream ofs(ss.str().c_str());
-			for(int iq=0; iq<GlobalV::NQX; iq++)
+			for(int iq=0; iq<PARAM.globalv.nqx; iq++)
 			{
 				int ic=0;
-				double energy_q = pow((double)iq*GlobalV::DQ,2);
+				double energy_q = pow((double)iq*PARAM.globalv.dq,2);
 				ofs << energy_q; // unit (Ry)
 				for(int L=0; L<GlobalC::ucell.atoms[it].nwl+1; L++)
 				{
@@ -209,34 +175,8 @@ void Wavefunc_in_pw::write_table_local(
 			ofs.close();
 		}
 	}
-}
 
-void Wavefunc_in_pw::make_table_q(
-	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in,
-	ModuleBase::realArray &table_local
-)
-{
-	ModuleBase::TITLE("Wavefunc_in_pw","make_table_q");
-
-	table_local.zero_out();
-	for(size_t T=0; T!=orb_in.size(); ++T)
-	{
-		int ic=0;
-		for(size_t L=0; L!=orb_in[T].size(); ++L)
-		{
-			for(size_t N=0; N!=orb_in[T][L].size(); ++N )
-			{
-				const auto &orb_origin = orb_in[T][L][N];
-				double* table = new double[GlobalV::NQX];
-				Wavefunc_in_pw::integral(orb_origin.getNr(), orb_origin.getPsi_r(), orb_origin.getRadial(), orb_origin.getRab(), L, table);
-				for(int iq=0; iq<GlobalV::NQX; iq++)
-					table_local(T, ic, iq) = table[iq];
-
-				delete[] table;
-				++ic;
-			}
-		}
-	}
+	return;
 }
 
 double Wavefunc_in_pw::smearing(const double &energy_x,
@@ -289,9 +229,9 @@ const double *rab, const int &l, double* table)
 
 	double *aux = new double[meshr];
 	double *vchi = new double[meshr];
-	for (int iq=0; iq<GlobalV::NQX; iq++)
+	for (int iq=0; iq<PARAM.globalv.nqx; iq++)
 	{
-		const double q = GlobalV::DQ * iq;
+		const double q = PARAM.globalv.dq * iq;
 		ModuleBase::Sphbes::Spherical_Bessel(meshr, r, q, l, aux);
 		for (int ir = 0;ir < meshr;ir++)
 		{
@@ -349,10 +289,10 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 					for(int ig=0; ig<npw; ig++)
 					{
 						flq[ig] = ModuleBase::PolyInt::Polynomial_Interpolation(table_local,
-						it, ic, GlobalV::NQX, GlobalV::DQ, gk[ig].norm() * GlobalC::ucell.tpiba );
+						it, ic, PARAM.globalv.nqx, PARAM.globalv.dq, gk[ig].norm() * GlobalC::ucell.tpiba );
 					}
 
-					if(GlobalV::NSPIN==4)
+					if(PARAM.inp.nspin==4)
 					{
 /*						for(int is_N = 0; is_N < 2; is_N++)*/  //for rotate base
 						for(int is_N = 0; is_N < 1; is_N++)
@@ -361,10 +301,11 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 							if(GlobalC::ucell.atoms[it].ncpp.has_so)
 							{
 								const double j = std::abs(double(L+is_N) - 0.5);
-								if (!(GlobalV::DOMAG||GlobalV::DOMAG_Z))
+								if (!(PARAM.globalv.domag||PARAM.globalv.domag_z))
 								{//atomic_wfc_so
 									for(int m=0; m<2*L+1; m++)
 									{
+										std::cout<<"iwall: "<<iwall<<std::endl;
 										const int lm = L*L+m;
 										for(int ig=0; ig<npw; ig++)
 										{
@@ -406,7 +347,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 										{//Average the two functions
 											chiaux[ig] =  L *
 												ModuleBase::PolyInt::Polynomial_Interpolation(table_local,
-												it, ic, GlobalV::NQX, GlobalV::DQ, gk[ig].norm() * GlobalC::ucell.tpiba );
+												it, ic, PARAM.globalv.nqx, PARAM.globalv.dq, gk[ig].norm() * GlobalC::ucell.tpiba );
 
 											chiaux[ig] += flq[ig] * (L+1.0) ;
 											chiaux[ig] *= 1/(2.0*L+1.0);
@@ -447,7 +388,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
                                         iwall++;
                                     }
 									iwall += 2*L +1;
-								} // end else INPUT.starting_spin_angle || !GlobalV::DOMAG
+								} // end else INPUT.starting_spin_angle || !PARAM.globalv.domag
 							} // end if GlobalC::ucell.atoms[it].has_so
 							else
 							{//atomic_wfc_nc
@@ -491,7 +432,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 								iwall += 2*L+1;
 							} // end else GlobalC::ucell.atoms[it].has_so
 						} // end for is_N
-                    } // end if GlobalV::NONCOLIN
+                    } // end if PARAM.inp.noncolin
 					else
 					{//LSDA and nomagnet case
 						for(int m=0; m<2*L+1; m++)
@@ -511,7 +452,7 @@ void Wavefunc_in_pw::produce_local_basis_in_pw(const int& ik,
 			delete[] sk;
 		} // end for ia
 	} // end for it
-	assert(iwall == GlobalV::NLOCAL);
+	assert(iwall == PARAM.globalv.nlocal);
 	delete[] flq;
 	delete[] aux;
 	delete[] chiaux;
