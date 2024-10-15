@@ -43,6 +43,18 @@ void ReadInput::item_exx()
         this->add_item(item);
     }
     {
+        Input_Item item("exx_fq_type");
+        item.annotation = "auxiliary-function fq used in correction to V(q) at q->0";
+        read_sync_int(input.exx_fq_type);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("exx_ewald_qdiv");
+        item.annotation = "the order of q-divergence in auxiliary function";
+        read_sync_double(input.exx_ewald_qdiv);
+        this->add_item(item);
+    }
+    {
         Input_Item item("exx_use_ewald");
         item.annotation = "if 1, use Ewald method to construct V matrix";
         read_sync_bool(input.exx_use_ewald);
@@ -79,6 +91,7 @@ void ReadInput::item_exx()
                 }
             }
         };
+        this->add_item(item);
     }
         {
         Input_Item item("exx_cam_beta");
@@ -113,13 +126,14 @@ void ReadInput::item_exx()
                 }
             }
         };
+        this->add_item(item);
     }
     {
         Input_Item item("exx_hse_omega");
-        item.annotation = "range-separation parameter in HSE functional";
+        item.annotation = "range-separation parameter in HSE/CAM/LR functional";
         read_sync_string(input.exx_hse_omega);
         item.reset_value = [](const Input_Item& item, Parameter& para) {
-            if (para.input.exx_cam_beta == "default")
+            if (para.input.exx_hse_omega == "default")
             {
                 std::string& dft_functional = para.input.dft_functional;
                 std::string dft_functional_lower = dft_functional;
