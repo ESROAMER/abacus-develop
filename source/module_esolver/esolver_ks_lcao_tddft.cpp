@@ -69,22 +69,6 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
     // 1) run "before_all_runners" in ESolver_KS
     ESolver_KS::before_all_runners(inp, ucell);
 
-#ifdef __EXX
-    if (GlobalC::exx_info.info_global.cal_exx)
-    {
-        XC_Functional::set_xc_first_loop(ucell);
-        // initialize 2-center radial tables for EXX-LRI
-        if (GlobalC::exx_info.info_ri.real_number)
-        {
-            this->exx_lri_double->init(MPI_COMM_WORLD, this->kv, orb_);
-        }
-        else
-        {
-            this->exx_lri_complex->init(MPI_COMM_WORLD, this->kv, orb_);
-        }
-    }
-#endif
-
     // 2) initialize the local pseudopotential with plane wave basis set
     GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, pw_rho);
 
@@ -117,6 +101,22 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
     // 6) initialize Density Matrix
     dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)
         ->init_DM(&kv, &this->pv, PARAM.inp.nspin);
+
+#ifdef __EXX
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
+        XC_Functional::set_xc_first_loop(ucell);
+        // initialize 2-center radial tables for EXX-LRI
+        if (GlobalC::exx_info.info_ri.real_number)
+        {
+            this->exx_lri_double->init(MPI_COMM_WORLD, this->kv, orb_);
+        }
+        else
+        {
+            this->exx_lri_complex->init(MPI_COMM_WORLD, this->kv, orb_);
+        }
+    }
+#endif
 
     // 8) initialize the charge density
     this->pelec->charge->allocate(PARAM.inp.nspin);
