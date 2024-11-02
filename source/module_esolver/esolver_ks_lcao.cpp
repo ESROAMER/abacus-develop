@@ -623,13 +623,15 @@ void ESolver_KS_LCAO<TK, TR>::iter_init(const int istep, const int iter)
     // calculate exact-exchange
     if (GlobalC::exx_info.info_ri.real_number)
     {
-        this->exd->exx_eachiterinit(*dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
+        this->exd->exx_eachiterinit(istep,
+                                    *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
                                     this->kv,
                                     iter);
     }
     else
     {
-        this->exc->exx_eachiterinit(*dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
+        this->exc->exx_eachiterinit(istep,
+                                    *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
                                     this->kv,
                                     iter);
     }
@@ -912,12 +914,12 @@ void ESolver_KS_LCAO<TK, TR>::update_pot(const int istep, const int iter)
 //! 5) cal_MW? (why put it here?)
 //------------------------------------------------------------------------------
 template <typename TK, typename TR>
-void ESolver_KS_LCAO<TK, TR>::iter_finish(int& iter)
+void ESolver_KS_LCAO<TK, TR>::iter_finish(const int istep, int& iter)
 {
     ModuleBase::TITLE("ESolver_KS_LCAO", "iter_finish");
 
     // call iter_finish() of ESolver_KS
-    ESolver_KS<TK>::iter_finish(iter);
+    ESolver_KS<TK>::iter_finish(istep, iter);
 
     // 1) mix density matrix if mixing_restart + mixing_dmr + not first
     // mixing_restart at every iter
@@ -941,7 +943,7 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(int& iter)
     // 3) save exx matrix
     int two_level_step = GlobalC::exx_info.info_ri.real_number ? this->exd->two_level_step : this->exc->two_level_step;
 
-    if (GlobalC::restart.info_save.save_H && two_level_step > 0
+    if (GlobalC::restart.info_save.save_H && (two_level_step > 0 || istep > 0)
         && (!GlobalC::exx_info.info_global.separate_loop || iter == 1)) // to avoid saving the same value repeatedly
     {
         ////////// for Add_Hexx_Type::k
@@ -989,23 +991,27 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(int& iter)
         }
         if (GlobalC::exx_info.info_ri.real_number)
         {
+            this->exd->dm_last_step = dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM();
             this->conv_esolver = this->exd->exx_after_converge(
                 *this->p_hamilt,
                 *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
                 this->kv,
                 PARAM.inp.nspin,
                 iter,
+                istep,
                 this->pelec->f_en.etot,
                 this->scf_ene_thr);
         }
         else
         {
+            this->exc->dm_last_step = dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM();
             this->conv_esolver = this->exc->exx_after_converge(
                 *this->p_hamilt,
                 *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
                 this->kv,
                 PARAM.inp.nspin,
                 iter,
+                istep,
                 this->pelec->f_en.etot,
                 this->scf_ene_thr);
         }
