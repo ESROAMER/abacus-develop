@@ -37,13 +37,16 @@ void Exx_LRI_Interface<T, Tdata>::read_Hexxs_cereal(const std::string& file_name
 }
 
 template<typename T, typename Tdata>
-void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charge_Mixing& chgmix, const UnitCell& ucell, const Parallel_2D& pv, const LCAO_Orbitals& orb)
+void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const int istep, const K_Vectors& kv, const Charge_Mixing& chgmix, const UnitCell& ucell, const Parallel_2D& pv, const LCAO_Orbitals& orb)
 {
 #ifdef __MPI
     if (GlobalC::exx_info.info_global.cal_exx)
     {
         if (GlobalC::restart.info_load.load_H_finish && !GlobalC::restart.info_load.restart_exx) { XC_Functional::set_xc_type(GlobalC::ucell.atoms[0].ncpp.xc_func);
-        } else
+        } 
+        else if (istep > 0) { XC_Functional::set_xc_type(GlobalC::ucell.atoms[0].ncpp.xc_func);
+        } 
+        else
         {
             if (ucell.atoms[0].ncpp.xc_func == "HF" || ucell.atoms[0].ncpp.xc_func == "PBE0" || ucell.atoms[0].ncpp.xc_func == "HSE")
             {
@@ -96,21 +99,28 @@ void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const K_Vectors& kv, const Charg
 }
 
 template<typename T, typename Tdata>
-void Exx_LRI_Interface<T, Tdata>::exx_eachiterinit(const elecstate::DensityMatrix<T, double>& dm, const K_Vectors& kv, const int& iter)
+void Exx_LRI_Interface<T, Tdata>::exx_eachiterinit(const int istep, const elecstate::DensityMatrix<T, double>& dm, const K_Vectors& kv, const int& iter)
 {
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        if (!GlobalC::exx_info.info_global.separate_loop && this->two_level_step)
+        if (!GlobalC::exx_info.info_global.separate_loop && (this->two_level_step || istep > 0))
         {
             const bool flag_restart = (iter == 1) ? true : false;
-            if (this->exx_spacegroup_symmetry) { this->mix_DMk_2D.mix(symrot_.restore_dm(kv, dm.get_DMK_vector(), *dm.get_paraV_pointer()), flag_restart); }
-            else { this->mix_DMk_2D.mix(dm.get_DMK_vector(), flag_restart); }
-			const std::vector<std::map<int,std::map<std::pair<int, std::array<int, 3>>,RI::Tensor<Tdata>>>>
-				Ds = PARAM.globalv.gamma_only_local
-                ? RI_2D_Comm::split_m2D_ktoR<Tdata>(*this->exx_ptr->p_kv, this->mix_DMk_2D.get_DMk_gamma_out(), *dm.get_paraV_pointer(), PARAM.inp.nspin)
-                : RI_2D_Comm::split_m2D_ktoR<Tdata>(*this->exx_ptr->p_kv, this->mix_DMk_2D.get_DMk_k_out(), *dm.get_paraV_pointer(), PARAM.inp.nspin, this->exx_spacegroup_symmetry);
-            if (this->exx_spacegroup_symmetry && GlobalC::exx_info.info_global.exx_symmetry_realspace) { this->exx_ptr->cal_exx_elec(Ds, *dm.get_paraV_pointer(), &this->symrot_); }
-            else { this->exx_ptr->cal_exx_elec(Ds, *dm.get_paraV_pointer()); }
+            auto cal = [this, &kv, &flag_restart](const elecstate::DensityMatrix<T, double>& dm_in)
+            {
+                if (this->exx_spacegroup_symmetry) { this->mix_DMk_2D.mix(symrot_.restore_dm(kv,dm_in.get_DMK_vector(), *dm_in.get_paraV_pointer()), flag_restart); }
+                else { this->mix_DMk_2D.mix(dm_in.get_DMK_vector(), flag_restart); }
+			        const std::vector<std::map<int,std::map<std::pair<int, std::array<int, 3>>,RI::Tensor<Tdata>>>>
+				            Ds = PARAM.globalv.gamma_only_local
+                                ? RI_2D_Comm::split_m2D_ktoR<Tdata>(*this->exx_ptr->p_kv, this->mix_DMk_2D.get_DMk_gamma_out(), *dm_in.get_paraV_pointer(), PARAM.inp.nspin)
+                                : RI_2D_Comm::split_m2D_ktoR<Tdata>(*this->exx_ptr->p_kv, this->mix_DMk_2D.get_DMk_k_out(), *dm_in.get_paraV_pointer(), PARAM.inp.nspin, this->exx_spacegroup_symmetry);
+                if (this->exx_spacegroup_symmetry && GlobalC::exx_info.info_global.exx_symmetry_realspace) { this->exx_ptr->cal_exx_elec(Ds, *dm_in.get_paraV_pointer(), &this->symrot_); }
+                else { this->exx_ptr->cal_exx_elec(Ds, *dm_in.get_paraV_pointer()); }
+            };
+            if(istep > 0 && flag_restart)
+                cal(*dm_last_step);
+            else
+                cal(dm);
         }
     }
 }
@@ -146,6 +156,7 @@ bool Exx_LRI_Interface<T, Tdata>::exx_after_converge(
     const K_Vectors& kv,
     const int& nspin,
     int& iter,
+    const int& istep,
     const double& etot,
     const double& scf_ene_thr)
 {   // only called if (GlobalC::exx_info.info_global.cal_exx)
@@ -154,7 +165,7 @@ bool Exx_LRI_Interface<T, Tdata>::exx_after_converge(
             GlobalC::restart.info_load.restart_exx = true;
             this->exx_ptr->Eexx = 0;
         };
-
+        
         // no separate_loop case
         if (!GlobalC::exx_info.info_global.separate_loop)
         {
@@ -164,7 +175,7 @@ bool Exx_LRI_Interface<T, Tdata>::exx_after_converge(
             // in first scf loop, exx updated once in beginning,
             // in second scf loop, exx updated every iter
 
-            if (this->two_level_step)
+            if (this->two_level_step || istep > 0)
             {
                 restart_reset();
                 return true;
