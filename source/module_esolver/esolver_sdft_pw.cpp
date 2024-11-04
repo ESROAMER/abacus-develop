@@ -152,6 +152,7 @@ void ESolver_SDFT_PW<T, Device>::before_scf(const int istep)
     }
 }
 
+template <typename T, typename Device>
 void ESolver_SDFT_PW::iter_finish(const int istep, int& iter)
 {
     // call iter_finish() of ESolver_KS
