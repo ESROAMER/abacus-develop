@@ -48,6 +48,11 @@ public:
     double& get_Eexx() const { return this->exx_ptr->Eexx; }
 
     // Processes in ESolver_KS_LCAO
+    /// @brief in before_all_runners: set symmetry according to irreducible k-points
+    /// since k-points are not reduced again after the variation of the cell and exx-symmetry must be consistent with k-points. 
+    /// In the future, we will reduce k-points again during cell-relax, then this setting can be moved to `exx_beforescf`.
+    void exx_before_all_runners(const K_Vectors& kv, const UnitCell& ucell, const Parallel_2D& pv);
+
     /// @brief in beforescf: set xc type, opt_orb, do DM mixing
     void exx_beforescf(const int istep, const K_Vectors& kv, const Charge_Mixing& chgmix, const UnitCell& ucell, const Parallel_2D& pv, const LCAO_Orbitals& orb);
 

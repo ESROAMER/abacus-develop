@@ -33,7 +33,7 @@ struct Input_para
     int kpar = 1;                   ///< ecch pool is for one k point
     int bndpar = 1;                 ///< parallel for stochastic/deterministic bands
     std::string latname = "none";   ///< lattice name
-    double ecutwfc = 50;            ///< energy cutoff for wavefunctions
+    double ecutwfc = 0;            ///< energy cutoff for wavefunctions
     double ecutrho = 0;             ///< energy cutoff for charge/potential
 
     int nx = 0, ny = 0, nz = 0;    ///< three dimension of FFT wavefunc
@@ -302,7 +302,8 @@ struct Input_para
     std::string lr_solver = "dav"; ///< the eigensolver for LR-TDDFT
     double lr_thr = 1e-2;          ///< convergence threshold of the LR-TDDFT eigensolver
     bool out_wfc_lr = false; ///< whether to output the eigenvectors (excitation amplitudes) in the particle-hole basis
-    std::vector<double> abs_wavelen_range = {0., 0.}; ///< the range of wavelength(nm) to output the absorption spectrum
+    bool lr_unrestricted = false; ///< whether to use the unrestricted construction for LR-TDDFT
+    std::vector<double> abs_wavelen_range = {}; ///< the range of wavelength(nm) to output the absorption spectrum
     double abs_broadening = 0.01;                     ///< the broadening (eta) for LR-TDDFT absorption spectrum
     std::string ri_hartree_benchmark = "none"; ///< whether to use the RI approximation for the Hartree potential in LR-TDDFT for benchmark (with FHI-aims/ABACUS read-in style)
     std::vector<int> aims_nbasis = {};  ///< the number of basis functions for each atom type used in FHI-aims (for benchmark)

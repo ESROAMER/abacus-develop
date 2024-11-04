@@ -1,10 +1,14 @@
 #ifndef DIAGO_NEW_DAV_H
 #define DIAGO_NEW_DAV_H
 
-#include "diagh.h"
+#include "module_base/macros.h"   // GetRealType
+#include "module_base/module_device/device.h"   // base_device
+#include "module_base/module_device/memory_op.h"// base_device::memory"
+
 #include "module_hsolver/diag_comm_info.h"
 #include "module_hsolver/diag_const_nums.h"
 
+#include <vector>
 #include <functional>
 
 namespace hsolver
@@ -154,8 +158,8 @@ class Diago_DavSubspace
     using syncmem_h2d_op = base_device::memory::synchronize_memory_op<T, Device, base_device::DEVICE_CPU>;
     using syncmem_d2h_op = base_device::memory::synchronize_memory_op<T, base_device::DEVICE_CPU, Device>;
 
-    const_nums<T> cs;
     const T *one = nullptr, *zero = nullptr, *neg_one = nullptr;
+    const T one_ = static_cast<T>(1.0), zero_ = static_cast<T>(0.0), neg_one_ = static_cast<T>(-1.0);
 };
 
 } // namespace hsolver
