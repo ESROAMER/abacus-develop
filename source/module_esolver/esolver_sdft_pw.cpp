@@ -155,7 +155,7 @@ void ESolver_SDFT_PW<T, Device>::before_scf(const int istep)
 void ESolver_SDFT_PW::iter_finish(const int istep, int& iter)
 {
     // call iter_finish() of ESolver_KS
-    ESolver_KS<std::complex<double>>::iter_finish(istep, iter);
+    ESolver_KS<T, Device>::iter_finish(istep, iter);
 }
 
 template <typename T, typename Device>
