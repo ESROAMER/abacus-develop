@@ -594,7 +594,7 @@ void ESolver_KS<T, Device>::runner(const int istep, UnitCell& ucell)
         this->update_pot(istep, iter);
 
         // 10) finish scf iterations
-        this->iter_finish(iter);
+        this->iter_finish(istep, iter);
 #ifdef __MPI
         double duration = (double)(MPI_Wtime() - iterstart);
 #else
@@ -659,7 +659,7 @@ void ESolver_KS<T, Device>::runner(const int istep, UnitCell& ucell)
 };
 
 template <typename T, typename Device>
-void ESolver_KS<T, Device>::iter_finish(int& iter)
+void ESolver_KS<T, Device>::iter_finish(const int istep, int& iter)
 {
     // 1 means Harris-Foulkes functional
     // 2 means Kohn-Sham functional
