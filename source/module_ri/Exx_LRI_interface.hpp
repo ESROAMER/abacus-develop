@@ -199,12 +199,14 @@ void Exx_LRI_Interface<T, Tdata>::exx_iter_finish(const K_Vectors& kv, const Uni
         {
             chgmix.close_kerker_gg0();
         }
+        this->dm_last_step = dynamic_cast<const elecstate::ElecStateLCAO<T>*>(&elec)->get_DM();
         conv_esolver = this->exx_after_converge(
             hamilt,
             *dynamic_cast<const elecstate::ElecStateLCAO<T>*>(&elec)->get_DM(),
             kv,
             PARAM.inp.nspin,
             iter,
+            istep,
             elec.f_en.etot,
             scf_ene_thr);
     }
