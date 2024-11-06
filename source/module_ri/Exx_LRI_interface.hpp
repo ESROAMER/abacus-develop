@@ -157,7 +157,7 @@ void Exx_LRI_Interface<T, Tdata>::exx_hamilt2density(elecstate::ElecState& elec,
 template<typename T, typename Tdata>
 void Exx_LRI_Interface<T, Tdata>::exx_iter_finish(const K_Vectors& kv, const UnitCell& ucell,
     hamilt::Hamilt<T>& hamilt, elecstate::ElecState& elec, Charge_Mixing& chgmix,
-    const double& scf_ene_thr, int& iter, int& istep, bool& conv_esolver)
+    const double& scf_ene_thr, int& iter, const int istep, bool& conv_esolver)
 {
     if (GlobalC::restart.info_save.save_H && (this->two_level_step > 0 || istep > 0)
         && (!GlobalC::exx_info.info_global.separate_loop || iter == 1)) // to avoid saving the same value repeatedly
