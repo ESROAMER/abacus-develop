@@ -210,7 +210,7 @@ void ESolver_KS_PW<T, Device>::before_scf(const int istep)
     //----------------------------------------------------------
     // about vdw, jiyy add vdwd3 and linpz add vdwd2
     //----------------------------------------------------------
-    auto vdw_solver = vdw::make_vdw(GlobalC::ucell, PARAM.inp);
+    auto vdw_solver = vdw::make_vdw(GlobalC::ucell, PARAM.inp, &(GlobalV::ofs_running));
     if (vdw_solver != nullptr)
     {
         this->pelec->f_en.evdw = vdw_solver->get_energy();
@@ -434,10 +434,10 @@ void ESolver_KS_PW<T, Device>::update_pot(const int istep, const int iter)
 }
 
 template <typename T, typename Device>
-void ESolver_KS_PW<T, Device>::iter_finish(int& iter)
+void ESolver_KS_PW<T, Device>::iter_finish(const int istep, int& iter)
 {
     // call iter_finish() of ESolver_KS
-    ESolver_KS<T, Device>::iter_finish(iter);
+    ESolver_KS<T, Device>::iter_finish(istep, iter);
 
     // liuyu 2023-10-24
     // D in uspp need vloc, thus needs update when veff updated
