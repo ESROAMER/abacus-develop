@@ -18,6 +18,8 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
 
     void before_all_runners(const Input_para& inp, UnitCell& cell) override;
 
+    void cal_force(ModuleBase::matrix& force) override;
+
     psi::Psi<std::complex<double>>* psi_laststep = nullptr;
 
     std::complex<double>** Hk_laststep = nullptr;
@@ -37,6 +39,8 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
     virtual void after_scf(const int istep) override;
 
     void cal_edm_tddft();
+
+    bool atom_fixed = false;
 };
 
 } // namespace ModuleESolver

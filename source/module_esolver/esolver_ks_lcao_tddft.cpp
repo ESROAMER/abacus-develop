@@ -116,8 +116,50 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 
     // this line should be optimized
     this->pelec_td = dynamic_cast<elecstate::ElecStateLCAO_TDDFT*>(this->pelec);
-}
 
+    this->atoms_fixed = !ucell.if_atoms_can_move();
+}
+void ESolver_KS_LCAO_TDDFT::cal_force(ModuleBase::matrix& force)
+{
+    if(atoms_fixed)
+    {
+        return;
+    }
+    ModuleBase::TITLE("ESolver_KS_LCAO_TDDFT", "cal_force");
+    ModuleBase::timer::tick("ESolver_KS_LCAO_TDDFT", "cal_force");
+
+    Force_Stress_LCAO<std::complex<>double> fsl(this->RA, GlobalC::ucell.nat);
+
+    fsl.getForceStress(PARAM.inp.cal_force,
+                       PARAM.inp.cal_stress,
+                       PARAM.inp.test_force,
+                       PARAM.inp.test_stress,
+                       this->pv,
+                       this->pelec,
+                       this->psi,
+                       this->GG, // mohan add 2024-04-01
+                       this->GK, // mohan add 2024-04-01
+                       two_center_bundle_,
+                       orb_,
+                       force,
+                       this->scs,
+                       this->sf,
+                       this->kv,
+                       this->pw_rho,
+#ifdef __EXX
+                       *this->exx_lri_double,
+                       *this->exx_lri_complex,
+#endif
+                       &GlobalC::ucell.symm);
+
+    // delete RA after cal_force
+
+    this->RA.delete_grid();
+
+    this->have_force = true;
+
+    ModuleBase::timer::tick("ESolver_KS_LCAO_TDDFT", "cal_force");
+}
 void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, const double ethr)
 {
     pelec->charge->save_rho_before_sum_band();
