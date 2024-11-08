@@ -128,7 +128,7 @@ void ESolver_KS_LCAO_TDDFT::cal_force(ModuleBase::matrix& force)
     ModuleBase::TITLE("ESolver_KS_LCAO_TDDFT", "cal_force");
     ModuleBase::timer::tick("ESolver_KS_LCAO_TDDFT", "cal_force");
 
-    Force_Stress_LCAO<std::complex<>double> fsl(this->RA, GlobalC::ucell.nat);
+    Force_Stress_LCAO<std::complex<double>> fsl(this->RA, GlobalC::ucell.nat);
 
     fsl.getForceStress(PARAM.inp.cal_force,
                        PARAM.inp.cal_stress,
