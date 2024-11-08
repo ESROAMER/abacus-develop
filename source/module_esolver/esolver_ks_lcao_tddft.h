@@ -40,7 +40,7 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
 
     void cal_edm_tddft();
 
-    bool atom_fixed = false;
+    bool atoms_fixed = false;
 };
 
 } // namespace ModuleESolver
