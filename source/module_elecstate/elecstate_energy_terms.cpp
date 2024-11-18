@@ -2,6 +2,7 @@
 #include "module_elecstate/potentials/H_Hartree_pw.h"
 #include "module_elecstate/potentials/efield.h"
 #include "module_elecstate/potentials/gatefield.h"
+#include "module_elecstate/potentials/H_TDDFT_pw.h"
 #include "module_hamilt_lcao/module_deepks/LCAO_deepks.h"
 #include "module_hamilt_lcao/module_dftu/dftu.h"
 #include "module_hamilt_lcao/module_deltaspin/spin_constrain.h"
@@ -23,7 +24,12 @@ double ElecState::get_etot_gatefield()
 {
     return Gatefield::etotgatefield;
 }
-
+//ETDP
+// double ElecState::get_etot_tdfield()
+// {
+//     return H_TDDFT_pw::e_td;
+// }
+//ETDP
 double ElecState::get_solvent_model_Ael()
 {
     return GlobalC::solvent_model.cal_Ael(GlobalC::ucell, this->charge->nrxx, this->charge->nxyz);
