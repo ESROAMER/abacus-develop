@@ -75,6 +75,13 @@ extern "C"
 		std::complex<double> *A, const int *IA, const int *JA, const int *DESCA,
 		int *ipiv,  int *info);
 
+	//add new func here
+	void pzgesv_(
+		const int *n, const int *nrhs,
+		const std::complex<double> *A, const int *ia, const int *ja, const int *desca,
+		int *ipiv, std::complex<double>* B, const int* ib, const int* jb, const int*descb, const int *info
+	);
+
 	void pdsygvx_(const int* itype, const char* jobz, const char* range, const char* uplo,
 		const int* n, double* A, const int* ia, const int* ja, const int*desca, double* B, const int* ib, const int* jb, const int*descb,
 		const double* vl, const double* vu, const int* il, const int* iu,
@@ -224,6 +231,14 @@ public:
 		const std::complex<double> *work, const int *lwork, const int *iwork, const int *liwork, int *info)
 	{
 		pzgetri_(&n, A, &ia, &ja, desca, ipiv, work, lwork, iwork, liwork, info);
+	}
+	static inline
+	void gesv(
+		const int n, const int nrhs,
+		const std::complex<double> *A, const int ia, const int ja, const int *desca,
+		int *ipiv, std::complex<double>* B, const int ib, const int jb, const int*descb, int *info)
+	{
+		pzgesv_(&n, &nrhs, A, &ia, &ja, desca, ipiv, B, &ib, &jb, descb, info);
 	}
 
 	static inline

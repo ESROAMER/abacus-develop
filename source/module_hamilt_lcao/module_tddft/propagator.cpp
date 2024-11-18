@@ -611,5 +611,115 @@ void Propagator::compute_propagator_etrs(const int nlocal,
                              this->ParaV->desc);
 }
 
+void Propagator::compute_propagator_cn2_svpre(const int nlocal,
+                                            const std::complex<double>* Stmp,
+                                            const std::complex<double>* Htmp,
+                                            std::complex<double>* Denominator,
+                                            std::complex<double>* Numerator,
+                                            const int print_matrix) const
+{
+    // (1) copy Htmp to Numerator & Denominator
+    ModuleBase::GlobalFunc::ZEROS(Numerator, this->ParaV->nloc);
+    BlasConnector::copy(this->ParaV->nloc, Htmp, 1, Numerator, 1);
+
+    ModuleBase::GlobalFunc::ZEROS(Denominator, this->ParaV->nloc);
+    BlasConnector::copy(this->ParaV->nloc, Htmp, 1, Denominator, 1);
+
+    if (print_matrix)
+    {
+        GlobalV::ofs_running << std::endl;
+        GlobalV::ofs_running << " S matrix :" << std::endl;
+        for (int i = 0; i < this->ParaV->nrow; i++)
+        {
+            for (int j = 0; j < this->ParaV->ncol; j++)
+            {
+                GlobalV::ofs_running << Stmp[i * this->ParaV->ncol + j].real() << "+"
+                                     << Stmp[i * this->ParaV->ncol + j].imag() << "i ";
+            }
+            GlobalV::ofs_running << std::endl;
+        }
+        GlobalV::ofs_running << std::endl;
+        GlobalV::ofs_running << std::endl;
+        GlobalV::ofs_running << " H matrix :" << std::endl;
+        for (int i = 0; i < this->ParaV->nrow; i++)
+        {
+            for (int j = 0; j < this->ParaV->ncol; j++)
+            {
+                GlobalV::ofs_running << Numerator[i * this->ParaV->ncol + j].real() << "+"
+                                     << Numerator[i * this->ParaV->ncol + j].imag() << "i ";
+            }
+            GlobalV::ofs_running << std::endl;
+        }
+        GlobalV::ofs_running << std::endl;
+    }
+
+    // ->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // (2) compute Numerator & Denominator by GEADD
+    // Numerator = Stmp - i*para * Htmp;     beta1 = - para = -0.25 * this->dt
+    // Denominator = Stmp + i*para * Htmp;   beta2 = para = 0.25 * this->dt
+    std::complex<double> alpha = {1.0, 0.0};
+    std::complex<double> beta1 = {0.0, -0.25 * this->dt};
+    std::complex<double> beta2 = {0.0, 0.25 * this->dt};
+
+    ScalapackConnector::geadd('N',
+                              nlocal,
+                              nlocal,
+                              alpha,
+                              Stmp,
+                              1,
+                              1,
+                              this->ParaV->desc,
+                              beta1,
+                              Numerator,
+                              1,
+                              1,
+                              this->ParaV->desc);
+    ScalapackConnector::geadd('N',
+                              nlocal,
+                              nlocal,
+                              alpha,
+                              Stmp,
+                              1,
+                              1,
+                              this->ParaV->desc,
+                              beta2,
+                              Denominator,
+                              1,
+                              1,
+                              this->ParaV->desc);
+
+    if (print_matrix)
+    {
+        GlobalV::ofs_running << " beta=" << beta1 << std::endl;
+        GlobalV::ofs_running << " fenmu:" << std::endl;
+        for (int i = 0; i < this->ParaV->nrow; i++)
+        {
+            for (int j = 0; j < this->ParaV->ncol; j++)
+            {
+                GlobalV::ofs_running << Denominator[i * this->ParaV->ncol + j].real() << "+"
+                                     << Denominator[i * this->ParaV->ncol + j].imag() << "i ";
+            }
+            GlobalV::ofs_running << std::endl;
+        }
+        GlobalV::ofs_running << std::endl;
+    }
+
+    if (print_matrix)
+    {
+        GlobalV::ofs_running << " fenzi:" << std::endl;
+        for (int i = 0; i < this->ParaV->nrow; i++)
+        {
+            for (int j = 0; j < this->ParaV->ncol; j++)
+            {
+                GlobalV::ofs_running << Numerator[i * this->ParaV->ncol + j].real() << "+"
+                                     << Numerator[i * this->ParaV->ncol + j].imag() << "i ";
+            }
+            GlobalV::ofs_running << std::endl;
+        }
+        GlobalV::ofs_running << std::endl;
+    }
+
+}
+
 #endif
 } // namespace module_tddft
