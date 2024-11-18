@@ -49,6 +49,9 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
         ->get_DM()
         ->EDMK.resize(kv.get_nks());
     for (int ik = 0; ik < kv.get_nks(); ++ik) {
+
+        p_hamilt->updateHk(ik);
+
         std::complex<double>* tmp_dmk
             = dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->get_DM()->get_DMK_pointer(ik);
 
@@ -147,11 +150,11 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
                 &nlocal,
                 &nlocal,
                 &one_float,
-                tmp_dmk,
+                Htmp,
                 &one_int,
                 &one_int,
                 this->pv.desc,
-                Htmp,
+                Sinv,
                 &one_int,
                 &one_int,
                 this->pv.desc,
@@ -161,7 +164,7 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
                 &one_int,
                 this->pv.desc);
 
-        pzgemm_(&N_char,
+        pzgemm_(&T_char,
                 &N_char,
                 &nlocal,
                 &nlocal,
@@ -171,7 +174,7 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
                 &one_int,
                 &one_int,
                 this->pv.desc,
-                Sinv,
+                tmp_dmk,
                 &one_int,
                 &one_int,
                 this->pv.desc,
@@ -202,16 +205,16 @@ void ESolver_KS_LCAO_TDDFT::cal_edm_tddft()
                 this->pv.desc);
 
         pzgemm_(&N_char,
-                &N_char,
+                &T_char,
                 &nlocal,
                 &nlocal,
                 &nlocal,
                 &one_float,
-                tmp3,
+                tmp_dmk,
                 &one_int,
                 &one_int,
                 this->pv.desc,
-                tmp_dmk,
+                tmp3,
                 &one_int,
                 &one_int,
                 this->pv.desc,
