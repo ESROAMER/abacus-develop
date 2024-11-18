@@ -1,6 +1,5 @@
 #include "td_current_io.h"
 
-#include "module_parameter/parameter.h"
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
 #include "module_base/libm/libm.h"
@@ -11,9 +10,10 @@
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_elecstate/potentials/H_TDDFT_pw.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h"
-#include "module_hamilt_lcao/module_tddft/td_velocity.h"
 #include "module_hamilt_lcao/module_tddft/td_current.h"
+#include "module_hamilt_lcao/module_tddft/td_velocity.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_parameter/parameter.h"
 
 #ifdef __LCAO
 
@@ -28,7 +28,7 @@ void ModuleIO::cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>
     int ld_hk = DM_real.get_paraV_pointer()->nrow;
     int ld_hk2 = 2 * ld_hk;
     // tmp for is
-    int ik_begin = DM_real.get_DMK_nks() / nspin * (is - 1); // jump this->_nks for spin_down if nspin==2
+    int ik_begin = DM_real.get_DMK_nks() / nspin * (is - 1); // jump nk for spin_down if nspin==2
 
     hamilt::HContainer<double>* tmp_DMR_real = DM_real.get_DMR_vector()[is - 1];
     hamilt::HContainer<double>* tmp_DMR_imag = DM_imag.get_DMR_vector()[is - 1];
@@ -156,7 +156,7 @@ void ModuleIO::write_current(const int istep,
         cal_current->calculate_grad_term();
         for (int dir = 0; dir < 3; dir++)
         {
-            current_term[dir]=cal_current->get_current_term_pointer(dir);
+            current_term[dir] = cal_current->get_current_term_pointer(dir);
         }
     }
     else
@@ -167,16 +167,16 @@ void ModuleIO::write_current(const int istep,
         }
         for (int dir = 0; dir < 3; dir++)
         {
-            current_term[dir]=TD_Velocity::td_vel_op->get_current_term_pointer(dir);
+            current_term[dir] = TD_Velocity::td_vel_op->get_current_term_pointer(dir);
         }
     }
-
 
     // construct a DensityMatrix object
     // Since the function cal_dm_psi do not suport DMR in complex type, I replace it with two DMR in double type. Should
     // be refactored in the future.
-    elecstate::DensityMatrix<std::complex<double>, double> DM_real(&kv, pv, PARAM.inp.nspin);
-    elecstate::DensityMatrix<std::complex<double>, double> DM_imag(&kv, pv, PARAM.inp.nspin);
+    const int nspin_dm = std::map<int, int>({ {1,1},{2,2},{4,1} })[PARAM.inp.nspin];
+    elecstate::DensityMatrix<std::complex<double>, double> DM_real(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
+    elecstate::DensityMatrix<std::complex<double>, double> DM_imag(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
     // calculate DMK
     elecstate::cal_dm_psi(DM_real.get_paraV_pointer(), pelec->wg, psi[0], DM_real);
 
@@ -241,12 +241,17 @@ void ModuleIO::write_current(const int istep,
                         double Rz = ra.info[iat][cb][2];
                         //std::cout<< "iat1: " << iat1 << " iat2: " << iat2 << " Rx: " << Rx << " Ry: " << Ry << " Rz:" << Rz << std::endl;
                         //  get BaseMatrix
-                        hamilt::BaseMatrix<double>* tmp_matrix_real = DM_real.get_DMR_pointer(is)->find_matrix(iat1, iat2, Rx, Ry, Rz);
-                        hamilt::BaseMatrix<double>* tmp_matrix_imag = DM_imag.get_DMR_pointer(is)->find_matrix(iat1, iat2, Rx, Ry, Rz);
+                        hamilt::BaseMatrix<double>* tmp_matrix_real
+                            = DM_real.get_DMR_pointer(is)->find_matrix(iat1, iat2, Rx, Ry, Rz);
+                        hamilt::BaseMatrix<double>* tmp_matrix_imag
+                            = DM_imag.get_DMR_pointer(is)->find_matrix(iat1, iat2, Rx, Ry, Rz);
                         // refactor
-                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvx = current_term[0]->find_matrix(iat1, iat2, Rx, Ry, Rz);
-                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvy = current_term[1]->find_matrix(iat1, iat2, Rx, Ry, Rz);
-                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvz = current_term[2]->find_matrix(iat1, iat2, Rx, Ry, Rz);
+                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvx
+                            = current_term[0]->find_matrix(iat1, iat2, Rx, Ry, Rz);
+                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvy
+                            = current_term[1]->find_matrix(iat1, iat2, Rx, Ry, Rz);
+                        hamilt::BaseMatrix<std::complex<double>>* tmp_m_rvz
+                            = current_term[2]->find_matrix(iat1, iat2, Rx, Ry, Rz);
                         if (tmp_matrix_real == nullptr)
                         {
                             continue;
@@ -277,13 +282,13 @@ void ModuleIO::write_current(const int istep,
                                 local_current_ik[0] -= dm2d1_real * rvx.real() - dm2d1_imag * rvx.imag();    
                                 local_current_ik[1] -= dm2d1_real * rvy.real() - dm2d1_imag * rvy.imag();
                                 local_current_ik[2] -= dm2d1_real * rvz.real() - dm2d1_imag * rvz.imag();
-                                                       
+
                                 ++local_total_irr;
                                 ++irr;
                             } // end kk
-                        }     // end jj
-                    }         // end cb
-                }             // end iat
+                        } // end jj
+                    } // end cb
+                } // end iat
 #ifdef _OPENMP
 #pragma omp critical(cal_current_k_reduce)
                 {
@@ -313,9 +318,8 @@ void ModuleIO::write_current(const int istep,
                 fout.close();
             }
             // write end
-            ModuleBase::timer::tick("ModuleIO", "write_current");
         } // end nks
-    }     // end is
+    } // end is
     if (GlobalV::MY_RANK == 0)
     {
         std::string filename = PARAM.globalv.global_out_dir + "current_total.dat";
@@ -326,10 +330,12 @@ void ModuleIO::write_current(const int istep,
         fout << istep << " " << current_total[0] << " " << current_total[1] << " " << current_total[2] << std::endl;
         fout.close();
     }
-    if(!TD_Velocity::tddft_velocity)
+    if (!TD_Velocity::tddft_velocity)
     {
         delete cal_current;
     }
+
+    ModuleBase::timer::tick("ModuleIO", "write_current");
     return;
 }
 #endif //__LCAO

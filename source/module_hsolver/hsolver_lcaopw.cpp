@@ -8,7 +8,6 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_hamilt_pw/hamilt_pwdft/hamilt_pw.h"
 #include "module_hamilt_pw/hamilt_pwdft/wavefunc.h"
-#include "module_hsolver/diagh.h"
 #include "module_hsolver/diago_iter_assist.h"
 #include "module_parameter/parameter.h"
 
@@ -193,11 +192,6 @@ void HSolverLIP<T>::paw_func_after_kloop(psi::Psi<T>& psi, elecstate::ElecState*
 }
 #endif
 
-template <typename T>
-HSolverLIP<T>::HSolverLIP(ModulePW::PW_Basis_K* wfc_basis_in)
-{
-    this->wfc_basis = wfc_basis_in;
-}
 
 /*
     lcao_in_pw

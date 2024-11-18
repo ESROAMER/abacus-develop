@@ -121,6 +121,7 @@ OBJS_MAIN=main.o\
 
 OBJS_BASE=abfs-vector3_order.o\
     assoc_laguerre.o\
+    blas_connector.o\
     complexarray.o\
     complexmatrix.o\
     clebsch_gordan_coeff.o\
@@ -213,6 +214,7 @@ OBJS_ELECSTAT=elecstate.o\
     elecstate_print.o\
     elecstate_pw.o\
     elecstate_pw_sdft.o\
+    elecstate_pw_cal_tau.o\
     elecstate_op.o\
     efield.o\
     gatefield.o\
@@ -226,6 +228,7 @@ OBJS_ELECSTAT=elecstate.o\
 
 OBJS_ELECSTAT_LCAO=elecstate_lcao.o\
       elecstate_lcao_tddft.o\
+      elecstate_lcao_cal_tau.o\
       density_matrix.o\
       cal_dm_psi.o\
 
@@ -240,7 +243,6 @@ OBJS_ESOLVER=esolver.o\
     esolver_of.o\
     esolver_of_tool.o\
     esolver_of_interface.o\
-    print_funcs.o\
     pw_fun.o\
     pw_init_after_vc.o\
     pw_init_globalc.o\
@@ -288,6 +290,7 @@ OBJS_GINT=gint.o\
       init_orb.o\
 
 OBJS_HAMILT=hamilt_pw.o\
+    hamilt_sdft_pw.o\
     operator.o\
     operator_pw.o\
     ekinetic_pw.o\
@@ -454,7 +457,12 @@ OBJS_XC=xc_functional.o\
     xc_functional_gradcorr.o\
     xc_functional_wrapper_xc.o\
     xc_functional_wrapper_gcxc.o\
-    xc_functional_wrapper_tauxc.o\
+    xc_functional_libxc.o\
+    xc_functional_libxc_tools.o\
+    xc_functional_libxc_vxc.o\
+    xc_functional_libxc_wrapper_xc.o\
+    xc_functional_libxc_wrapper_gcxc.o\
+    xc_functional_libxc_wrapper_tauxc.o\
     xc_funct_exch_lda.o\
     xc_funct_corr_lda.o\
     xc_funct_exch_gga.o\
@@ -476,7 +484,6 @@ OBJS_IO=input_conv.o\
     output.o\
     print_info.o\
     read_cube.o\
-    read_rho.o\
     rhog_io.o\
     read_exit_file.o\
     read_wfc_pw.o\
@@ -496,6 +503,7 @@ OBJS_IO=input_conv.o\
     winput.o\
     write_cube.o\
     write_elecstat_pot.o\
+    write_elf.o\
     write_dipole.o\
     td_current_io.o\
     write_wfc_r.o\
@@ -523,6 +531,7 @@ OBJS_IO=input_conv.o\
     read_input_item_other.o\
     read_input_item_output.o\
     read_set_globalv.o\
+    orb_io.o\
 
 OBJS_IO_LCAO=cal_r_overlap_R.o\
       write_orb_info.o\
@@ -559,12 +568,9 @@ OBJS_LCAO=evolve_elec.o\
       FORCE_STRESS.o\
 	  FORCE_gamma.o\
 	  FORCE_k.o\
-	  fvl_dphi_gamma.o\
-	  fvl_dphi_k.o\
-	  fedm_gamma.o\
-	  fedm_k.o\
-	  ftvnl_dphi_gamma.o\
-	  ftvnl_dphi_k.o\
+      stress_tools.o\
+      edm.o\
+      pulay_force_stress_center2.o\
 	  fvnl_dbeta_gamma.o\
 	  fvnl_dbeta_k.o\
 	  grid_init.o\
@@ -605,6 +611,8 @@ OBJS_MODULE_RI=conv_coulomb_pot_k.o\
       Mix_Matrix.o\
       symmetry_rotation.o\
       symmetry_irreducible_sector.o\
+      auxiliary_func.o\
+      ewald_Vq_tools.o\
 
 OBJS_PARALLEL=parallel_common.o\
     parallel_global.o\
@@ -642,7 +650,6 @@ OBJS_SRCPW=H_Ewald_pw.o\
     structure_factor_k.o\
     soc.o\
     sto_iter.o\
-    sto_hchi.o\
     sto_che.o\
     sto_wf.o\
     sto_func.o\
@@ -722,7 +729,6 @@ OBJS_TENSOR=tensor.o\
     operator_lr_exx.o\
     kernel_xc.o\
     pot_hxc_lrtd.o\
-    hsolver_lrtd.o\
     lr_spectrum.o\
     hamilt_casida.o\
     esolver_lrtd_lcao.o\

@@ -61,19 +61,12 @@ namespace ModuleESolver
         //! K points in Brillouin zone
         K_Vectors kv;
 
-        bool conv_elec; // If electron density is converged in scf.
-
       protected:
         //! Something to do after SCF iterations when SCF is converged or comes to the max iter step.
         virtual void after_scf(const int istep);
 
         //! Charge extrapolation
         Charge_Extra CE;
-
-      private:
-       
-        //! Print charge density using FFT
-        void print_rhofft(const Input_para& inp, std::ofstream &ofs);
     };
 }
 

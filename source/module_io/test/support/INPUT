@@ -51,6 +51,10 @@ erf_sigma                      4 #the width of the energy step for reciprocal ve
 fft_mode                       0 #mode of FFTW
 pw_diag_thr                    0.01 #threshold for eigenvalues is cg electron iterations
 scf_thr                        1e-08 #charge density error
+scf_ene_thr                    1e-06 #total energy error threshold
+scf_os_stop                    1 #whether to stop scf when oscillation is detected
+scf_os_thr                     -0.02 #charge density threshold for oscillation
+scf_os_ndim                    10 #number of old iterations used for oscillation detection
 scf_thr_type                   2 #type of the criterion of scf_thr, 1: reci drho for pw, 2: real drho for lcao
 init_wfc                       atomic #start wave functions are from 'atomic', 'atomic+random', 'random' or 'file'
 init_chg                       atomic #start charge is from 'atomic' or file
@@ -269,8 +273,12 @@ vdw_cutoff_period   3 3 3 #periods of periodic structure
 
 #Parameters (14.exx)
 exx_hybrid_alpha               default #
-exx_hse_omega                  0.11 #
+exx_cam_alpha                  default #
+exx_cam_beta                   default #
+exx_hse_omega                  default #
 exx_separate_loop              1 #0 or 1
+exx_use_ewald                  0 
+exx_fq_type                    1 
 exx_hybrid_step                100 #
 exx_mixing_beta                1.0 #
 exx_lambda                     0.3 #

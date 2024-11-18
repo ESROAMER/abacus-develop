@@ -6,34 +6,50 @@
 #ifndef RI_2D_COMM_HPP
 #define RI_2D_COMM_HPP
 
-#include "RI_2D_Comm.h"
-#include "RI_Util.h"
-#include "module_hamilt_pw/hamilt_pwdft/global.h"
-#include "module_base/tool_title.h"
-#include "module_base/timer.h"
+#include <Comm/Comm_Assemble/Comm_Assemble.h>
+#include <Comm/example/Communicate_Map-1.h>
+#include <Comm/example/Communicate_Map-2.h>
+#include <RI/comm/example/Communicate_Map_Period.h>
+#include <RI/comm/mix/Communicate_Tensors_Map.h>
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h"
 #include "module_parameter/parameter.h"
 #include <RI/global/Global_Func-2.h>
 
 #include <cmath>
-#include <string>
 #include <stdexcept>
+#include <string>
 
-inline RI::Tensor<double> tensor_conj(const RI::Tensor<double>& t) { return t; }
-inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::complex<double>>& t)
+#include "RI_2D_Comm.h"
+#include "RI_Util.h"
+#include "module_base/timer.h"
+#include "module_base/tool_title.h"
+#include "module_hamilt_pw/hamilt_pwdft/global.h"
+
+// inline RI::Tensor<double> tensor_conj(const RI::Tensor<double>& t) { return t; }
+// inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::complex<double>>& t)
+// {
+//     RI::Tensor<std::complex<double>> r(t.shape);
+//     for (int i = 0;i < t.data->size();++i)(*r.data)[i] = std::conj((*t.data)[i]);
+//     return r;
+// }
+// inline RI::Tensor<double> tensor_real(const RI::Tensor<double>& t) { return t; }
+// inline RI::Tensor<std::complex<double>> tensor_real(const RI::Tensor<std::complex<double>>& t)
+// {
+// 	RI::Tensor<std::complex<double>> r(t.shape);
+// 	for (int i = 0;i < t.data->size();++i)(*r.data)[i] = ((*t.data)[i]).real();
+// 	return r;
+// }
+
+template <typename Tdata, typename Tmatrix>
+auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors& kv,
+                                const std::vector<const Tmatrix*>& mks_2D,
+                                const Parallel_2D& pv,
+                                const int nspin, 
+                                const bool spgsym)
+    -> std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>
 {
-    RI::Tensor<std::complex<double>> r(t.shape);
-    for (int i = 0; i < t.data->size(); ++i) {
-        (*r.data)[i] = std::conj((*t.data)[i]);
-    }
-    return r;
-}
-template<typename Tdata, typename Tmatrix>
-auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors & kv, const std::vector<const Tmatrix*>&mks_2D, const Parallel_2D & pv, const int nspin, const bool spgsym)
--> std::vector<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>>
-{
-	ModuleBase::TITLE("RI_2D_Comm","split_m2D_ktoR");
-	ModuleBase::timer::tick("RI_2D_Comm", "split_m2D_ktoR");
+    ModuleBase::TITLE("RI_2D_Comm", "split_m2D_ktoR");
+    ModuleBase::timer::tick("RI_2D_Comm", "split_m2D_ktoR");
 
 	const TC period = RI_Util::get_Born_vonKarmen_period(kv);
 	const std::map<int,int> nspin_k = {{1,1}, {2,2}, {4,1}};
@@ -65,7 +81,7 @@ auto RI_2D_Comm::split_m2D_ktoR(const K_Vectors & kv, const std::vector<const Tm
                         * RI::Global_Func::convert<Tdata_m>(std::exp(
                             -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell) * GlobalC::ucell.latvec))));
                     if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.get_nkstot_full())) == 2)
-                        { set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5))); }
+                        { set_mR_2D(tensor_real(mk_2D * frac)); }
                     else { set_mR_2D(mk_2D * frac); }
                 }
                 else
@@ -164,8 +180,7 @@ void RI_2D_Comm::add_Hexx(
 	ModuleBase::timer::tick("RI_2D_Comm", "add_Hexx");
 }
 
-std::tuple<int,int,int>
-RI_2D_Comm::get_iat_iw_is_block(const int iwt)
+std::tuple<int, int, int> RI_2D_Comm::get_iat_iw_is_block(const int iwt)
 {
 	const int iat = GlobalC::ucell.iwt2iat[iwt];
 	const int iw = GlobalC::ucell.iwt2iw[iwt];
@@ -191,8 +206,7 @@ int RI_2D_Comm::get_is_block(const int is_k, const int is_row_b, const int is_co
 	}
 }
 
-std::tuple<int,int>
-RI_2D_Comm::split_is_block(const int is_b)
+std::tuple<int, int> RI_2D_Comm::split_is_block(const int is_b)
 {
 	switch(PARAM.inp.nspin)
 	{
@@ -204,8 +218,6 @@ RI_2D_Comm::split_is_block(const int is_b)
 			throw std::invalid_argument(std::string(__FILE__)+" line "+std::to_string(__LINE__));
 	}
 }
-
-
 
 int RI_2D_Comm::get_iwt(const int iat, const int iw_b, const int is_b)
 {
@@ -279,6 +291,121 @@ void RI_2D_Comm::add_HexxR(
     }
 
     ModuleBase::timer::tick("RI_2D_Comm", "add_HexxR");
+}
+
+template <typename TA, typename TAC, typename T>
+std::map<TA, std::map<TAC, T>> RI_2D_Comm::comm_map2_first(const MPI_Comm& mpi_comm,
+                                                           const std::map<TA, std::map<TAC, T>>& Ds_in,
+                                                           const std::set<TA>& s0,
+                                                           const std::set<TA>& s1)
+{
+    RI::Communicate_Map_Period::Judge_Map2_First<TA> judge;
+    judge.s0 = s0;
+    judge.s1 = s1;
+    return comm_map2(mpi_comm, Ds_in, judge);
+}
+
+template <typename TA, typename TAC, typename T, typename Tjudge>
+std::map<TA, std::map<TAC, T>> RI_2D_Comm::comm_map2(const MPI_Comm& mpi_comm,
+                                                     const std::map<TA, std::map<TAC, T>>& Ds_in,
+                                                     const Tjudge& judge)
+{
+    Comm::Comm_Assemble<std::tuple<TA, TAC>, T, std::map<TA, std::map<TAC, T>>, Tjudge, std::map<TA, std::map<TAC, T>>>
+        com(mpi_comm);
+
+    com.traverse_keys_provide = Comm::Communicate_Map::traverse_keys<TA, TAC, T>;
+    com.get_value_provide = Comm::Communicate_Map::get_value<TA, TAC, T>;
+    com.set_value_require = set_value_add<TA, TAC, T>;
+    com.flag_lock_set_value = Comm::Comm_Tools::Lock_Type::Copy_merge;
+    com.init_datas_local = Comm::Communicate_Map::init_datas_local<TA, TAC, T>;
+    com.add_datas = add_datas<TA, TAC, T>;
+
+    std::map<TA, std::map<TAC, T>> Ds_out;
+    com.communicate(Ds_in, judge, Ds_out);
+    return Ds_out;
+}
+
+template <typename Tkey, typename Tvalue>
+void RI_2D_Comm::set_value_add(Tkey&& key, Tvalue&& value, std::map<Tkey, Tvalue>& data)
+{
+    using namespace RI::Array_Operator;
+    auto ptr = data.find(key);
+    if (ptr == data.end())
+        data[key] = std::move(value);
+    else
+        ptr->second = ptr->second + std::move(value);
+}
+
+template <typename Tkey0, typename Tkey1, typename Tvalue>
+void RI_2D_Comm::set_value_add(std::tuple<Tkey0, Tkey1>&& key,
+                               Tvalue&& value,
+                               std::map<Tkey0, std::map<Tkey1, Tvalue>>& data)
+{
+    set_value_add(std::move(std::get<1>(key)), std::move(value), data[std::get<0>(key)]);
+}
+
+template <typename Tkey, typename Tvalue>
+void RI_2D_Comm::add_datas(std::map<Tkey, Tvalue>&& data_local, std::map<Tkey, Tvalue>& data_recv)
+{
+    using namespace RI::Array_Operator;
+    auto ptr_local = data_local.begin();
+    auto ptr_recv = data_recv.begin();
+    for (; ptr_local != data_local.end() && ptr_recv != data_recv.end();)
+    {
+        const Tkey& key_local = ptr_local->first;
+        const Tkey& key_recv = ptr_recv->first;
+        if (key_local == key_recv)
+        {
+            ptr_recv->second = ptr_recv->second + std::move(ptr_local->second);
+            ++ptr_local;
+            ++ptr_recv;
+        }
+        else if (key_local < key_recv)
+        {
+            ptr_recv = data_recv.emplace_hint(ptr_recv, key_local, std::move(ptr_local->second));
+            ++ptr_local;
+        }
+        else
+        {
+            ++ptr_recv;
+        }
+    }
+    for (; ptr_local != data_local.end(); ++ptr_local)
+    {
+        ptr_recv = data_recv.emplace_hint(ptr_recv, ptr_local->first, std::move(ptr_local->second));
+    }
+}
+
+template <typename Tkey0, typename Tkey1, typename Tvalue>
+void RI_2D_Comm::add_datas(std::map<Tkey0, std::map<Tkey1, Tvalue>>&& data_local,
+                           std::map<Tkey0, std::map<Tkey1, Tvalue>>& data_recv)
+{
+    auto ptr_local = data_local.begin();
+    auto ptr_recv = data_recv.begin();
+    for (; ptr_local != data_local.end() && ptr_recv != data_recv.end();)
+    {
+        const Tkey0& key_local = ptr_local->first;
+        const Tkey0& key_recv = ptr_recv->first;
+        if (key_local == key_recv)
+        {
+            add_datas(std::move(ptr_local->second), ptr_recv->second);
+            ++ptr_local;
+            ++ptr_recv;
+        }
+        else if (key_local < key_recv)
+        {
+            ptr_recv = data_recv.emplace_hint(ptr_recv, key_local, std::move(ptr_local->second));
+            ++ptr_local;
+        }
+        else
+        {
+            ++ptr_recv;
+        }
+    }
+    for (; ptr_local != data_local.end(); ++ptr_local)
+    {
+        ptr_recv = data_recv.emplace_hint(ptr_recv, ptr_local->first, std::move(ptr_local->second));
+    }
 }
 
 #endif

@@ -7,26 +7,26 @@
 #define EXX_LRI_H
 
 #include "LRI_CV.h"
-#include "module_hamilt_general/module_xc/exx_info.h"
-#include "module_basis/module_ao/ORB_atomic_lm.h"
+#include "ewald_Vq.h"
 #include "module_base/matrix.h"
-#include <RI/physics/Exx.h>
+#include "module_basis/module_ao/ORB_atomic_lm.h"
+#include "module_hamilt_general/module_xc/exx_info.h"
 
-#include <vector>
+#include <RI/physics/Exx.h>
 #include <array>
-#include <map>
 #include <deque>
+#include <map>
 #include <mpi.h>
 
 #include "module_exx_symmetry/symmetry_rotation.h"
 
-	class Parallel_Orbitals;
-	
-	template<typename T, typename Tdata>
-	class RPA_LRI;
+class Parallel_Orbitals;
 
-	template<typename T, typename Tdata>
-	class Exx_LRI_Interface;
+template <typename T, typename Tdata>
+class RPA_LRI;
+
+template <typename T, typename Tdata>
+class Exx_LRI_Interface;
 
     namespace LR
     {
@@ -49,7 +49,7 @@ private:
 	using TatomR = std::array<double,Ndim>;		// tmp
 
 public:
-    Exx_LRI(const Exx_Info::Exx_Info_RI& info_in) :info(info_in) {}
+    Exx_LRI(const Exx_Info::Exx_Info_RI& info_in, const Exx_Info::Exx_Info_Ewald& info_ewald_in) :info(info_in), info_ewald(info_ewald_in), evq(info, info_ewald) {}
     Exx_LRI operator=(const Exx_LRI&) = delete;
     Exx_LRI operator=(Exx_LRI&&);
 
@@ -61,24 +61,28 @@ public:
     void cal_exx_stress();
     std::vector<std::vector<int>> get_abfs_nchis() const;
 
-	std::vector< std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Hexxs;
+    std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Hexxs;
     double Eexx;
 	ModuleBase::matrix force_exx;
 	ModuleBase::matrix stress_exx;
     
 
-private:
-	const Exx_Info::Exx_Info_RI &info;
-	MPI_Comm mpi_comm;
-	const K_Vectors *p_kv = nullptr;
+  private:
+    const Exx_Info::Exx_Info_RI& info;
+    const Exx_Info::Exx_Info_Ewald& info_ewald;
+    MPI_Comm mpi_comm;
+    const K_Vectors* p_kv = nullptr;
+    ORB_gaunt_table MGT;
     std::vector<double> orb_cutoff_;
 
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
-
-	LRI_CV<Tdata> cv;
-	RI::Exx<TA,Tcell,Ndim,Tdata> exx_lri;
+    std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
+    std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
+    std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
+    std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp_sr;
+    LRI_CV<Tdata> cv;
+    LRI_CV<Tdata> sr_cv;
+    RI::Exx<TA, Tcell, Ndim, Tdata> exx_lri;
+    Ewald_Vq<Tdata> evq;
 
 	void cal_exx_ions(const bool write_cv = false);
     void cal_exx_elec(const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>& Ds,

@@ -1,16 +1,21 @@
 #ifndef CONV_COULOMB_POT_K_H
 #define CONV_COULOMB_POT_K_H
 
-#include <vector>
 #include <map>
 #include <string>
+#include <vector>
+
+#include "module_cell/klist.h"
 
 namespace Conv_Coulomb_Pot_K
 {
 	enum class Ccp_Type{		//	parameter:
 		Ccp,					//
 		Hf,						//		"hf_Rcut"
-		Hse};					//		"hse_omega"
+		Hse,    //  	"hse_omega"
+        Cam,    //  	"hse_omega", "cam_alpha", "cam_beta", "hf_Rcut"
+		Ccp_Cam // "hse_omega", "cam_alpha", "cam_beta"
+    };
 
 	template<typename T> T cal_orbs_ccp(
 		const T &orbs,
@@ -34,6 +39,19 @@ namespace Conv_Coulomb_Pot_K
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
 		const double hse_omega);
+  std::vector<double> cal_psi_cam(
+                                           const std::vector<double>& psif,
+                                           const std::vector<double>& k_radial,
+                                           const double omega,
+                                           const double cam_alpha,
+                                           const double cam_beta,
+                                           const double Rc);
+
+  std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
+                                               const std::vector<double>& k_radial,
+                                               const double omega,
+                                               const double cam_alpha,
+                                               const double cam_beta);
 }
 
 #include "conv_coulomb_pot_k.hpp"

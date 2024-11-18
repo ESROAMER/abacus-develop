@@ -33,9 +33,8 @@ template <typename T, typename Tdata> class RPA_LRI
     using TatomR = std::array<double, Ndim>; // tmp
 
   public:
-    RPA_LRI(const Exx_Info::Exx_Info_RI &info_in) : info(info_in)
-    {
-    }
+    RPA_LRI(const Exx_Info::Exx_Info_RI &info_in, const Exx_Info::Exx_Info_Ewald &info_ewald_in)
+        :info(info_in), info_ewald(info_ewald_in){};
     ~RPA_LRI(){};
     void init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, const std::vector<double>& orb_cutoff);
     void cal_rpa_cv();
@@ -61,6 +60,7 @@ template <typename T, typename Tdata> class RPA_LRI
 
   private:
     const Exx_Info::Exx_Info_RI &info;
+    const Exx_Info::Exx_Info_Ewald &info_ewald;
     const K_Vectors *p_kv=nullptr;
     MPI_Comm mpi_comm;
     std::vector<double> orb_cutoff_;
@@ -77,7 +77,7 @@ template <typename T, typename Tdata> class RPA_LRI
 
     // Tdata post_process_Erpa( const Tdata &Erpa_in ) const;
 };
-Exx_LRI<double> exx_lri_rpa(GlobalC::exx_info.info_ri);
+Exx_LRI<double> exx_lri_rpa(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
 #include "RPA_LRI.hpp"
 
 #endif

@@ -166,19 +166,6 @@ void Input_Conv::Convert()
     //----------------------------------------------------------
     // main parameters / electrons / spin ( 10/16 )
     //----------------------------------------------------------
-    //  suffix
-    if (PARAM.inp.calculation == "md" && PARAM.mdp.md_restart) // md restart  liuyu add 2023-04-12
-    {
-        int istep = 0;
-        double temperature = 0.0;
-        MD_func::current_md_info(GlobalV::MY_RANK, PARAM.globalv.global_readin_dir, istep, temperature);
-        if (PARAM.inp.read_file_dir == "auto")
-        {
-            GlobalV::stru_file = PARAM.globalv.global_stru_dir + "STRU_MD_" + std::to_string(istep);
-        }
-    } else if (PARAM.inp.stru_file != "") {
-        GlobalV::stru_file = PARAM.inp.stru_file;
-    }
 
     ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running, "pseudo_dir", PARAM.inp.pseudo_dir);
     ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running, "orbital_dir", PARAM.inp.orbital_dir);
@@ -194,13 +181,7 @@ void Input_Conv::Convert()
     }
 
 
-    GlobalV::NBANDS = PARAM.inp.nbands;
-
-    GlobalV::device_flag = base_device::information::get_device_flag(PARAM.inp.device,
-                                                                     PARAM.inp.ks_solver,
-                                                                     PARAM.inp.basis_type);
-
-    if (GlobalV::device_flag == "gpu" && PARAM.inp.basis_type == "pw")
+    if (PARAM.inp.device  == "gpu" && PARAM.inp.basis_type == "pw")
     {
         GlobalV::KPAR = base_device::information::get_device_kpar(PARAM.inp.kpar);
     }
@@ -216,7 +197,7 @@ void Input_Conv::Convert()
     {
         GlobalV::KPAR = PARAM.inp.kpar;
     }
-    if (GlobalV::device_flag == "cpu" and PARAM.inp.precision == "single")
+    if (PARAM.inp.device  == "cpu" and PARAM.inp.precision == "single")
     {
 // cpu single precision is not supported while float_fftw lib is not available
 #ifndef __ENABLE_FLOAT_FFTW
@@ -290,11 +271,6 @@ void Input_Conv::Convert()
     //----------------------------------------------------------
     // Yu Liu add 2022-09-13
     //----------------------------------------------------------
-    GlobalV::nelec = PARAM.inp.nelec;
-    if (PARAM.globalv.two_fermi)
-    {
-        GlobalV::nupdown = PARAM.inp.nupdown;
-    }
     elecstate::Gatefield::zgate = PARAM.inp.zgate;
     elecstate::Gatefield::relax = PARAM.inp.relax;
     elecstate::Gatefield::block = PARAM.inp.block;
@@ -337,10 +313,11 @@ void Input_Conv::Convert()
                        tolower);
         GlobalC::restart.folder = PARAM.globalv.global_readin_dir + "restart/";
         ModuleBase::GlobalFunc::MAKE_DIR(GlobalC::restart.folder);
-        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0"
-            || dft_functional_lower == "hse"
-            || dft_functional_lower == "opt_orb"
-            || dft_functional_lower == "scan0") {
+        if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "hse"
+            || dft_functional_lower == "opt_orb" || dft_functional_lower == "scan0"|| dft_functional_lower == "lc_pbe"
+            || dft_functional_lower == "lc_wpbe" || dft_functional_lower == "lrc_wpbe"|| dft_functional_lower == "lrc_wpbeh"
+            || dft_functional_lower == "cam_pbeh")
+        {
             GlobalC::restart.info_save.save_charge = true;
             GlobalC::restart.info_save.save_H = true;
         } else {
@@ -358,7 +335,12 @@ void Input_Conv::Convert()
         if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0"
             || dft_functional_lower == "hse"
             || dft_functional_lower == "opt_orb"
-            || dft_functional_lower == "scan0") {
+            || dft_functional_lower == "scan0"
+            || dft_functional_lower == "lc_pbe"
+            || dft_functional_lower == "lc_wpbe" 
+            || dft_functional_lower == "lrc_wpbe"
+            || dft_functional_lower == "lrc_wpbeh"
+            || dft_functional_lower == "cam_pbeh") {
             GlobalC::restart.info_load.load_charge = true;
             GlobalC::restart.info_load.load_H = true;
         } else {
@@ -380,16 +362,46 @@ void Input_Conv::Convert()
     if (dft_functional_lower == "hf" || dft_functional_lower == "pbe0" || dft_functional_lower == "scan0")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.ccp_type
-            = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
-    } else if (dft_functional_lower == "hse") {
+        if (PARAM.inp.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
+            GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.fq_type = Singular_Value::Fq_type(PARAM.inp.exx_fq_type);
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
+        }
+        else
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Hf;
+    }
+    else if (dft_functional_lower == "hse")
+    {
         GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.ccp_type
             = Conv_Coulomb_Pot_K::Ccp_Type::Hse;
     } else if (dft_functional_lower == "opt_orb") {
         GlobalC::exx_info.info_global.cal_exx = false;
         Exx_Abfs::Jle::generate_matrix = true;
-    } else {
+    }
+    else if (dft_functional_lower == "lc_pbe"
+            || dft_functional_lower == "lc_wpbe" 
+            || dft_functional_lower == "lrc_wpbe"
+            || dft_functional_lower == "lrc_wpbeh"
+            || dft_functional_lower == "cam_pbeh")
+    {
+        GlobalC::exx_info.info_global.cal_exx = true;
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
+        GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
+        if (PARAM.inp.exx_use_ewald)
+        {
+            GlobalC::exx_info.info_global.use_ewald = true;
+            GlobalC::exx_info.info_ewald.fq_type = Singular_Value::Fq_type(PARAM.inp.exx_fq_type);
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
+        }
+        else
+            GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Cam;
+    }
+    else
+    {
         GlobalC::exx_info.info_global.cal_exx = false;
     }
 
@@ -398,12 +410,13 @@ void Input_Conv::Convert()
         // EXX case, convert all EXX related variables
         // GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(PARAM.inp.exx_hybrid_alpha);
-        XC_Functional::get_hybrid_alpha(std::stod(PARAM.inp.exx_hybrid_alpha));
-        GlobalC::exx_info.info_global.hse_omega = PARAM.inp.exx_hse_omega;
+        XC_Functional::set_hybrid_alpha(std::stod(PARAM.inp.exx_hybrid_alpha), 
+                                            std::stod(PARAM.inp.exx_cam_alpha), 
+                                            std::stod(PARAM.inp.exx_cam_beta));
+        GlobalC::exx_info.info_global.hse_omega = std::stod(PARAM.inp.exx_hse_omega);
         GlobalC::exx_info.info_global.separate_loop = PARAM.inp.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = PARAM.inp.exx_hybrid_step;
         GlobalC::exx_info.info_global.mixing_beta_for_loop1 = PARAM.inp.exx_mixing_beta;
-        GlobalC::exx_info.info_global.exx_symmetry_realspace = PARAM.inp.exx_symmetry_realspace;
         GlobalC::exx_info.info_lip.lambda = PARAM.inp.exx_lambda;
 
         GlobalC::exx_info.info_ri.real_number = std::stoi(PARAM.inp.exx_real_number);
@@ -419,6 +432,7 @@ void Input_Conv::Convert()
         GlobalC::exx_info.info_ri.cauchy_force_threshold = PARAM.inp.exx_cauchy_force_threshold;
         GlobalC::exx_info.info_ri.cauchy_stress_threshold = PARAM.inp.exx_cauchy_stress_threshold;
         GlobalC::exx_info.info_ri.ccp_rmesh_times = std::stod(PARAM.inp.exx_ccp_rmesh_times);
+        GlobalC::exx_info.info_ewald.ewald_qdiv = PARAM.inp.exx_ewald_qdiv;
 
         Exx_Abfs::Jle::Lmax = PARAM.inp.exx_opt_orb_lmax;
         Exx_Abfs::Jle::Ecut_exx = PARAM.inp.exx_opt_orb_ecut;
@@ -470,7 +484,6 @@ void Input_Conv::Convert()
     //----------------------------------------------------------
     // wavefunction / charge / potential / (2/4)
     //----------------------------------------------------------
-    GlobalV::nelec = PARAM.inp.nelec;
 
 #ifdef __LCAO
 

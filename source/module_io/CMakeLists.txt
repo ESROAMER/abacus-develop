@@ -13,7 +13,6 @@ list(APPEND objects
     output.cpp
     print_info.cpp
     read_cube.cpp
-    read_rho.cpp
     rhog_io.cpp
     read_exit_file.cpp
     read_wfc_pw.cpp
@@ -23,12 +22,14 @@ list(APPEND objects
     write_wfc_pw.cpp
     write_cube.cpp
     write_elecstat_pot.cpp
+    write_elf.cpp
     write_dipole.cpp
     td_current_io.cpp
     write_wfc_r.cpp
     output_log.cpp
     para_json.cpp
     parse_args.cpp
+    orb_io.cpp
 )
 
 list(APPEND objects_advanced

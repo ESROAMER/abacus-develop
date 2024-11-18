@@ -33,11 +33,6 @@ class ESolver_OF : public ESolver_FP
 
     virtual void cal_stress(ModuleBase::matrix& stress) override;
 
-    virtual int get_niter() override
-    {
-        return this->iter_;
-    }
-
   private:
     // ======================= variables ==========================
     // ---------- the kinetic energy density functionals ----------
@@ -125,6 +120,7 @@ class ESolver_OF : public ESolver_FP
     void init_kedf(const Input_para& inp);
     void kinetic_potential(double** prho, double** pphi, ModuleBase::matrix& rpot);
     double kinetic_energy();
+    void kinetic_energy_density(double** prho, double** pphi, double** rtau);
     void kinetic_stress(ModuleBase::matrix& kinetic_stress);
 
     // ---------------------- interfaces to optimization methods --------

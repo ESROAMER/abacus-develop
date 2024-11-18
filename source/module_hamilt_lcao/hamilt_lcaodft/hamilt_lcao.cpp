@@ -75,6 +75,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
     const LCAO_Orbitals& orb,
     elecstate::DensityMatrix<TK, double>* DM_in
 #ifdef __EXX
+    , const int istep
     , int* exx_two_level_step
     , std::vector<std::map<int, std::map<TAC, RI::Tensor<double>>>>* Hexxd
     , std::vector<std::map<int, std::map<TAC, RI::Tensor<std::complex<double>>>>>* Hexxc
@@ -176,13 +177,14 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                 pot_in->pot_register(pot_register_in);
                 // effective potential term
                 Operator<TK>* veff = new Veff<OperatorLCAO<TK, TR>>(GG_in,
-                                                                    this->hsk,
-                                                                    this->kv->kvec_d,
-                                                                    pot_in,
-                                                                    this->hR, // no explicit call yet
-                                                                    &GlobalC::ucell,
-                                                                    orb.cutoffs(),
-                                                                    &GlobalC::GridD
+                    this->hsk,
+                    this->kv->kvec_d,
+                    pot_in,
+                    this->hR, // no explicit call yet
+                    &GlobalC::ucell,
+                    orb.cutoffs(),
+                    &GlobalC::GridD,
+                    PARAM.inp.nspin
                 );
                 this->getOperator()->add(veff);
             }
@@ -244,13 +246,14 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                 pot_in->pot_register(pot_register_in);
                 // Veff term
                 this->getOperator() = new Veff<OperatorLCAO<TK, TR>>(GK_in,
-                                                                     this->hsk,
-                                                                     kv->kvec_d,
-                                                                     pot_in,
-                                                                     this->hR,
-                                                                     &GlobalC::ucell,
-                                                                     orb.cutoffs(),
-                                                                     &GlobalC::GridD);
+                    this->hsk,
+                    kv->kvec_d,
+                    pot_in,
+                    this->hR,
+                    &GlobalC::ucell,
+                    orb.cutoffs(),
+                    &GlobalC::GridD,
+                    PARAM.inp.nspin);
                 // reset spin index and real space Hamiltonian matrix
                 int start_spin = -1;
                 GK_in->reset_spin(start_spin);
@@ -413,6 +416,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
             Hexxd,
             Hexxc,
             Add_Hexx_Type::R,
+            istep,
             exx_two_level_step,
             !GlobalC::restart.info_load.restart_exx
             && GlobalC::restart.info_load.load_H);

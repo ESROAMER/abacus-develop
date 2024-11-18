@@ -51,6 +51,9 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.nbands_sto, 256);
     EXPECT_EQ(param.inp.nbands_istate, 5);
     EXPECT_EQ(param.inp.bands_to_print.size(), 0);
+    EXPECT_EQ(param.inp.out_pchg.size(), 0);
+    EXPECT_EQ(param.inp.out_wfc_norm.size(), 0);
+    EXPECT_EQ(param.inp.out_wfc_re_im.size(), 0);
     EXPECT_FALSE(param.inp.if_separate_k);
     EXPECT_EQ(param.inp.pw_seed, 1);
     EXPECT_EQ(param.inp.emin_sto, 0.0);
@@ -161,7 +164,10 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(PARAM.inp.test_force, 0);
     EXPECT_EQ(param.inp.test_stress, 0);
     EXPECT_NEAR(param.inp.scf_thr, 1.0e-8, 1.0e-15);
-    EXPECT_NEAR(param.inp.scf_ene_thr, -1.0, 1.0e-15);
+    EXPECT_EQ(param.inp.scf_os_stop, 1);
+    EXPECT_NEAR(param.inp.scf_os_thr, -0.02, 1.0e-15);
+    EXPECT_EQ(param.inp.scf_os_ndim, 10);
+    EXPECT_NEAR(param.inp.scf_ene_thr, 1.0e-6, 1.0e-15);
     EXPECT_EQ(param.inp.scf_nmax, 50);
     EXPECT_EQ(param.inp.relax_nmax, 1);
     EXPECT_EQ(param.inp.out_stru, 0);
@@ -180,6 +186,8 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.out_freq_ion, 0);
     EXPECT_EQ(param.inp.out_chg[0], 0);
     EXPECT_EQ(param.inp.out_chg[1], 3);
+    EXPECT_EQ(param.inp.out_elf[0], 0);
+    EXPECT_EQ(param.inp.out_elf[1], 3);
     EXPECT_EQ(param.inp.out_dm, 0);
     EXPECT_EQ(param.inp.out_dm1, 0);
     EXPECT_EQ(param.inp.deepks_out_labels, 0);
@@ -258,6 +266,10 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.vdw_cutoff_period[1], 3);
     EXPECT_EQ(param.inp.vdw_cutoff_period[2], 3);
     EXPECT_EQ(std::stod(param.inp.exx_hybrid_alpha), 0.25);
+    EXPECT_EQ(std::stod(param.inp.exx_cam_alpha), 0.0);
+    EXPECT_EQ(std::stod(param.inp.exx_cam_beta), 0.0);
+    EXPECT_EQ(param.inp.exx_use_ewald, 0);
+    EXPECT_EQ(param.inp.exx_fq_type, 1);
     EXPECT_EQ(param.inp.exx_real_number, "1");
     EXPECT_DOUBLE_EQ(param.inp.exx_hse_omega, 0.11);
     EXPECT_TRUE(param.inp.exx_separate_loop);
@@ -414,6 +426,7 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.xc_kernel, "LDA");
     EXPECT_EQ(param.inp.lr_solver, "dav");
     EXPECT_DOUBLE_EQ(param.inp.lr_thr, 1e-2);
+    EXPECT_FALSE(param.inp.lr_unrestricted);
     EXPECT_FALSE(param.inp.out_wfc_lr);
     EXPECT_EQ(param.inp.abs_wavelen_range.size(), 2);
     EXPECT_DOUBLE_EQ(param.inp.abs_wavelen_range[0], 0.0);

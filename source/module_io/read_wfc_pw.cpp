@@ -82,7 +82,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
     ikstot = ik;
 #endif
 
-    npwtot *= PARAM.globalv.npol;
+    int npwtot_npol = npwtot * PARAM.globalv.npol;
 
     
 
@@ -114,7 +114,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
     MPI_Bcast(&tpiba_in, 1, MPI_DOUBLE, 0, POOL_WORLD);
 #endif
 
-    if (ikstot_in != ikstot + 1 || nkstot_in != nkstot || npwtot_in != npwtot || nbands_in != GlobalV::NBANDS)
+    if (ikstot_in != ikstot + 1 || nkstot_in != nkstot || npwtot_in != npwtot || nbands_in != PARAM.inp.nbands)
     {
         std::cout << "ikstot_in = " << ikstot_in << std::endl;
         std::cout << "ikstot = " << ikstot + 1 << std::endl;
@@ -123,10 +123,10 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
         std::cout << "npwtot_in = " << npwtot_in << std::endl;
         std::cout << "npwtot = " << npwtot << std::endl;
         std::cout << "nbands_in = " << nbands_in << std::endl;
-        std::cout << "nbands = " << GlobalV::NBANDS << std::endl;
+        std::cout << "nbands = " << PARAM.inp.nbands << std::endl;
         ModuleBase::WARNING_QUIT(
             "ModuleIO::read_wfc_pw",
-            "ikstot_in != ikstot || nkstot_in != nkstot || npwtot_in != npwtot || nbands_in != GlobalV::NBANDS");
+            "ikstot_in != ikstot || nkstot_in != nkstot || npwtot_in != npwtot || nbands_in != PARAM.inp.nbands");
     }
 
     if (kvec[0] != pw_wfc->kvec_c[ik].x || kvec[1] != pw_wfc->kvec_c[ik].y || kvec[2] != pw_wfc->kvec_c[ik].z)
@@ -178,7 +178,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
     }
 
     // read in miller index
-    ModuleBase::Vector3<int>* miller = new ModuleBase::Vector3<int>[npwtot_in];
+    ModuleBase::Vector3<int>* miller = new ModuleBase::Vector3<int>[npwtot];
     int* glo_order = nullptr;
     if (GlobalV::RANK_IN_POOL == 0)
     {
@@ -188,7 +188,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
         else if (filetype == "dat")
         {
             rfs >> size;
-            for (int i = 0; i < npwtot_in; ++i)
+            for (int i = 0; i < npwtot; ++i)
             {
                 rfs >> miller[i].x >> miller[i].y >> miller[i].z;
             }
@@ -201,7 +201,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
         {
             glo_order[i] = -1;
         }
-        for (int i = 0; i < npwtot_in / PARAM.globalv.npol; ++i)
+        for (int i = 0; i < npwtot; ++i)
         {
             int index = (miller[i].x * ny + miller[i].y) * nz + miller[i].z;
             glo_order[index] = i;
@@ -221,7 +221,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
     }
 
     // read in wfc
-    std::complex<double>* wfc_in = new std::complex<double>[npwtot_in];
+    std::complex<double>* wfc_in = new std::complex<double>[npwtot_npol];
     for (int ib = 0; ib < nbands_in; ib++)
     {
         if (GlobalV::RANK_IN_POOL == 0)
@@ -232,7 +232,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
             else if (filetype == "dat")
             {
                 rfs >> size;
-                for (int i = 0; i < npwtot_in; ++i)
+                for (int i = 0; i < npwtot_npol; ++i)
                 {
                     rfs >> wfc_in[i];
                 }
@@ -285,7 +285,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
                     {
                         for (int i = 0; i < size; i++)
                         {
-                            wfc_ip[i] = wfc_in[glo_order[ig_ip[i]] + npwtot_in / 2];
+                            wfc_ip[i] = wfc_in[glo_order[ig_ip[i]] + npwtot];
                         }
                         MPI_Send(wfc_ip, size, MPI_DOUBLE_COMPLEX, ip, ip + 2 * GlobalV::NPROC_IN_POOL, POOL_WORLD);
                     }
@@ -305,7 +305,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
                     {
                         for (int i = 0; i < pw_wfc->npwk[ik]; ++i)
                         {
-                            wfc(ib, i + npwk_max) = wfc_in[glo_order[l2g_pw[i]] + npwtot_in / 2];
+                            wfc(ib, i + npwk_max) = wfc_in[glo_order[l2g_pw[i]] + npwtot];
                         }
                     }
                 }
@@ -321,7 +321,7 @@ void ModuleIO::read_wfc_pw(const std::string& filename,
         {
             for (int i = 0; i < pw_wfc->npwk[ik]; ++i)
             {
-                wfc(ib, i + npwk_max) = wfc_in[glo_order[l2g_pw[i]] + npwtot_in / 2];
+                wfc(ib, i + npwk_max) = wfc_in[glo_order[l2g_pw[i]] + npwtot];
             }
         }
 #endif

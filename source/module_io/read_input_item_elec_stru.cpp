@@ -69,6 +69,7 @@ void ReadInput::item_elec_stru()
                 "lapack",
                 "scalapack_gvx",
                 "cusolver",
+                "cusolvermp",
                 "pexsi",
                 "cg_in_lcao",
             };
@@ -234,7 +235,18 @@ void ReadInput::item_elec_stru()
             para.input.nupdown = doublevalue;
             para.sys.two_fermi = true;
         };
-
+        item.reset_value = [](const Input_Item&, Parameter& para) {
+            if (para.input.nspin == 1)
+            {
+                para.sys.two_fermi = false;
+            }
+        };
+        item.check_value = [](const Input_Item&, const Parameter& para) {
+            if (para.input.nspin == 1 && para.input.nupdown != 0.0)
+            {
+                ModuleBase::WARNING_QUIT("ReadInput", "nupdown mustn't have a non-zero value for spin-unpolarized calculations.");
+            }
+        };
         sync_double(input.nupdown);
         this->add_item(item);
     }
@@ -457,8 +469,7 @@ void ReadInput::item_elec_stru()
                 GlobalV::ofs_warning << " WARNING : gamma_only has not been implemented for pw yet" << std::endl;
                 GlobalV::ofs_warning << "gamma_only is not supported in the pw model" << std::endl;
                 GlobalV::ofs_warning << " the INPUT parameter gamma_only has been reset to 0" << std::endl;
-                GlobalV::ofs_warning << " and a new KPT is generated with "
-                                        "gamma point as the only k point"<< std::endl;
+                GlobalV::ofs_warning << " and a new KPT is generated with gamma point as the only k point"<< std::endl;
                 GlobalV::ofs_warning << " Auto generating k-points file: " << para.input.kpoint_file << std::endl;
                 std::ofstream ofs(para.input.kpoint_file.c_str());
                 ofs << "K_POINTS" << std::endl;
@@ -466,6 +477,13 @@ void ReadInput::item_elec_stru()
                 ofs << "Gamma" << std::endl;
                 ofs << "1 1 1 0 0 0" << std::endl;
                 ofs.close();
+            }
+            if (para.input.basis_type == "lcao" && para.input.gamma_only)
+            {
+                if (para.input.nspin == 4)
+                {
+                    ModuleBase::WARNING_QUIT("NOTICE", "nspin=4(soc or noncollinear-spin) does not support gamma only calculation");
+                }
             }
         };
         this->add_item(item);
@@ -508,6 +526,36 @@ void ReadInput::item_elec_stru()
         Input_Item item("scf_ene_thr");
         item.annotation = "total energy error threshold";
         read_sync_double(input.scf_ene_thr);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("scf_os_stop");
+        item.annotation = "whether to stop scf when oscillation is detected";
+        read_sync_bool(input.scf_os_stop);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("scf_os_thr");
+        item.annotation = "charge density threshold for oscillation";
+        read_sync_double(input.scf_os_thr);
+        item.check_value = [](const Input_Item& item, const Parameter& para) {
+            if (para.input.scf_os_thr >= 0)
+            {
+                ModuleBase::WARNING_QUIT("ReadInput", "scf_os_thr should be negative");
+            }
+        };
+        this->add_item(item);
+    }
+    {
+        Input_Item item("scf_os_ndim");
+        item.annotation = "number of old iterations used for oscillation detection";
+        read_sync_int(input.scf_os_ndim);
+        item.reset_value = [](const Input_Item& item, Parameter& para) {
+            if (para.input.scf_os_ndim <= 0) // default value
+            {
+                para.input.scf_os_ndim = para.input.mixing_ndim;
+            }
+        };
         this->add_item(item);
     }
     {

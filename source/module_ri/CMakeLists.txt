@@ -10,10 +10,13 @@ if (ENABLE_LIBRI)
         exx_lip.cpp
         Mix_DMk_2D.cpp
         Mix_Matrix.cpp
+        gaussian_abfs.cpp
+        singular_value.cpp
   )
 
   if(ENABLE_LCAO)
     list(APPEND objects
+        Faddeeva.cc
         conv_coulomb_pot_k.cpp
         exx_abfs-abfs_index.cpp
         exx_abfs-construct_orbs.cpp

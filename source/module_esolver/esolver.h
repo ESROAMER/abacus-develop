@@ -41,28 +41,8 @@ class ESolver
     //! calcualte stress of given cell
     virtual void cal_stress(ModuleBase::matrix& stress) = 0;
 
+    bool conv_esolver = true; // whether esolver is converged
 
-    // Print current classname.
-    void printname();
-
-    // temporarily
-    // get iterstep used in current scf
-    virtual int get_niter()
-    {
-        return 0;
-    }
-
-    // get maxniter used in current scf
-    virtual int get_maxniter()
-    {
-        return 0;
-    }
-
-    // get conv_elec used in current scf
-    virtual bool get_conv_elec()
-    {
-        return false;
-    }
     std::string classname;
 };
 

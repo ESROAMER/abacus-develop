@@ -50,24 +50,15 @@ class ESolver_KS : public ESolver_FP
 		// calculate electron states from a specific Hamiltonian
 		virtual void hamilt2estates(const double ethr){};
 
-		// get current step of Ionic simulation
-		virtual int get_niter() override;
-
-		// get maxniter used in current scf
-		virtual int get_maxniter() override;
-
-		// get conv_elec used in current scf
-		virtual bool get_conv_elec() override;
-
-	protected:
-		//! Something to do before SCF iterations.
+      protected:
+        //! Something to do before SCF iterations.
 		virtual void before_scf(const int istep) {};
 
 		//! Something to do before hamilt2density function in each iter loop.
 		virtual void iter_init(const int istep, const int iter) {};
 
 		//! Something to do after hamilt2density function in each iter loop.
-        virtual void iter_finish(int& iter);
+        virtual void iter_finish(const int istep, int& iter);
 
         //! Something to do after SCF iterations when SCF is converged or comes to the max iter step.
         virtual void after_scf(const int istep) override;
@@ -75,31 +66,7 @@ class ESolver_KS : public ESolver_FP
         //! <Temporary> It should be replaced by a function in Hamilt Class
 		virtual void update_pot(const int istep, const int iter) {};
 
-    protected:
-
-		// Print the headline on the screen:
-		// ITER   ETOT(eV)       EDIFF(eV)      DRHO    TIME(s) 
-		void print_head();
-
-		// Print inforamtion in each iter
-		// G1    -3.435545e+03  0.000000e+00   3.607e-01  2.862e-01
-		// for metaGGA
-		// ITER   ETOT(eV)       EDIFF(eV)      DRHO       DKIN       TIME(s) 
-		// G1    -3.435545e+03  0.000000e+00   3.607e-01  3.522e-01  2.862e-01
-		void print_iter(
-				const int iter, 
-				const double drho, 
-				const double dkin, 
-				const double duration, 
-				const double ethr);
-
-		// Write the headline in the running_log file
-		// "PW/LCAO" ALGORITHM --------------- ION=   1  ELEC=   1--------------------------------
-		void write_head(
-				std::ofstream& ofs_running, 
-				const int istep, 
-				const int iter);
-
+      protected:
         //! Hamiltonian
 		hamilt::Hamilt<T, Device>* p_hamilt = nullptr;
 
@@ -112,13 +79,10 @@ class ESolver_KS : public ESolver_FP
         // wavefunction coefficients
         psi::Psi<T>* psi = nullptr;
 
-	protected:
-
-		std::string basisname; //PW or LCAO
-
-        void print_wfcfft(const Input_para& inp, std::ofstream& ofs);
-
-	    double esolver_KS_ne = 0.0;
+      protected:
+        std::string basisname; // PW or LCAO
+        double esolver_KS_ne = 0.0;
+		bool oscillate_esolver = false; // whether esolver is oscillated
 };	
 } // end of namespace
 #endif

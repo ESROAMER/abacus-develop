@@ -58,6 +58,7 @@ gamma_only=$(get_input_key_value "gamma_only" "INPUT")
 imp_sol=$(get_input_key_value "imp_sol" "INPUT")
 run_rpa=$(get_input_key_value "rpa" "INPUT")
 out_pot=$(get_input_key_value "out_pot" "INPUT")
+out_elf=$(get_input_key_value "out_elf" "INPUT")
 out_dm1=$(get_input_key_value "out_dm1" "INPUT")
 get_s=$(get_input_key_value "calculation" "INPUT")
 out_pband=$(get_input_key_value "out_proj_band" "INPUT")
@@ -163,6 +164,14 @@ if ! test -z "$out_pot"  && [  $out_pot == 2 ]; then
 	pot1cal=OUT.autotest/ElecStaticPot.cube
 	python3 ../tools/CompareFile.py $pot1ref $pot1cal 8
 	echo "ComparePot_pass $?" >>$1
+fi
+
+#echo $out_elf
+if ! test -z "$out_elf"  && [  $out_elf == 1 ]; then
+	elf1ref=refELF.cube
+	elf1cal=OUT.autotest/ELF.cube
+	python3 ../tools/CompareFile.py $elf1ref $elf1cal 3
+	echo "ComparePot1_pass $?" >>$1
 fi
 
 #echo $get_s
@@ -530,7 +539,7 @@ if [ $is_lr == 1 ]; then
 	lr_path=OUT.autotest/running_lr.log
 	lrns=$(get_input_key_value "lr_nstates" "INPUT")
 	lrns1=`echo "$lrns + 1" |bc`
-	grep -A$lrns1 "Excitation Energy" $lr_path | tail -$lrns | awk '{print $2}' > lr_eig.txt
+	grep -A$lrns1 "Excitation Energy" $lr_path | awk 'NR > 2 && $2 ~ /^[0-9]+\.[0-9]+$/ {print $2}' > lr_eig.txt
 	lreig_tot=`sum_file lr_eig.txt`
 	echo "totexcitationenergyref $lreig_tot" >>$1
 fi

@@ -85,13 +85,15 @@ OperatorEXX<OperatorLCAO<TK, TR>>::OperatorEXX(HS_Matrix_K<TK>* hsk_in,
 	std::vector<std::map<int, std::map<TAC, RI::Tensor<double>>>>* Hexxd_in,
 	std::vector<std::map<int, std::map<TAC, RI::Tensor<std::complex<double>>>>>* Hexxc_in,
     Add_Hexx_Type add_hexx_type_in,
-	int* two_level_step_in,
+    const int istep,
+    int* two_level_step_in,
 	const bool restart_in)
     : OperatorLCAO<TK, TR>(hsk_in, kv_in.kvec_d, hR_in),
     kv(kv_in),
     Hexxd(Hexxd_in),
     Hexxc(Hexxc_in),
     add_hexx_type(add_hexx_type_in),
+    istep(istep),
     two_level_step(two_level_step_in),
     restart(restart_in)
 {
@@ -104,12 +106,12 @@ OperatorEXX<OperatorLCAO<TK, TR>>::OperatorEXX(HS_Matrix_K<TK>* hsk_in,
         const std::string file_name_exx = PARAM.globalv.global_readin_dir + "HexxR" + std::to_string(GlobalV::MY_RANK);
         if (GlobalC::exx_info.info_ri.real_number)
         {
-            ModuleIO::read_Hexxs_csr(file_name_exx, GlobalC::ucell, PARAM.inp.nspin, GlobalV::NLOCAL, *Hexxd);
+            ModuleIO::read_Hexxs_csr(file_name_exx, GlobalC::ucell, PARAM.inp.nspin, PARAM.globalv.nlocal, *Hexxd);
             if (this->add_hexx_type == Add_Hexx_Type::R) { reallocate_hcontainer(*Hexxd, this->hR); }
         }
         else
         {
-            ModuleIO::read_Hexxs_csr(file_name_exx, GlobalC::ucell, PARAM.inp.nspin, GlobalV::NLOCAL, *Hexxc);
+            ModuleIO::read_Hexxs_csr(file_name_exx, GlobalC::ucell, PARAM.inp.nspin, PARAM.globalv.nlocal, *Hexxc);
             if (this->add_hexx_type == Add_Hexx_Type::R) { reallocate_hcontainer(*Hexxc, this->hR); }
         }
         this->use_cell_nearest = false;
@@ -180,10 +182,10 @@ OperatorEXX<OperatorLCAO<TK, TR>>::OperatorEXX(HS_Matrix_K<TK>* hsk_in,
                 // read in Hexx(R)
                 const std::string restart_HR_path = GlobalC::restart.folder + "HexxR" + std::to_string(GlobalV::MY_RANK);
                 if (GlobalC::exx_info.info_ri.real_number) {
-                    ModuleIO::read_Hexxs_csr(restart_HR_path, GlobalC::ucell, PARAM.inp.nspin, GlobalV::NLOCAL, *Hexxd);
+                    ModuleIO::read_Hexxs_csr(restart_HR_path, GlobalC::ucell, PARAM.inp.nspin, PARAM.globalv.nlocal, *Hexxd);
                 }
                 else {
-                    ModuleIO::read_Hexxs_csr(restart_HR_path, GlobalC::ucell, PARAM.inp.nspin, GlobalV::NLOCAL, *Hexxc);
+                    ModuleIO::read_Hexxs_csr(restart_HR_path, GlobalC::ucell, PARAM.inp.nspin, PARAM.globalv.nlocal, *Hexxc);
                 }
             }
 
@@ -201,33 +203,40 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHR()
 {
     ModuleBase::TITLE("OperatorEXX", "contributeHR");
     // Peize Lin add 2016-12-03
-    if (PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return;  //in the non-exx loop, do nothing 
-}
+    if (this->istep == 0 && PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return; }  //in the non-exx loop, do nothing 
+    if (this->add_hexx_type == Add_Hexx_Type::k) { return; }
+
     if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
     {
+        const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
+                                 ? 1.0
+                                 : GlobalC::exx_info.info_global.hybrid_alpha;
         // add H(R) normally
-        if (GlobalC::exx_info.info_ri.real_number) {
+        if (GlobalC::exx_info.info_ri.real_number)
+        {
             RI_2D_Comm::add_HexxR(
                 this->current_spin,
-                GlobalC::exx_info.info_global.hybrid_alpha,
+                coeff,
                 *this->Hexxd,
                 *this->hR->get_paraV(),
                 PARAM.globalv.npol,
                 *this->hR,
                 this->use_cell_nearest ? &this->cell_nearest : nullptr);
-        } else {
+        }
+        else
+        {
             RI_2D_Comm::add_HexxR(
                 this->current_spin,
-                GlobalC::exx_info.info_global.hybrid_alpha,
+                coeff,
                 *this->Hexxc,
                 *this->hR->get_paraV(),
                 PARAM.globalv.npol,
                 *this->hR,
                 this->use_cell_nearest ? &this->cell_nearest : nullptr);
-}
+        }
     }
-    if (PARAM.inp.nspin == 2) { this->current_spin = 1 - this->current_spin;
-}
+    if (PARAM.inp.nspin == 2) { this->current_spin = 1 - this->current_spin; }
 }
 
 template<typename TK, typename TR>
@@ -235,8 +244,10 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
 {
     ModuleBase::TITLE("OperatorEXX", "constributeHR");
     // Peize Lin add 2016-12-03
-    if (PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return;  //in the non-exx loop, do nothing 
-}
+    if (PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return; }  //in the non-exx loop, do nothing 
+
+    if (this->add_hexx_type == Add_Hexx_Type::R) { throw std::invalid_argument("Set Add_Hexx_Type::k sto call OperatorEXX::contributeHk()."); }
+
     if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
     {
         if (this->restart && this->two_level_step != nullptr)
@@ -261,12 +272,15 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
             }
         }
         // cal H(k) from H(R) normally
-
+		const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                              || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
+                                 ? 1.0
+                                 : GlobalC::exx_info.info_global.hybrid_alpha;
         if (GlobalC::exx_info.info_ri.real_number) {
             RI_2D_Comm::add_Hexx(
                 this->kv,
                 ik,
-                GlobalC::exx_info.info_global.hybrid_alpha,
+                coeff,
                 *this->Hexxd,
                 *this->hR->get_paraV(),
                 this->hsk->get_hk());
@@ -274,7 +288,7 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
             RI_2D_Comm::add_Hexx(
                 this->kv,
                 ik,
-                GlobalC::exx_info.info_global.hybrid_alpha,
+                coeff,
                 *this->Hexxc,
                 *this->hR->get_paraV(),
                 this->hsk->get_hk());

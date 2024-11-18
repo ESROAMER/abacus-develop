@@ -20,6 +20,15 @@ namespace Wavefunc_in_pw
 		std::vector<std::string> &orbital_files, 
 		ModuleBase::realArray &table_local);
 
+	void make_table_q(
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in,
+		ModuleBase::realArray &table_local); // used for exx abfs
+
+	void write_table_local(
+		const ModuleBase::realArray &table_local,
+		std::string &filename
+	);
+
 	void integral(
 		const int meshr, // number of mesh points 
 		const double *psir,
