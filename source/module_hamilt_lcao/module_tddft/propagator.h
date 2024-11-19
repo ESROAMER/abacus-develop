@@ -41,12 +41,6 @@ class Propagator
                             const std::complex<double>* H_laststep,
                             std::complex<double>* U_operator,
                             const int print_matrix) const;
-    void compute_propagator_cn2_svpre(const int nlocal,
-                            const std::complex<double>* Stmp,
-                            const std::complex<double>* Htmp,
-                            std::complex<double>* Denominator,
-                            std::complex<double>* Numerator,
-                            const int print_matrix) const;
 #endif
 
   private:
@@ -104,7 +98,6 @@ class Propagator
                                  const std::complex<double>* H_laststep,
                                  std::complex<double>* U_operator,
                                  const int print_matrix) const;
-
 #endif
 };
 } // namespace module_tddft

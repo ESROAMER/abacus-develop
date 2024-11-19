@@ -27,7 +27,6 @@ void compute_ekb(const Parallel_Orbitals* pv,
                  const int nband,
                  const int nlocal,
                  const std::complex<double>* Htmp,
-                 const std::complex<double>* H_hybrid,
                  const std::complex<double>* psi_k,
                  double* ekb);
 #endif

@@ -10,9 +10,6 @@
 #include "norm_psi.h"
 #include "propagator.h"
 #include "upsi.h"
-#include "solve_psi.h"
-#include "module_hamilt_lcao/module_tddft/td_velocity.h"
-#include "module_elecstate/potentials/H_TDDFT_pw.h"
 
 #include <complex>
 
@@ -55,21 +52,6 @@ void evolve_psi(const int nband,
     std::complex<double>* U_operator = new std::complex<double>[pv->nloc];
     ModuleBase::GlobalFunc::ZEROS(U_operator, pv->nloc);
 
-    std::complex<double>* H_hybrid = new std::complex<double>[pv->nloc];
-    ModuleBase::GlobalFunc::ZEROS(H_hybrid, pv->nloc);
-    if(elecstate::H_TDDFT_pw::stype == 2)
-    {
-        hamilt::MatrixBlock<std::complex<double>> h_mat_hybrid;
-        TD_Velocity::td_vel_op->matrixHk_hybrid(h_mat_hybrid, pv);
-        BlasConnector::copy(pv->nloc, h_mat_hybrid.p, 1, H_hybrid, 1);
-    }
-
-    // std::complex<double>* U_operator_left = new std::complex<double>[pv->nloc];
-    // ModuleBase::GlobalFunc::ZEROS(U_operator_left, pv->nloc);
-
-    // std::complex<double>* U_operator_right = new std::complex<double>[pv->nloc];
-    // ModuleBase::GlobalFunc::ZEROS(U_operator_right, pv->nloc);
-
     // (1)->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     /// @brief compute H(t+dt/2)
@@ -85,9 +67,7 @@ void evolve_psi(const int nband,
     /// @brief compute U_operator
     /// @input Stmp, Htmp, print_matrix
     /// @output U_operator
-
     Propagator prop(propagator, pv, PARAM.mdp.md_dt);
-    //prop.compute_propagator_cn2_svpre(nlocal, Stmp, Htmp, U_operator_left, U_operator_right, print_matrix);
     prop.compute_propagator(nlocal, Stmp, Htmp, H_laststep, U_operator, print_matrix);
 
     // (3)->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -95,9 +75,7 @@ void evolve_psi(const int nband,
     /// @brief apply U_operator to the wave function of the previous step for new wave function
     /// @input U_operator, psi_k_laststep, print_matrix
     /// @output psi_k
-
     upsi(pv, nband, nlocal, U_operator, psi_k_laststep, psi_k, print_matrix);
-    //solve_psi_td(pv, nband, nlocal, U_operator_left, U_operator_right, psi_k_laststep, psi_k, print_matrix);
 
     // (4)->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -111,14 +89,12 @@ void evolve_psi(const int nband,
     /// @brief compute ekb
     /// @input Htmp, psi_k
     /// @output ekb
-    compute_ekb(pv, nband, nlocal, Hold, H_hybrid, psi_k, ekb);
+    compute_ekb(pv, nband, nlocal, Hold, psi_k, ekb);
 
     delete[] Stmp;
     delete[] Htmp;
     delete[] Hold;
     delete[] U_operator;
-    // delete[] U_operator_left;
-    // delete[] U_operator_right;
 
 #endif
 

@@ -135,7 +135,6 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 
     this->atoms_fixed = !ucell.if_atoms_can_move();
 }
-
 void ESolver_KS_LCAO_TDDFT::cal_force(ModuleBase::matrix& force)
 {
     if(atoms_fixed)
@@ -177,7 +176,6 @@ void ESolver_KS_LCAO_TDDFT::cal_force(ModuleBase::matrix& force)
 
     ModuleBase::timer::tick("ESolver_KS_LCAO_TDDFT", "cal_force");
 }
-
 void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, const double ethr)
 {
     pelec->charge->save_rho_before_sum_band();
