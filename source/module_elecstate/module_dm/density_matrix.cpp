@@ -496,12 +496,12 @@ void DensityMatrix<std::complex<double>, double>::cal_DMR()
                         std::cout << "ucell->lat0 " << tmp_lat0 << std::endl;
                         std::cout << "iat1 " << iat1 << " " << "iat2 " << iat2 << std::endl;*/
                     }
-                    for (int ik = 0; ik < this->_nks; ++ik)
+                    for (int ik = 0; ik < this->_nk; ++ik)
                     {
                         // cal k_phase
                         // if TK==std::complex<double>, kphase is e^{ikR}
                         const ModuleBase::Vector3<double> dR(r_index[0], r_index[1], r_index[2]);
-                        const double arg = (this->_kv->kvec_d[ik] * dR) * ModuleBase::TWO_PI + arg_td;
+                        const double arg = (this->_kvec_d[ik] * dR) * ModuleBase::TWO_PI + arg_td;
                         double sinp, cosp;
                         ModuleBase::libm::sincos(arg, &sinp, &cosp);
                         std::complex<double> kphase = std::complex<double>(cosp, sinp);
@@ -678,7 +678,7 @@ void DensityMatrix<std::complex<double>, double>::cal_DMR(const int ik)
                     // cal k_phase
                     // if TK==std::complex<double>, kphase is e^{ikR}
                     const ModuleBase::Vector3<double> dR(r_index[0], r_index[1], r_index[2]);
-                    const double arg = (this->_kv->kvec_d[ik] * dR) * ModuleBase::TWO_PI + arg_td;
+                    const double arg = (this->_kvec_d[ik] * dR) * ModuleBase::TWO_PI + arg_td;
                     double sinp, cosp;
                     ModuleBase::libm::sincos(arg, &sinp, &cosp);
                     std::complex<double> kphase = std::complex<double>(cosp, sinp);

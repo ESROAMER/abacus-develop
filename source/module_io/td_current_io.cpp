@@ -82,7 +82,7 @@ void ModuleIO::cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>
                 // cal k_phase
                 // if TK==std::complex<double>, kphase is e^{ikR}
                 const ModuleBase::Vector3<double> dR(r_index.x, r_index.y, r_index.z);
-                const double arg = (DM_real.get_kv_pointer()->kvec_d[ik] * dR) * ModuleBase::TWO_PI + arg_td;
+                const double arg = (DM_real.get_kvec_d()[ik] * dR) * ModuleBase::TWO_PI + arg_td;
                 double sinp, cosp;
                 ModuleBase::libm::sincos(arg, &sinp, &cosp);
                 std::complex<double> kphase = std::complex<double>(cosp, sinp);
