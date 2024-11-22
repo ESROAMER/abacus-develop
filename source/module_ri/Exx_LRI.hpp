@@ -153,7 +153,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
 }
 
 template<typename Tdata>
-void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
+void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
 {
 	ModuleBase::TITLE("Exx_LRI","cal_exx_ions");
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
@@ -203,7 +203,9 @@ void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
                 Vs_sr);
             this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
         }
-        this->evq.init_ions(period_Vs);
+        if (PARAM.inp.cal_stress || istep == 0)
+            this->evq.init_ions(period_Vs);
+
         double chi = this->evq.get_singular_chi(this->info_ewald.fq_type,
                                                 this->info_ewald.ewald_qdiv);
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
