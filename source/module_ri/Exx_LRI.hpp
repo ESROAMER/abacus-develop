@@ -206,8 +206,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
         if (PARAM.inp.cal_stress || istep == 0)
             this->evq.init_ions(period_Vs);
 
-        double chi = this->evq.get_singular_chi(this->info_ewald.fq_type,
-                                                this->info_ewald.ewald_qdiv);
+        double chi = this->evq.get_singular_chi(this->info_ewald.fq_type, 2.0);
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
             = this->evq.cal_Vs(chi, Vs);
         Vs_full = LRI_CV_Tools::mul2(

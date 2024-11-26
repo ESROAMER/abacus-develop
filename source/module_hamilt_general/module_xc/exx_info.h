@@ -43,8 +43,6 @@ struct Exx_Info
         Singular_Value::Fq_type fq_type;
         const bool& use_ewald;
 
-        double ewald_qdiv = 2;
-
         Exx_Info_Ewald(const Exx_Info::Exx_Info_Global& info_global) : use_ewald(info_global.use_ewald)
         {
         }
