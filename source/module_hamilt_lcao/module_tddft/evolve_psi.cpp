@@ -117,6 +117,7 @@ void evolve_psi(const int nband,
     delete[] Htmp;
     delete[] Hold;
     delete[] U_operator;
+    delete[] H_hybrid;
     // delete[] U_operator_left;
     // delete[] U_operator_right;
 
