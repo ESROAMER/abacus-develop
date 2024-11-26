@@ -17,7 +17,9 @@ void ReadInput::item_exx()
                 std::string& dft_functional = para.input.dft_functional;
                 std::string dft_functional_lower = dft_functional;
                 std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
-                if (dft_functional_lower == "hf")
+                if (dft_functional_lower == "hf" ||
+                    dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
+                    dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
                 {
                     para.input.exx_hybrid_alpha = "1";
                 }
@@ -25,6 +27,10 @@ void ReadInput::item_exx()
                          || dft_functional_lower == "scan0")
                 {
                     para.input.exx_hybrid_alpha = "0.25";
+                }
+                else if (dft_functional_lower == "cam_pbeh")
+                {
+                    para.input.exx_hybrid_alpha = "0.2";
                 }
                 else
                 { // no exx in scf, but will change to non-zero in
@@ -55,44 +61,11 @@ void ReadInput::item_exx()
         this->add_item(item);
     }
     {
-        Input_Item item("exx_cam_alpha");
-        item.annotation = "fraction of the full-range parts of Fock exchange in range-separated hybrid funtionals";
-        read_sync_string(input.exx_cam_alpha);
+        Input_Item item("exx_hybrid_beta");
+        item.annotation = "another fraction of Fock exchange in range-separated hybrid funtionals";
+        read_sync_string(input.exx_hybrid_beta);
         item.reset_value = [](const Input_Item& item, Parameter& para) {
-            if (para.input.exx_cam_alpha == "default")
-            {
-                std::string& dft_functional = para.input.dft_functional;
-                std::string dft_functional_lower = dft_functional;
-                std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
-                if (dft_functional_lower == "hf" ||
-                    dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
-                    dft_functional_lower == "lrc_wpbe" || dft_functional_lower == "lrc_wpbeh")
-                {
-                    para.input.exx_cam_alpha = "1";
-                }
-                else if (dft_functional_lower == "cam_pbeh")
-                {
-                    para.input.exx_cam_alpha = "0.2";
-                }
-                else if (dft_functional_lower == "pbe0"
-                         || dft_functional_lower == "scan0")
-                {
-                    para.input.exx_cam_alpha = "0.25";
-                }
-                else
-                {
-                    para.input.exx_cam_alpha = "0";
-                }
-            }
-        };
-        this->add_item(item);
-    }
-        {
-        Input_Item item("exx_cam_beta");
-        item.annotation = "fraction of the short-range parts of Fock exchange in range-separated hybrid funtionals";
-        read_sync_string(input.exx_cam_beta);
-        item.reset_value = [](const Input_Item& item, Parameter& para) {
-            if (para.input.exx_cam_beta == "default")
+            if (para.input.exx_hybrid_beta == "default")
             {
                 std::string& dft_functional = para.input.dft_functional;
                 std::string dft_functional_lower = dft_functional;
@@ -100,23 +73,23 @@ void ReadInput::item_exx()
                 if (dft_functional_lower == "lc_pbe" || dft_functional_lower == "lc_wpbe" ||
                     dft_functional_lower == "lrc_wpbe")
                 {
-                    para.input.exx_cam_beta = "-1";
+                    para.input.exx_hybrid_beta = "-1";
                 }
                 else if (dft_functional_lower == "lrc_wpbeh")
                 {
-                    para.input.exx_cam_beta = "-0.8";
+                    para.input.exx_hybrid_beta = "-0.8";
                 }
                 else if (dft_functional_lower == "cam_pbeh")
                 {
-                    para.input.exx_cam_beta = "0.8";
+                    para.input.exx_hybrid_beta = "0.8";
                 }
                 else if (dft_functional_lower == "hse")
                 {
-                    para.input.exx_cam_beta = "0.25";
+                    para.input.exx_hybrid_beta = "0.25";
                 }
                 else
                 {
-                    para.input.exx_cam_beta = "0";
+                    para.input.exx_hybrid_beta = "0";
                 }
             }
         };

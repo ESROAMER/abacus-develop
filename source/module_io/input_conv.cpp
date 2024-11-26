@@ -364,8 +364,6 @@ void Input_Conv::Convert()
         GlobalC::exx_info.info_global.cal_exx = true;
         if (PARAM.inp.exx_use_ewald)
         {
-            GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
-            GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
             GlobalC::exx_info.info_global.use_ewald = true;
             GlobalC::exx_info.info_ewald.fq_type = Singular_Value::Fq_type(PARAM.inp.exx_fq_type);
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
@@ -389,8 +387,6 @@ void Input_Conv::Convert()
             || dft_functional_lower == "cam_pbeh")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
-        GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
-        GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
         if (PARAM.inp.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
@@ -410,9 +406,9 @@ void Input_Conv::Convert()
         // EXX case, convert all EXX related variables
         // GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(PARAM.inp.exx_hybrid_alpha);
+        GlobalC::exx_info.info_global.hybrid_beta = std::stod(PARAM.inp.exx_hybrid_beta);
         XC_Functional::set_hybrid_alpha(std::stod(PARAM.inp.exx_hybrid_alpha), 
-                                            std::stod(PARAM.inp.exx_cam_alpha), 
-                                            std::stod(PARAM.inp.exx_cam_beta));
+                                            std::stod(PARAM.inp.exx_hybrid_beta));
         GlobalC::exx_info.info_global.hse_omega = std::stod(PARAM.inp.exx_hse_omega);
         GlobalC::exx_info.info_global.separate_loop = PARAM.inp.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = PARAM.inp.exx_hybrid_step;

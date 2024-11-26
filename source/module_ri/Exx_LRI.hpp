@@ -90,14 +90,14 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
                                * GlobalC::ucell.omega / (ModuleBase::PI),
                            1.0 / 3.0);
             return {{"hse_omega", this->info.hse_omega},
-                    {"cam_alpha", this->info.cam_alpha},
-                    {"cam_beta", this->info.cam_beta},
+                    {"hybrid_alpha", this->info.hybrid_alpha},
+                    {"hybrid_beta", this->info.hybrid_beta},
                     {"hf_Rcut", hf_Rcut}};
         }
         case Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam:
             return {{"hse_omega", this->info.hse_omega},
-                    {"cam_alpha", this->info.cam_alpha},
-                    {"cam_beta", this->info.cam_beta}};
+                    {"hybrid_alpha", this->info.hybrid_alpha},
+                    {"hybrid_beta", this->info.hybrid_beta}};
         default:
             throw std::domain_error(std::string(__FILE__) + " line "
                                     + std::to_string(__LINE__));
@@ -125,7 +125,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
                           true);
 
     if (this->info_ewald.use_ewald) {
-        if (this->info.cam_beta) {
+        if (this->info.hybrid_beta) {
             this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(
                 this->abfs,
                 Conv_Coulomb_Pot_K::Ccp_Type::Hse,
@@ -194,12 +194,12 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     if (this->info_ewald.use_ewald) {
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_sr;
-        if (this->info.cam_beta) {
+        if (this->info.hybrid_beta) {
             Vs_sr = this->sr_cv.cal_Vs(list_As_Vs.first,
                                        list_As_Vs.second[0],
                                        {{"writable_Vws", true}});
             Vs_sr = LRI_CV_Tools::mul2(
-                RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                RI::Global_Func::convert<Tdata>(-this->info.hybrid_beta),
                 Vs_sr);
             this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
         }
@@ -210,9 +210,9 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
             = this->evq.cal_Vs(chi, Vs);
         Vs_full = LRI_CV_Tools::mul2(
-            RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+            RI::Global_Func::convert<Tdata>(this->info.hybrid_alpha),
             Vs_full);
-        Vs = this->info.cam_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr)
+        Vs = this->info.hybrid_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr)
                                  : Vs_full;
     }
 
@@ -229,12 +229,12 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
         if (this->info_ewald.use_ewald) {
             std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
                 dVs_sr;
-            if (this->info.cam_beta) {
+            if (this->info.hybrid_beta) {
                 dVs_sr = this->sr_cv.cal_dVs(list_As_Vs.first,
                                              list_As_Vs.second[0],
                                              {{"writable_dVws", true}});
                 dVs_sr = LRI_CV_Tools::mul2(
-                    RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                    RI::Global_Func::convert<Tdata>(-this->info.hybrid_beta),
                     dVs_sr);
                 this->sr_cv.dVws = LRI_CV_Tools::get_dCVws(dVs_sr);
             }
@@ -242,9 +242,9 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
             // dVs = this->evq.cal_dVs(chi, dVs);
             std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
                 dVs_full = LRI_CV_Tools::mul2(
-                    RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+                    RI::Global_Func::convert<Tdata>(this->info.hybrid_alpha),
                     dVs);
-            dVs = this->info.cam_beta ? LRI_CV_Tools::minus(dVs_full, dVs_sr)
+            dVs = this->info.hybrid_beta ? LRI_CV_Tools::minus(dVs_full, dVs_sr)
                                       : dVs_full;
         }
 
