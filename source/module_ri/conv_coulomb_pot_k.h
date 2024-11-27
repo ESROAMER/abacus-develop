@@ -34,7 +34,8 @@ namespace Conv_Coulomb_Pot_K
 	std::vector<double> cal_psi_hf(
 		const std::vector<double> &psif,
 		const std::vector<double> &k_radial,
-		const double hf_Rcut);
+		const int Rcut_type,
+		const double Rc);
 	std::vector<double> cal_psi_hse(
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
@@ -45,6 +46,7 @@ namespace Conv_Coulomb_Pot_K
                                            const double omega,
                                            const double hybrid_alpha,
                                            const double hybrid_beta,
+										   const int Rcut_type,
                                            const double Rc);
 
   std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
