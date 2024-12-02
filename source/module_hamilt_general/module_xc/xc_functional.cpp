@@ -18,14 +18,12 @@ std::vector<int> XC_Functional::func_id(1);
 int XC_Functional::func_type = 0;
 bool XC_Functional::use_libxc = true;
 double XC_Functional::hybrid_alpha = 0.25;
-double XC_Functional::cam_alpha = 0.0;
-double XC_Functional::cam_beta = 0.0;
+double XC_Functional::hybrid_beta = 0.0;
 
-void XC_Functional::set_hybrid_alpha(const double alpha_in, const double cam_alpha_in, const double cam_beta_in)
+void XC_Functional::set_hybrid_alpha(const double alpha_in, const double beta_in)
 {
     hybrid_alpha = alpha_in;
-    cam_alpha = cam_alpha_in;
-    cam_beta = cam_beta_in;
+    hybrid_beta = beta_in;
 }
 
 double XC_Functional::get_hybrid_alpha()

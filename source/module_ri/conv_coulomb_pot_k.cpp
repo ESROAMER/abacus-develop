@@ -17,15 +17,15 @@ std::vector<double> cal_psi_ccp(const std::vector<double>& psif) {
 std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
                                     const std::vector<double>& k_radial,
                                     const double omega,
-                                    const double cam_alpha,
-                                    const double cam_beta) {
+                                    const double hybrid_alpha,
+                                    const double hybrid_beta) {
     std::vector<double> psik2_ccp(psif.size());
     for (size_t ik = 0; ik < psif.size(); ++ik) {
         double fock_part
             = 1
               - std::exp(-(k_radial[ik] * k_radial[ik]) / (4 * omega * omega));
         psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik]
-                        * (cam_alpha + cam_beta * fock_part);
+                        * (hybrid_alpha + hybrid_beta * fock_part);
     }
     return psik2_ccp;
 }
@@ -34,11 +34,33 @@ std::vector<double> cal_psi_ccp_cam(const std::vector<double>& psif,
 // Sphere truction -- Spencer
 std::vector<double> cal_psi_hf(const std::vector<double>& psif,
                                const std::vector<double>& k_radial,
-                               const double hf_Rcut) {
+                               const int Rcut_type,
+                               const double Rc) {
     std::vector<double> psik2_ccp(psif.size());
+    double Rw = 1.092 * Rc;
+    double gamma = 5.0 / Rc;
+    double dr = 0.01;
+    int nr = static_cast<int>(5 * Rc / dr);
     for (size_t ik = 0; ik < psif.size(); ++ik)
-        psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik]
-                        * (1 - std::cos(k_radial[ik] * hf_Rcut));
+    {
+        if (Rcut_type == 0)
+        {
+            psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik]
+                        * (1 - std::cos(k_radial[ik] * Rc));
+        }
+        else if (Rcut_type == 1)
+        {
+            double sum_r = 0;
+            for (size_t ir = 0; ir != nr; ++ir)
+            {
+                double r = dr * ir;
+                sum_r += (std::erfc(gamma * r)
+                          + 0.5 * std::erfc((std::log(r) - std::log(Rc)) / std::log(1.092)) * std::erf(gamma * r))
+                         * std::sin(r * k_radial[ik]);
+            }
+            psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * dr * sum_r * k_radial[ik];
+        }
+    }
     return psik2_ccp;
 }
 
@@ -58,8 +80,9 @@ std::vector<double> cal_psi_cam(
                                 const std::vector<double>& psif,
                                 const std::vector<double>& k_radial,
                                 const double omega,
-                                const double cam_alpha,
-                                const double cam_beta,
+                                const double hybrid_alpha,
+                                const double hybrid_beta,
+                                const int Rcut_type,
 								const double Rc) {
     double eps = 1e-14;
     std::vector<double> psik2_ccp(psif.size());
@@ -83,7 +106,7 @@ std::vector<double> cal_psi_cam(
             = -0.5 * (-2 + 2 * temp0 + temp1 * (temp2 + temp3));
         psik2_ccp[ik]
             = ModuleBase::FOUR_PI * psif[ik]
-              * (cam_alpha * coulomb_part + cam_beta * fock_part.real());
+              * (hybrid_alpha * coulomb_part + hybrid_beta * fock_part.real());
     }
     return psik2_ccp;
 }
@@ -102,6 +125,7 @@ Numerical_Orbital_Lm cal_orbs_ccp<Numerical_Orbital_Lm>(
     case Ccp_Type::Hf:
         psik2_ccp = cal_psi_hf(orbs.get_psif(),
                                orbs.get_k_radial(),
+                               parameter.at("Rcut_type"),
                                parameter.at("hf_Rcut"));
         break;
     case Ccp_Type::Hse:
@@ -113,16 +137,17 @@ Numerical_Orbital_Lm cal_orbs_ccp<Numerical_Orbital_Lm>(
         psik2_ccp = cal_psi_cam(orbs.get_psif(),
                                 orbs.get_k_radial(),
                                 parameter.at("hse_omega"),
-                                parameter.at("cam_alpha"),
-                                parameter.at("cam_beta"),
+                                parameter.at("hybrid_alpha"),
+                                parameter.at("hybrid_beta"),
+                                parameter.at("Rcut_type"),
                                 parameter.at("hf_Rcut"));
         break;
     case Ccp_Type::Ccp_Cam:
         psik2_ccp = cal_psi_ccp_cam(orbs.get_psif(),
                                     orbs.get_k_radial(),
                                     parameter.at("hse_omega"),
-                                    parameter.at("cam_alpha"),
-                                    parameter.at("cam_beta"));
+                                    parameter.at("hybrid_alpha"),
+                                    parameter.at("hybrid_beta"));
         break;
     default:
         throw(ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "

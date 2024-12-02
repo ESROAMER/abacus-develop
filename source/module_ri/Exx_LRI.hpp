@@ -68,36 +68,50 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
 	Exx_Abfs::Construct_Orbs::print_orbs_size(this->abfs, GlobalV::ofs_running);
 
     auto get_ccp_parameter = [this]() -> std::map<std::string, double> {
+        double hf_Rcut;
+        switch (this->info.Rcut_type) {
+            case 0: {
+                // 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
+                const int nspin0 = (PARAM.inp.nspin == 2) ? 2 : 1;
+                hf_Rcut = std::pow(0.75 * this->p_kv->get_nkstot_full() / nspin0
+                               * GlobalC::ucell.omega / (ModuleBase::PI),
+                           1.0 / 3.0);
+                break;
+            }
+            case 1: {
+                double bvk_a1 = GlobalC::ucell.a1.norm() * this->p_kv->nmp[0];
+                double bvk_a2 = GlobalC::ucell.a2.norm() * this->p_kv->nmp[1];
+                double bvk_a3 = GlobalC::ucell.a3.norm() * this->p_kv->nmp[2];
+
+                double min_len = std::min({bvk_a1, bvk_a2, bvk_a3});
+                hf_Rcut = 0.5 * min_len;
+                break;
+            }
+            default:
+                throw std::domain_error(std::string(__FILE__) + " line "
+                                    + std::to_string(__LINE__));
+            break;
+        }
+
         switch (this->info.ccp_type) {
         case Conv_Coulomb_Pot_K::Ccp_Type::Ccp:
             return {};
         case Conv_Coulomb_Pot_K::Ccp_Type::Hf: {
-            // 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
-            const int nspin0 = (PARAM.inp.nspin == 2) ? 2 : 1;
-            const double hf_Rcut
-                = std::pow(0.75 * this->p_kv->get_nkstot_full() / nspin0
-                               * GlobalC::ucell.omega / (ModuleBase::PI),
-                           1.0 / 3.0);
-            return {{"hf_Rcut", hf_Rcut}};
+            return {{"Rcut_type", this->info.Rcut_type}, {"hf_Rcut", hf_Rcut}};
         }
         case Conv_Coulomb_Pot_K::Ccp_Type::Hse:
             return {{"hse_omega", this->info.hse_omega}};
         case Conv_Coulomb_Pot_K::Ccp_Type::Cam: {
-            // 4/3 * pi * Rcut^3 = V_{supercell} = V_{unitcell} * Nk
-            const int nspin0 = (PARAM.inp.nspin == 2) ? 2 : 1;
-            const double hf_Rcut
-                = std::pow(0.75 * this->p_kv->get_nkstot_full() / nspin0
-                               * GlobalC::ucell.omega / (ModuleBase::PI),
-                           1.0 / 3.0);
             return {{"hse_omega", this->info.hse_omega},
-                    {"cam_alpha", this->info.cam_alpha},
-                    {"cam_beta", this->info.cam_beta},
+                    {"hybrid_alpha", this->info.hybrid_alpha},
+                    {"hybrid_beta", this->info.hybrid_beta},
+                    {"Rcut_type", this->info.Rcut_type},
                     {"hf_Rcut", hf_Rcut}};
         }
         case Conv_Coulomb_Pot_K::Ccp_Type::Ccp_Cam:
             return {{"hse_omega", this->info.hse_omega},
-                    {"cam_alpha", this->info.cam_alpha},
-                    {"cam_beta", this->info.cam_beta}};
+                    {"hybrid_alpha", this->info.hybrid_alpha},
+                    {"hybrid_beta", this->info.hybrid_beta}};
         default:
             throw std::domain_error(std::string(__FILE__) + " line "
                                     + std::to_string(__LINE__));
@@ -125,7 +139,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
                           true);
 
     if (this->info_ewald.use_ewald) {
-        if (this->info.cam_beta) {
+        if (this->info.hybrid_beta) {
             this->abfs_ccp_sr = Conv_Coulomb_Pot_K::cal_orbs_ccp(
                 this->abfs,
                 Conv_Coulomb_Pot_K::Ccp_Type::Hse,
@@ -153,7 +167,7 @@ void Exx_LRI<Tdata>::init(const MPI_Comm &mpi_comm_in, const K_Vectors &kv_in, c
 }
 
 template<typename Tdata>
-void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
+void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
 {
 	ModuleBase::TITLE("Exx_LRI","cal_exx_ions");
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
@@ -194,24 +208,25 @@ void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
     this->cv.Vws = LRI_CV_Tools::get_CVws(Vs);
     if (this->info_ewald.use_ewald) {
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_sr;
-        if (this->info.cam_beta) {
+        if (this->info.hybrid_beta) {
             Vs_sr = this->sr_cv.cal_Vs(list_As_Vs.first,
                                        list_As_Vs.second[0],
                                        {{"writable_Vws", true}});
             Vs_sr = LRI_CV_Tools::mul2(
-                RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                RI::Global_Func::convert<Tdata>(-this->info.hybrid_beta),
                 Vs_sr);
             this->sr_cv.Vws = LRI_CV_Tools::get_CVws(Vs_sr);
         }
-        this->evq.init_ions(period_Vs);
-        double chi = this->evq.get_singular_chi(this->info_ewald.fq_type,
-                                                this->info_ewald.ewald_qdiv);
+        if (PARAM.inp.cal_stress || istep == 0)
+            this->evq.init_ions(period_Vs);
+
+        double chi = this->evq.get_singular_chi(this->info_ewald.fq_type, 2.0);
         std::map<TA, std::map<TAC, RI::Tensor<Tdata>>> Vs_full
             = this->evq.cal_Vs(chi, Vs);
         Vs_full = LRI_CV_Tools::mul2(
-            RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+            RI::Global_Func::convert<Tdata>(this->info.hybrid_alpha),
             Vs_full);
-        Vs = this->info.cam_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr)
+        Vs = this->info.hybrid_beta ? LRI_CV_Tools::minus(Vs_full, Vs_sr)
                                  : Vs_full;
     }
 
@@ -228,12 +243,12 @@ void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
         if (this->info_ewald.use_ewald) {
             std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
                 dVs_sr;
-            if (this->info.cam_beta) {
+            if (this->info.hybrid_beta) {
                 dVs_sr = this->sr_cv.cal_dVs(list_As_Vs.first,
                                              list_As_Vs.second[0],
                                              {{"writable_dVws", true}});
                 dVs_sr = LRI_CV_Tools::mul2(
-                    RI::Global_Func::convert<Tdata>(-this->info.cam_beta),
+                    RI::Global_Func::convert<Tdata>(-this->info.hybrid_beta),
                     dVs_sr);
                 this->sr_cv.dVws = LRI_CV_Tools::get_dCVws(dVs_sr);
             }
@@ -241,9 +256,9 @@ void Exx_LRI<Tdata>::cal_exx_ions(const bool write_cv)
             // dVs = this->evq.cal_dVs(chi, dVs);
             std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>>
                 dVs_full = LRI_CV_Tools::mul2(
-                    RI::Global_Func::convert<Tdata>(this->info.cam_alpha),
+                    RI::Global_Func::convert<Tdata>(this->info.hybrid_alpha),
                     dVs);
-            dVs = this->info.cam_beta ? LRI_CV_Tools::minus(dVs_full, dVs_sr)
+            dVs = this->info.hybrid_beta ? LRI_CV_Tools::minus(dVs_full, dVs_sr)
                                       : dVs_full;
         }
 

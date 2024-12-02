@@ -66,7 +66,7 @@ class XC_Functional
     static void set_xc_type(const std::string xc_func_in);
 
     // For hybrid functional
-    static void set_hybrid_alpha(const double alpha_in, const double cam_alpha_in, const double cam_beta_in);
+    static void set_hybrid_alpha(const double alpha_in, const double beta_in);
     static double get_hybrid_alpha();
     /// Usually in exx caculation, the first SCF loop should be converged with PBE
     static void set_xc_first_loop(const UnitCell& ucell);
@@ -79,8 +79,7 @@ class XC_Functional
 
 	//exx_hybrid_alpha for mixing exx in hybrid functional:
 	static double hybrid_alpha;
-	static double cam_alpha;
-	static double cam_beta;
+	static double hybrid_beta;
 
 	public:
 	static std::vector<int> get_func_id() { return func_id; }
