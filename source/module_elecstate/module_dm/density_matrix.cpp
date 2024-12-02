@@ -7,6 +7,8 @@
 #include "module_base/tool_title.h"
 #include "module_cell/klist.h"
 
+#include "module_elecstate/potentials/H_TDDFT_pw.h"
+#include "module_hamilt_lcao/module_tddft/td_velocity.h"
 namespace elecstate
 {
 
@@ -427,6 +429,7 @@ template <>
 void DensityMatrix<std::complex<double>, double>::cal_DMR()
 {
     ModuleBase::TITLE("DensityMatrix", "cal_DMR");
+    //std::cout<<"cal_DMR"<<std::endl;
 
     // To check whether DMR has been initialized
 #ifdef __DEBUG
@@ -655,6 +658,23 @@ void DensityMatrix<std::complex<double>, double>::cal_DMR(const int ik)
                 // Remove loop over k-points and directly use the provided ik
                 if (PARAM.inp.nspin != 4)
                 {
+                    double arg_td = 0.0;
+                    if(elecstate::H_TDDFT_pw::stype == 2)
+                    {
+                        //new
+                        //cal tddft phase for mixing gague
+                        const int iat1 = tmp_ap.get_atom_i();
+                        const int iat2 = tmp_ap.get_atom_j();
+                        ModuleBase::Vector3<double> dtau = TD_Velocity::td_vel_op->get_ucell()->cal_dtau(iat1, iat2, r_index);
+                        double& tmp_lat0 = TD_Velocity::td_vel_op->get_ucell()->lat0;
+                        arg_td = TD_Velocity::td_vel_op->cart_At * dtau * tmp_lat0;
+                        //new
+                        std::cout << "arg_td " << arg_td << std::endl;
+                        std::cout << "cart_At " << TD_Velocity::td_vel_op->cart_At[0] << " "<< TD_Velocity::td_vel_op->cart_At[1] << " " << TD_Velocity::td_vel_op->cart_At[2] << std::endl;
+                        std::cout << "dtau " << dtau[0] << " "<< dtau[1] << " " << dtau[2] << std::endl;
+                        std::cout << "ucell->lat0 " << tmp_lat0 << std::endl;
+                        std::cout << "iat1 " << iat1 << " " << "iat2 " << iat2 << std::endl;
+                    }
                     // cal k_phase
                     // if TK==std::complex<double>, kphase is e^{ikR}
                     const ModuleBase::Vector3<double> dR(r_index[0], r_index[1], r_index[2]);
