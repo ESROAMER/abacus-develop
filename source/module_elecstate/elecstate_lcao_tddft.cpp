@@ -6,6 +6,7 @@
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_hamilt_lcao/module_gint/grid_technique.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_elecstate/potentials/H_TDDFT_pw.h"
 namespace elecstate
 {
 
@@ -79,6 +80,44 @@ void ElecStateLCAO_TDDFT::calculate_weights_td()
         }
     }
     return;
+}
+
+
+void ElecStateLCAO_TDDFT::init_scf(const int istep, const ModuleBase::ComplexMatrix& strucfac, ModuleSymmetry::Symmetry& symm, const void* wfcpw)
+{
+    if(this->first_evolve)
+    {
+        //---------Charge part-----------------
+        // core correction potential.
+        if (!PARAM.inp.use_paw)
+        {
+            this->charge->set_rho_core(strucfac);
+        }
+        else
+        {
+            this->charge->set_rho_core_paw();
+        }
+    }
+
+    //--------------------------------------------------------------------
+    // (2) other effective potentials need charge density,
+    // choose charge density from ionic step 0.
+    //--------------------------------------------------------------------
+    if (istep == 0)
+    {
+        this->charge->init_rho(this->eferm, strucfac, symm, (const void*)this->klist, wfcpw);
+        this->charge->check_rho(); // check the rho
+    }
+
+    // renormalize the charge density
+    this->charge->renormalize_rho();
+
+    if(this->first_evolve || elecstate::H_TDDFT_pw::stype == 0)
+    {
+        //---------Potential part--------------
+        this->pot->init_pot(istep, this->charge);
+    }
+    
 }
 
 } // namespace elecstate

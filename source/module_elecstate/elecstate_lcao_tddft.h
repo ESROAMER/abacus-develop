@@ -23,6 +23,11 @@ class ElecStateLCAO_TDDFT : public ElecStateLCAO<std::complex<double>>
     }
     void psiToRho_td(const psi::Psi<std::complex<double>>& psi);
     void calculate_weights_td();
+    virtual void init_scf(const int istep,
+                    const ModuleBase::ComplexMatrix& strucfac,
+                    ModuleSymmetry::Symmetry& symm,
+                    const void* wfcpw = nullptr) override;
+    bool first_evolve = true;
 };
 
 } // namespace elecstate
