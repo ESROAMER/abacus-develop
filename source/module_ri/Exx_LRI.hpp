@@ -177,6 +177,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
 
     //	this->m_abfsabfs.init_radial_table(Rradial);
     //	this->m_abfslcaos_lcaos.init_radial_table(Rradial);
+    if(istep>0 && !GlobalC::ucell.if_atoms_can_move()) return;
 
     std::vector<TA> atoms(GlobalC::ucell.nat);
     for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
@@ -233,7 +234,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
 	if (write_cv && GlobalV::MY_RANK == 0) { LRI_CV_Tools::write_Vs_abf(Vs, PARAM.globalv.global_out_dir + "Vs"); }
     this->exx_lri.set_Vs(std::move(Vs), this->info.V_threshold);
 
-    if (GlobalC::ucell.if_atoms_can_move() && (PARAM.inp.cal_force || PARAM.inp.cal_stress)) {
+    if (PARAM.inp.cal_force || PARAM.inp.cal_stress) {
         std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, Ndim>>> dVs
             = this->cv.cal_dVs(list_As_Vs.first,
                                list_As_Vs.second[0],
@@ -291,7 +292,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
         Cs_dCs = this->cv.cal_Cs_dCs(
             list_As_Cs.first,
             list_As_Cs.second[0],
-            {{"cal_dC", GlobalC::ucell.if_atoms_can_move() && (PARAM.inp.cal_force || PARAM.inp.cal_stress)},
+            {{"cal_dC", PARAM.inp.cal_force || PARAM.inp.cal_stress},
              {"writable_Cws", true},
              {"writable_dCws", true},
              {"writable_Vws", false},
@@ -301,7 +302,7 @@ void Exx_LRI<Tdata>::cal_exx_ions(const int istep, const bool write_cv)
     if (write_cv && GlobalV::MY_RANK == 0) { LRI_CV_Tools::write_Cs_ao(Cs, PARAM.globalv.global_out_dir + "Cs"); }
     this->exx_lri.set_Cs(std::move(Cs), this->info.C_threshold);
 
-    if (GlobalC::ucell.if_atoms_can_move() && (PARAM.inp.cal_force || PARAM.inp.cal_stress)) {
+    if (PARAM.inp.cal_force || PARAM.inp.cal_stress) {
         std::map<TA, std::map<TAC, std::array<RI::Tensor<Tdata>, 3>>>& dCs
             = std::get<1>(Cs_dCs);
         this->cv.dCws = LRI_CV_Tools::get_dCVws(dCs);
@@ -334,7 +335,7 @@ void Exx_LRI<Tdata>::cal_exx_elec(const std::vector<std::map<TA, std::map<TAC, R
     (p_symrot) ? this->exx_lri.set_symmetry(true, p_symrot->get_irreducible_sector()) : this->exx_lri.set_symmetry(false, {});
 	for(int is=0; is<PARAM.inp.nspin; ++is)
 	{
-        std::string suffix = ((GlobalC::ucell.if_atoms_can_move() && (PARAM.inp.cal_force || PARAM.inp.cal_stress)) ? std::to_string(is) : "");
+        std::string suffix = ((PARAM.inp.cal_force || PARAM.inp.cal_stress) ? std::to_string(is) : "");
 
         this->exx_lri.set_Ds(Ds[is], this->info.dm_threshold, suffix);
         this->exx_lri.cal_Hs({ "","",suffix });
