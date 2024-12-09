@@ -230,12 +230,19 @@ void TDEkinetic<OperatorLCAO<TK, TR>>::cal_HR_IJR(const int& iat1,
         }
     }
 }
-// init two center integrals and vector potential for td_ekintic term
+// init two center integrals  for td_ekintic term
 template <typename TK, typename TR>
 void TDEkinetic<OperatorLCAO<TK, TR>>::init_td()
 {
     td_velocity = new TD_Velocity(this->ucell);
     TD_Velocity::td_vel_op = td_velocity;
+}
+//update vector potential for td_ekintic term
+template <typename TK, typename TR>
+void TDEkinetic<OperatorLCAO<TK, TR>>::update_td()
+{
+    std::cout<<"velocity"<<std::endl;
+    if(!TD_Velocity::init_vecpot_file) { elecstate::H_TDDFT_pw::update_At();}
     // calculate At in cartesian coorinates.
     td_velocity->cal_cart_At(elecstate::H_TDDFT_pw::At);
     this->cart_At = td_velocity->cart_At;
@@ -337,7 +344,7 @@ void TDEkinetic<OperatorLCAO<TK, TR>>::contributeHR()
     {
         return;
     }
-    if (!this->hR_tmp_done)
+    if (!this->hR_tmp_done || TD_Velocity::evolve_once)
     {
         const Parallel_Orbitals* paraV = this->hR->get_atom_pair(0).get_paraV();
         // if this Operator is the first node of the sub_chain, then hR_tmp is nullptr
@@ -359,6 +366,8 @@ void TDEkinetic<OperatorLCAO<TK, TR>>::contributeHR()
             td_velocity->initialize_current_term(this->hR_tmp, paraV);
         }
         // calculate the values in hR_tmp
+        this->update_td();
+        this->hR_tmp->set_zero();
         this->calculate_HR();
         this->hR_tmp_done = true;
     }

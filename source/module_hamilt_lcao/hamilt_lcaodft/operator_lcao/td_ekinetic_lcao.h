@@ -48,6 +48,7 @@ class TDEkinetic<OperatorLCAO<TK,TR>> : public OperatorLCAO<TK, TR>
     virtual void contributeHk(int ik) override;
     /// @brief init two center integrals and vector potential for td_ekintic term
     void init_td();
+    void update_td();
 
     /**
      * @brief initialize HR, search the nearest neighbor atoms

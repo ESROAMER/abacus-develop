@@ -103,6 +103,7 @@ class TD_mixing_pot<OperatorLCAO<TK, TR>> : public OperatorLCAO<TK, TR>
     void initialize_HR(Grid_Driver* GridD_in);
 
     void init_td();
+    void update_td();
 
     /**
      * @brief calculate the electronic kinetic matrix with specific <I,J,R> atom-pairs

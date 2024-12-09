@@ -9,6 +9,7 @@ bool TD_Velocity::out_vecpot = false;
 bool TD_Velocity::out_current = false;
 bool TD_Velocity::out_current_k = false;
 bool TD_Velocity::init_vecpot_file = false;
+bool TD_Velocity::evolve_once = false;
 
 TD_Velocity* TD_Velocity::td_vel_op = nullptr;
 

@@ -13,12 +13,12 @@ TD_current::TD_current(const UnitCell* ucell_in,
                       const Parallel_Orbitals* paraV,
                       const LCAO_Orbitals& orb,
                       const TwoCenterIntegrator* intor)
-    : ucell(ucell_in), paraV(paraV) , orb_(orb), Grid(GridD_in), intor_(intor)
+    : ucell(ucell_in), paraV(paraV) , orb_(orb), intor_(intor)
 {   
     // for length gague, the A(t) = 0 for all the time.
     this->cart_At = ModuleBase::Vector3<double>(0,0,0);
-    this->initialize_vcomm_r(GridD_in, paraV);
     this->initialize_grad_term(GridD_in, paraV);
+    this->initialize_vcomm_r(GridD_in, paraV);
 }
 TD_current::~TD_current()
 {
@@ -37,7 +37,6 @@ void TD_current::initialize_vcomm_r(Grid_Driver* GridD, const Parallel_Orbitals*
         if (this->current_term[dir] == nullptr)
         this->current_term[dir] = new hamilt::HContainer<std::complex<double>>(paraV);
     }
-
     this->adjs_vcommr.clear();
     this->adjs_vcommr.reserve(this->ucell->nat);
     for (int iat0 = 0; iat0 < ucell->nat; iat0++)
@@ -107,12 +106,13 @@ void TD_current::initialize_grad_term(Grid_Driver* GridD, const Parallel_Orbital
 {
     ModuleBase::TITLE("TD_current", "initialize_grad_term");
     ModuleBase::timer::tick("TD_current", "initialize_grad_term");
-
     for (int dir=0;dir<3;dir++)
     {
         if (this->current_term[dir] == nullptr)
         this->current_term[dir] = new hamilt::HContainer<std::complex<double>>(paraV);
     }
+    this->adjs_grad.clear();
+    this->adjs_grad.reserve(this->ucell->nat);
     for (int iat1 = 0; iat1 < ucell->nat; iat1++)
     {
         auto tau1 = ucell->get_tau(iat1);

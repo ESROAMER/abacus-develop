@@ -36,6 +36,9 @@ class TD_Velocity
     /// @brief switch to control the source of At
     static bool init_vecpot_file;
 
+    /// @brief if need to calculate more than once
+    static bool evolve_once;
+
     /// @brief Store the vector potential for tddft calculation
     ModuleBase::Vector3<double> cart_At;
 

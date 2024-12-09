@@ -407,7 +407,7 @@ void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
     {
         return;
     }
-    if (!this->hR_tmp_done)
+    if (!this->hR_tmp_done || TD_Velocity::evolve_once)
     {
         if (this->hR_tmp == nullptr)
         {
@@ -424,6 +424,7 @@ void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
         // calculate the values in hR_tmp
         this->calculate_HR();
         this->hR_tmp_done = true;
+        TD_Velocity::evolve_once = false;
     }
     ModuleBase::timer::tick("TDNonlocal", "contributeHR");
     return;
