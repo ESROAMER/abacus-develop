@@ -5,6 +5,7 @@
 #include "module_elecstate/elecstate_lcao.h"
 #include "module_elecstate/module_dm/density_matrix.h"
 #include "module_psi/psi.h"
+#include "module_hamilt_lcao/module_tddft/td_current.h"
 
 namespace ModuleIO
 {
@@ -17,6 +18,7 @@ void write_current(const int istep,
                    const TwoCenterIntegrator* intor,
                    const Parallel_Orbitals* pv,
                    const LCAO_Orbitals& orb,
+                   const TD_current* cal_current,
                    Record_adj& ra);
 
 /// @brief calculate sum_n[𝜌_(𝑛𝑘,𝜇𝜈)] for current calculation

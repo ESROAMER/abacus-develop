@@ -374,7 +374,7 @@ void ReadInput::write_txt_input(const Parameter& param, const std::string& filen
         {
             ofs << "\n#Parameters (8.DeepKS)" << std::endl;
         }
-        else if (p_item->label == "td_force_dt")
+        else if (p_item->label == "estep_per_md")
         {
             ofs << "\n#Parameters (9.rt-tddft)" << std::endl;
         }

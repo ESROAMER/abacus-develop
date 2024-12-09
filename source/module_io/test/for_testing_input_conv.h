@@ -30,8 +30,6 @@
 #endif
 #undef private
 bool berryphase::berry_phase_flag = false;
-
-double module_tddft::Evolve_elec::td_force_dt;
 bool module_tddft::Evolve_elec::td_vext;
 std::vector<int> module_tddft::Evolve_elec::td_vext_dire_case;
 bool module_tddft::Evolve_elec::out_dipole;
