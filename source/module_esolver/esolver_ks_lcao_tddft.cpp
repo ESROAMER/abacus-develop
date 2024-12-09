@@ -21,6 +21,7 @@
 #include "module_io/print_info.h"
 #include "module_hamilt_lcao/module_deltaspin/spin_constrain.h"
 #include "module_hamilt_general/module_ewald/H_Ewald_pw.h"
+#include "module_elecstate/potentials/H_TDDFT_pw.h"
 
 //-----HSolver ElecState Hamilt--------
 #include "module_elecstate/elecstate_lcao.h"
@@ -63,6 +64,12 @@ ESolver_KS_LCAO_TDDFT::~ESolver_KS_LCAO_TDDFT()
         }
         delete[] Sk_laststep;
     }
+    if (td_p != nullptr)
+    {
+        delete td_p;
+        TD_Velocity::td_vel_op = nullptr;
+    }
+
 }
 
 void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& ucell)
@@ -136,6 +143,12 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
     this->pelec_td = dynamic_cast<elecstate::ElecStateLCAO_TDDFT*>(this->pelec);
 
     this->atoms_fixed = !ucell.if_atoms_can_move();
+
+    if(elecstate::H_TDDFT_pw::stype!=0)
+    {
+        td_p  = new TD_Velocity(&GlobalC::ucell);
+        TD_Velocity::td_vel_op = td_p;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -182,6 +195,12 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
         this->totstep++;
         this->print_step();
         this->p_chgmix->init_mixing();
+        //update At
+        if(elecstate::H_TDDFT_pw::stype!=0)
+        {
+            elecstate::H_TDDFT_pw::update_At();
+            td_p->cal_cart_At(elecstate::H_TDDFT_pw::At);
+        }
         if(estep!=0)
         {
             this->CE.update_all_dis(GlobalC::ucell);
@@ -197,7 +216,10 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
             //need to test if correct when estep>0
             this->pelec_td->init_scf(totstep, this->sf.strucFac, GlobalC::ucell.symm);
             dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->get_DM()->cal_DMR();
-            TD_Velocity::evolve_once = true;
+            if(totstep <= PARAM.inp.td_tend)
+            {
+                TD_Velocity::evolve_once = true;
+            }
         }
         ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT SCF");
         // perhaps no need change
@@ -325,6 +347,12 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
         this->after_scf(totstep);
         ModuleBase::timer::tick(this->classname, "after_scf");
         this->pelec_td->first_evolve = false;
+        if(!restart_done)
+        {
+            estep += PARAM.inp.estep_shift%PARAM.inp.estep_per_md;
+            totstep += PARAM.inp.estep_shift;
+            restart_done = true;
+        }
     }
     if(!TD_Velocity::tddft_velocity && TD_Velocity::out_current)
     {
@@ -660,7 +688,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
     }
 
     if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao
-        && (this->conv_esolver || iter == PARAM.inp.scf_nmax) && (istep % PARAM.inp.out_interval == 0))
+        && (this->conv_esolver || iter == PARAM.inp.scf_nmax) && (((istep+1) % PARAM.inp.out_interval == 0) || istep == 0))
     {
         ModuleIO::write_wfc_nao(elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao,
                                 this->psi[0],

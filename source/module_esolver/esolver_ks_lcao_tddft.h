@@ -50,9 +50,13 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
 
     bool atoms_fixed = false;
 
+    bool restart_done = false;
+
     int totstep = -1;
 
     TD_current* velocity_mat = nullptr;
+
+    TD_Velocity* td_p;
 };
 
 } // namespace ModuleESolver

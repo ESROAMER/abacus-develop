@@ -24,6 +24,7 @@ TD_Velocity::TD_Velocity(const UnitCell* ucell_in)
     {
         this->read_cart_At();
     }
+    this->istep+=PARAM.inp.estep_shift;
     return;
 }
 TD_Velocity::~TD_Velocity()
@@ -49,7 +50,7 @@ void TD_Velocity::output_cart_At(const std::string& out_dir)
         out_file = out_dir + "At.dat";
         std::ofstream ofs;
         // output title
-        if (istep == 0)
+        if (istep == PARAM.inp.estep_shift)
         {
             ofs.open(out_file.c_str(), std::ofstream::out);
             ofs << std::left << std::setw(8) << "#istep" << std::setw(15) << "A_x" << std::setw(15) << "A_y"

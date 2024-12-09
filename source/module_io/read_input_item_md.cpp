@@ -23,7 +23,7 @@ void ReadInput::item_md()
         Input_Item item("md_nstep");
         item.annotation = "md steps";
         item.reset_value = [](const Input_Item& item, Parameter& para) {
-            if (para.input.mdp.md_nstep == 0)
+            if (para.input.mdp.md_nstep == 0 && para.input.esolver_type != "tddft")
             {
                 GlobalV::ofs_running << "md_nstep should be set. Autoset md_nstep to 50!" << std::endl;
                 para.input.mdp.md_nstep = 50;

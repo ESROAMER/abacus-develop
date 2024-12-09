@@ -47,7 +47,6 @@ class TDEkinetic<OperatorLCAO<TK,TR>> : public OperatorLCAO<TK, TR>
     virtual void contributeHR() override;
     virtual void contributeHk(int ik) override;
     /// @brief init two center integrals and vector potential for td_ekintic term
-    void init_td();
     void update_td();
 
     /**

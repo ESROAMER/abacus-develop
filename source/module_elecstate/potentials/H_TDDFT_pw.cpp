@@ -104,6 +104,7 @@ void H_TDDFT_pw::cal_fixed_v(double* vl_pseudo)
     // time evolve
     H_TDDFT_pw::istep++;
     H_TDDFT_pw::istep_int = istep;
+    std::cout<<"istep:"<<istep<<std::endl;
 
     // judgement to skip vext
     if (!module_tddft::Evolve_elec::td_vext || istep > tend || istep < tstart)
@@ -264,7 +265,6 @@ void H_TDDFT_pw::update_At()
     std::cout << "calculate electric potential" << std::endl;
     // time evolve
     H_TDDFT_pw::istep++;
-    std::cout << "TDDFT-istep: " << istep << std::endl;
 
     // judgement to skip vext
     if (!module_tddft::Evolve_elec::td_vext || istep > tend || istep < tstart)
