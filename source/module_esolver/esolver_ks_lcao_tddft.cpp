@@ -67,8 +67,8 @@ ESolver_KS_LCAO_TDDFT::~ESolver_KS_LCAO_TDDFT()
     if (td_p != nullptr)
     {
         delete td_p;
-        TD_Velocity::td_vel_op = nullptr;
     }
+    TD_Velocity::td_vel_op = nullptr;
 
 }
 
@@ -576,7 +576,7 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
     // }
 
     // print occupation of each band
-    if (iter == 1 && istep <= 2)
+    /*if (iter == 1 && istep <= 2)
     {
         GlobalV::ofs_running << "---------------------------------------------------------------"
                                 "---------------------------------"
@@ -598,7 +598,7 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
         GlobalV::ofs_running << "---------------------------------------------------------------"
                                 "---------------------------------"
                              << std::endl;
-    }
+    }*/
 
     for (int ik = 0; ik < kv.get_nks(); ++ik)
     {
@@ -836,6 +836,7 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                 this->velocity_mat,
                                 this->RA);
     }
+    std::cout << "Potential (Ry): " << std::setprecision(15) << this->pelec->f_en.etot <<std::endl;
 }
 
 } // namespace ModuleESolver
