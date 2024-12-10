@@ -146,7 +146,10 @@ void ReadInput::item_system()
             }
             if (para.input.calculation == "md")
             {
-                para.input.symmetry = "0";
+                if(para.input.symmetry != "0" && para.input.symmetry != "-1")
+                {
+                    para.input.symmetry = "0";
+                }
             }
             if (para.input.efield_flag)
             {
