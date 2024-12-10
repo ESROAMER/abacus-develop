@@ -56,7 +56,7 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
 
     TD_current* velocity_mat = nullptr;
 
-    TD_Velocity* td_p;
+    TD_Velocity* td_p = nullptr;
 };
 
 } // namespace ModuleESolver
