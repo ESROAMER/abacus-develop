@@ -13,7 +13,6 @@ namespace module_tddft
 Evolve_elec::Evolve_elec(){};
 Evolve_elec::~Evolve_elec(){};
 
-double Evolve_elec::td_force_dt;
 bool Evolve_elec::td_vext;
 std::vector<int> Evolve_elec::td_vext_dire_case;
 bool Evolve_elec::out_dipole;

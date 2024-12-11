@@ -96,6 +96,12 @@ class H_TDDFT_pw : public PotBase
     static std::vector<double> heavi_t0;
     static std::vector<double> heavi_amp; // Ry/bohr
 
+    // internal time-step,
+    //-------hypothesis-------
+    // Vext will evolve by time, every time cal_fixed_v() is called, istep++
+    //------------------------
+    static int istep;
+
     //update At for velocity gauge by intergral of E(t)dt
     static void update_At(void);
 
@@ -108,12 +114,6 @@ class H_TDDFT_pw : public PotBase
     //ETD
 
   private:
-    // internal time-step,
-    //-------hypothesis-------
-    // Vext will evolve by time, every time cal_fixed_v() is called, istep++
-    //------------------------
-    static int istep;
-
     static double amp;
 
     static double bmod;

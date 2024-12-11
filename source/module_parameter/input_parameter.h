@@ -242,7 +242,11 @@ struct Input_para
     double bessel_descriptor_sigma = 0.1;           ///< spherical bessel smearing_sigma
 
     // ==============   #Parameters (9.rt-tddft) ===========================
-    double td_force_dt = 0.02;      ///<"fs"
+    int estep_per_md = 1;           ///< number of electronic steps per MD step
+    int estep_shift = 0;            ///< shift of electronic steps
+    double vec_start_x = 0.0;
+    double vec_start_y = 0.0;
+    double vec_start_z = 0.0;
     bool td_vext = false;           ///< add extern potential or not
     std::string td_vext_dire = "1"; ///< vext direction
 

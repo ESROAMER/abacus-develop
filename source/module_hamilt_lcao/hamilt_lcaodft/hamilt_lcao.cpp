@@ -336,9 +336,6 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
         // TDDFT_velocity_gague
         if (TD_Velocity::tddft_velocity)
         {
-            std::cout<<"velocity"<<std::endl;
-            if(!TD_Velocity::init_vecpot_file) { elecstate::H_TDDFT_pw::update_At();
-}
             Operator<TK>* td_ekinetic = new TDEkinetic<OperatorLCAO<TK, TR>>(this->hsk,
                                                                              this->hR,
                                                                              kv,
@@ -358,8 +355,6 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
         }
         if (elecstate::H_TDDFT_pw::stype == 2)
         {
-            std::cout<<"hybrid gague" <<std::endl;
-            elecstate::H_TDDFT_pw::update_At();
             Operator<TK>* td_pot_mixing = new TD_mixing_pot<OperatorLCAO<TK, TR>>(this->hsk,
                                                                            this->kv->kvec_d,
                                                                            this->hR,

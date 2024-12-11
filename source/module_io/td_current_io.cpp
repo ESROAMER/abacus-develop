@@ -10,7 +10,6 @@
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_elecstate/potentials/H_TDDFT_pw.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h"
-#include "module_hamilt_lcao/module_tddft/td_current.h"
 #include "module_hamilt_lcao/module_tddft/td_velocity.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_parameter/parameter.h"
@@ -142,18 +141,15 @@ void ModuleIO::write_current(const int istep,
                              const TwoCenterIntegrator* intor,
                              const Parallel_Orbitals* pv,
                              const LCAO_Orbitals& orb,
+                             const TD_current* cal_current,
                              Record_adj& ra)
 {
 
     ModuleBase::TITLE("ModuleIO", "write_current");
     ModuleBase::timer::tick("ModuleIO", "write_current");
-    TD_current* cal_current = nullptr;
     std::vector<hamilt::HContainer<std::complex<double>>*> current_term = {nullptr, nullptr, nullptr};
     if (!TD_Velocity::tddft_velocity)
     {
-        cal_current = new TD_current(&GlobalC::ucell, &GlobalC::GridD, pv, orb, intor);
-        cal_current->calculate_vcomm_r();
-        cal_current->calculate_grad_term();
         for (int dir = 0; dir < 3; dir++)
         {
             current_term[dir] = cal_current->get_current_term_pointer(dir);
@@ -329,10 +325,6 @@ void ModuleIO::write_current(const int istep,
         fout << std::scientific;
         fout << istep << " " << current_total[0] << " " << current_total[1] << " " << current_total[2] << std::endl;
         fout.close();
-    }
-    if (!TD_Velocity::tddft_velocity)
-    {
-        delete cal_current;
     }
 
     ModuleBase::timer::tick("ModuleIO", "write_current");

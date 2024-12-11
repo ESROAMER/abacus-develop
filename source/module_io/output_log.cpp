@@ -311,4 +311,11 @@ void write_head(std::ofstream& ofs_running, const int& istep, const int& iter, c
                 << "  ELEC=" << std::setw(4) << iter << "--------------------------------\n";
 }
 
+void write_head_td(std::ofstream& ofs_running, const int& istep, const int& estep, const int& iter, const std::string& basisname)
+{
+    ofs_running << "\n " << basisname << " ALGORITHM --------------- ION=" << std::setw(4) << istep + 1
+                << "  ELEC=" << std::setw(4) << estep << "  iter=" << std::setw(4)  << iter << "--------------------------------\n";
+}
+
+
 }// namespace ModuleIO

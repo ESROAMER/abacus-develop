@@ -43,11 +43,6 @@ hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::~TD_mixing_pot()
     {
         delete this->HR_fixed;
     }
-    if (this->td_velocity != nullptr)
-    {
-        delete this->td_velocity;
-    }
-    TD_Velocity::td_vel_op = nullptr;
 }
 
 // initialize_HR()
@@ -233,27 +228,23 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::cal_HR_IJR(const int& 
 template <typename TK, typename TR>
 void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::init_td()
 {
-    td_velocity = new TD_Velocity(this->ucell);
-    TD_Velocity::td_vel_op = td_velocity;
-    // calculate At in cartesian coorinates.
-    td_velocity->cal_cart_At(elecstate::H_TDDFT_pw::At);
-    this->cart_At = td_velocity->cart_At;
-    std::cout << "cart_At: " << cart_At[0] << " " << cart_At[1] << " " << cart_At[2] << std::endl;
-
     // initialize the r_calculator
-    if(td_velocity->get_istep()==0)
+    if(TD_Velocity::td_vel_op->get_istep()==(PARAM.inp.estep_shift-1))
     {
         std::cout << "init_r_overlap" <<std::endl;
         r_calculator.init(*this->hR->get_paraV(), orb_);
     }
-    
-
+    hk_hybrid.resize(this->hR->get_paraV()->nloc);
+}
+template <typename TK, typename TR>
+void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::update_td()
+{
+    std::cout<<"hybrid gague" <<std::endl;
+    this->cart_At = TD_Velocity::td_vel_op->cart_At;
+    std::cout << "cart_At: " << cart_At[0] << " " << cart_At[1] << " " << cart_At[2] << std::endl;
     Et = elecstate::H_TDDFT_pw::Et;
     std::cout<<"Et: "<<Et[0]<<" "<<Et[1]<<" "<<Et[2]<<std::endl;
-    hk_hybrid.resize(this->hR->get_paraV()->nloc);
-    td_velocity->hk_hybrid=this->hk_hybrid.data();
 }
-
 // set_HR_fixed()
 template <typename TK, typename TR>
 void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::set_HR_fixed(void* HR_fixed_in)
@@ -269,7 +260,7 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
     ModuleBase::TITLE("TD_mixing_pot", "contributeHR");
     ModuleBase::timer::tick("TD_mixing_pot", "contributeHR");
 
-    if (!this->HR_fixed_done)
+    if (!this->HR_fixed_done || TD_Velocity::evolve_once)
     {
         // if this Operator is the first node of the sub_chain, then HR_fixed is nullptr
         if (this->HR_fixed == nullptr)
@@ -284,8 +275,15 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
             static_cast<OperatorLCAO<TK, TR>*>(this->next_sub_op)->set_HR_fixed(this->HR_fixed);
         }
         // calculate the values in HR_fixed
+        this->update_td();
+        this->HR_fixed->set_zero();
         this->calculate_HR();
         this->HR_fixed_done = true;
+        TD_Velocity::evolve_once = false;
+        if(TD_Velocity::td_vel_op->hk_hybrid == nullptr)
+        {
+            TD_Velocity::td_vel_op->hk_hybrid = this->hk_hybrid.data();
+        }
     }
     // last node of sub-chain, add HR_fixed into HR
     if (this->next_sub_op == nullptr)

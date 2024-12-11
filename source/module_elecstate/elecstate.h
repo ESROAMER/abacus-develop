@@ -108,10 +108,10 @@ class ElecState
      * @param symm symmetry
      * @param wfcpw PW basis for wave function if needed
      */
-    void init_scf(const int istep,
-                  const ModuleBase::ComplexMatrix& strucfac,
-                  ModuleSymmetry::Symmetry& symm,
-                  const void* wfcpw = nullptr);
+    virtual void init_scf(const int istep,
+                        const ModuleBase::ComplexMatrix& strucfac,
+                        ModuleSymmetry::Symmetry& symm,
+                        const void* wfcpw = nullptr);
     std::string classname = "elecstate";
 
     int iter = 0;                                  ///< scf iteration

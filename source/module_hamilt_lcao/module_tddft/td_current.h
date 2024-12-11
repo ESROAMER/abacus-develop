@@ -36,7 +36,6 @@ class TD_current
 
     const LCAO_Orbitals& orb_;
 
-    Grid_Driver* Grid = nullptr;
     /// @brief Store real space hamiltonian. TD term should include imaginary part, thus it has to be complex type. Only shared between TD operators.
     std::vector<hamilt::HContainer<std::complex<double>>*> current_term = {nullptr, nullptr, nullptr};
     

@@ -28,8 +28,6 @@ hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::TDNonlocal(HS_Matrix_K<TK>* hs
 #ifdef __DEBUG
     assert(this->ucell != nullptr);
 #endif
-    // initialize HR to get adjs info.
-    this->init_td();
     this->initialize_HR(Grid);
 }
 
@@ -43,7 +41,7 @@ hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::~TDNonlocal()
     }
 }
 template <typename TK, typename TR>
-void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::init_td()
+void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::update_td()
 {
     // calculate At in cartesian coorinates.
     this->cart_At = TD_Velocity::td_vel_op->cart_At;
@@ -407,7 +405,7 @@ void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
     {
         return;
     }
-    if (!this->hR_tmp_done)
+    if (!this->hR_tmp_done || TD_Velocity::evolve_once)
     {
         if (this->hR_tmp == nullptr)
         {
@@ -422,8 +420,10 @@ void hamilt::TDNonlocal<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
             static_cast<OperatorLCAO<TK, TR>*>(this->next_sub_op)->set_HR_fixed(this->hR_tmp);
         }
         // calculate the values in hR_tmp
+        this->update_td();
         this->calculate_HR();
         this->hR_tmp_done = true;
+        TD_Velocity::evolve_once = false;
     }
     ModuleBase::timer::tick("TDNonlocal", "contributeHR");
     return;

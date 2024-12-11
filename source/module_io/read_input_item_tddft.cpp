@@ -9,9 +9,33 @@ void ReadInput::item_rt_tddft()
 { 
     // real time TDDFT
     {
-        Input_Item item("td_force_dt");
-        item.annotation = "time of force change";
-        read_sync_double(input.td_force_dt);
+        Input_Item item("estep_per_md");
+        item.annotation = "steps of force change";
+        read_sync_int(input.estep_per_md);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("estep_shift");
+        item.annotation = "restart estep";
+        read_sync_int(input.estep_shift);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("vec_start_x");
+        item.annotation = "vec_start_x";
+        read_sync_double(input.vec_start_x);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("vec_start_y");
+        item.annotation = "vec_start_y";
+        read_sync_double(input.vec_start_y);
+        this->add_item(item);
+    }
+    {
+        Input_Item item("vec_start_z");
+        item.annotation = "vec_start_z";
+        read_sync_double(input.vec_start_z);
         this->add_item(item);
     }
     {

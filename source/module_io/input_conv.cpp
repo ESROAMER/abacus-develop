@@ -69,6 +69,10 @@ void Input_Conv::read_td_efield()
     } else {
         TD_Velocity::out_mat_R = false;
     }
+    elecstate::H_TDDFT_pw::istep += PARAM.inp.estep_shift;
+    elecstate::H_TDDFT_pw::At[0] += PARAM.inp.vec_start_x * 2.0;
+    elecstate::H_TDDFT_pw::At[1] += PARAM.inp.vec_start_y * 2.0;
+    elecstate::H_TDDFT_pw::At[2] += PARAM.inp.vec_start_z * 2.0;
     parse_expression(PARAM.inp.td_ttype, elecstate::H_TDDFT_pw::ttype);
 
     elecstate::H_TDDFT_pw::tstart = PARAM.inp.td_tstart;
@@ -282,7 +286,6 @@ void Input_Conv::Convert()
 // Fuxiang He add 2016-10-26
 //----------------------------------------------------------
 #ifdef __LCAO
-    module_tddft::Evolve_elec::td_force_dt = PARAM.inp.td_force_dt;
     module_tddft::Evolve_elec::td_vext = PARAM.inp.td_vext;
     if (module_tddft::Evolve_elec::td_vext)
     {

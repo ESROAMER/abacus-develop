@@ -23,7 +23,7 @@ std::string wfc_nao_gen_fname(const int out_type,
     std::string kgamma_block = (gamma_only) ? "_GAMMA" : "_K";
     std::string istep_block
         = (istep >= 0 && (!out_app_flag))
-              ? "_ION" + std::to_string(istep + 1)
+              ? "_ION" + std::to_string(istep)
               : ""; // only when istep >= 0 and out_app_flag is true will write each wfc to a separate file
     std::string suffix_block = "";
 

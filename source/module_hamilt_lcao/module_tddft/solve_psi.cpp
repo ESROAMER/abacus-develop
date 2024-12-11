@@ -56,5 +56,8 @@ void solve_psi_td(const Parallel_Orbitals* pv,
 
     //copy solution to psi_k
     BlasConnector::copy(pv->nloc_wfc, tmp_b, 1, psi_k, 1);
+
+    delete []tmp_b;
+    delete []ipiv;
 }
 } // namespace module_tddft
