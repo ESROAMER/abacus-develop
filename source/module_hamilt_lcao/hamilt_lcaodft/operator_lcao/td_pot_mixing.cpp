@@ -229,7 +229,7 @@ template <typename TK, typename TR>
 void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::init_td()
 {
     // initialize the r_calculator
-    if(TD_Velocity::td_vel_op->get_istep()==-1)
+    if(TD_Velocity::td_vel_op->get_istep()==(PARAM.inp.estep_shift-1))
     {
         std::cout << "init_r_overlap" <<std::endl;
         r_calculator.init(*this->hR->get_paraV(), orb_);
