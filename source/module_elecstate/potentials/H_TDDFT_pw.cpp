@@ -266,6 +266,9 @@ void H_TDDFT_pw::update_At()
     // time evolve
     H_TDDFT_pw::istep++;
 
+    At = At + At_laststep;
+    At_laststep.set(0.0, 0.0, 0.0);
+    Et.set(0.0, 0.0, 0.0);
     // judgement to skip vext
     if (!module_tddft::Evolve_elec::td_vext || istep > tend || istep < tstart)
     {
@@ -280,9 +283,6 @@ void H_TDDFT_pw::update_At()
     int ncut = 1;
     bool last = false;
     double out = 0.0;
-    At = At + At_laststep;
-    At_laststep.set(0.0, 0.0, 0.0);
-    Et.set(0.0, 0.0, 0.0);
     for (auto direc: module_tddft::Evolve_elec::td_vext_dire_case)
     {
         last = false;
