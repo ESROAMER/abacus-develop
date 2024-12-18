@@ -201,6 +201,8 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
             elecstate::H_TDDFT_pw::update_At();
             td_p->cal_cart_At(elecstate::H_TDDFT_pw::At);
         }
+        std::cout << "cart_At: " << td_p->cart_At[0] << " " << td_p->cart_At[1] << " " << td_p->cart_At[2] << std::endl;
+        std::cout<<"Et: "<<elecstate::H_TDDFT_pw::Et[0]<<" "<<elecstate::H_TDDFT_pw::Et[1]<<" "<<elecstate::H_TDDFT_pw::Et[2]<<std::endl;
         if(estep!=0)
         {
             this->CE.update_all_dis(GlobalC::ucell);
@@ -216,7 +218,7 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
             //need to test if correct when estep>0
             this->pelec_td->init_scf(totstep, this->sf.strucFac, GlobalC::ucell.symm);
             dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->get_DM()->cal_DMR();
-            if(totstep <= PARAM.inp.td_tend)
+            if(totstep <= PARAM.inp.td_tend + 1)
             {
                 TD_Velocity::evolve_once = true;
             }
@@ -783,7 +785,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
         }    
 
     // print "eigen value" for tddft
-    if (this->conv_esolver)
+    /*if (this->conv_esolver)
     {
         GlobalV::ofs_running << "---------------------------------------------------------------"
                                 "---------------------------------"
@@ -805,7 +807,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
         GlobalV::ofs_running << "---------------------------------------------------------------"
                                 "---------------------------------"
                              << std::endl;
-    }
+    }*/
 }
 
 void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
