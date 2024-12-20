@@ -242,7 +242,7 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHR()
 template<typename TK, typename TR>
 void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
 {
-    ModuleBase::TITLE("OperatorEXX", "constributeHR");
+    ModuleBase::TITLE("OperatorEXX", "constributeHk");
     // Peize Lin add 2016-12-03
     if (PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return; }  //in the non-exx loop, do nothing 
 
