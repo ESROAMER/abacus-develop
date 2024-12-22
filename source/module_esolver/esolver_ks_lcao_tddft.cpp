@@ -144,11 +144,8 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 
     this->atoms_fixed = !ucell.if_atoms_can_move();
 
-    if(elecstate::H_TDDFT_pw::stype!=0)
-    {
-        td_p  = new TD_Velocity(&GlobalC::ucell);
-        TD_Velocity::td_vel_op = td_p;
-    }
+    td_p  = new TD_Velocity(&GlobalC::ucell);
+    TD_Velocity::td_vel_op = td_p;
 }
 
 //------------------------------------------------------------------------------
