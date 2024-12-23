@@ -43,6 +43,7 @@ hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::~TD_mixing_pot()
     {
         delete this->HR_fixed;
     }
+    TD_Velocity::td_vel_op->hk_hybrid = nullptr;
 }
 
 // initialize_HR()
