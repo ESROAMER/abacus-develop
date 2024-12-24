@@ -43,6 +43,7 @@ hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::~TD_mixing_pot()
     {
         delete this->HR_fixed;
     }
+    TD_Velocity::td_vel_op->hk_hybrid = nullptr;
 }
 
 // initialize_HR()
@@ -241,9 +242,7 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::update_td()
 {
     std::cout<<"hybrid gague" <<std::endl;
     this->cart_At = TD_Velocity::td_vel_op->cart_At;
-    std::cout << "cart_At: " << cart_At[0] << " " << cart_At[1] << " " << cart_At[2] << std::endl;
     Et = elecstate::H_TDDFT_pw::Et;
-    std::cout<<"Et: "<<Et[0]<<" "<<Et[1]<<" "<<Et[2]<<std::endl;
 }
 // set_HR_fixed()
 template <typename TK, typename TR>
