@@ -307,6 +307,7 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<TK, TR>>::contributeHk(int ik) {
 // contributeHk()
 template <>
 void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<std::complex<double>, double>>::contributeHk(int ik) {
+    if(!PARAM.inp.out_excitation)return;
     ModuleBase::TITLE("TD_mixing_pot", "contributeHk");
     ModuleBase::timer::tick("TD_mixing_pot", "contributeHk");
     const Parallel_Orbitals* paraV = this->HR_fixed->get_atom_pair(0).get_paraV();
@@ -321,7 +322,7 @@ void hamilt::TD_mixing_pot<hamilt::OperatorLCAO<std::complex<double>, double>>::
         const int ncol = paraV->get_col_size();
         TD_Velocity::td_vel_op->folding_HR_td(*this->HR_fixed, this->hk_hybrid.data(), this->kvec_d[ik], ncol, 0);
     }
-    ModuleBase::timer::tick("OperatorLCAO", "contributeHk");
+    ModuleBase::timer::tick("TD_mixing_pot", "contributeHk");
 }
 //ETD
 template class hamilt::TD_mixing_pot<hamilt::OperatorLCAO<double, double>>;
