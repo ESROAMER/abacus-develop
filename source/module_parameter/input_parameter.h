@@ -248,6 +248,7 @@ struct Input_para
     double vec_start_y = 0.0;
     double vec_start_z = 0.0;
     bool td_vext = false;           ///< add extern potential or not
+    bool out_excitation = true;           ///< calculate excitation energy or not
     std::string td_vext_dire = "1"; ///< vext direction
 
     bool init_vecpot_file = false; ///< initialize the vector potential, though file or integral
