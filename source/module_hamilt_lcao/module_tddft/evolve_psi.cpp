@@ -57,7 +57,7 @@ void evolve_psi(const int nband,
 
     std::complex<double>* H_hybrid = new std::complex<double>[pv->nloc];
     ModuleBase::GlobalFunc::ZEROS(H_hybrid, pv->nloc);
-    if(elecstate::H_TDDFT_pw::stype == 2)
+    if(elecstate::H_TDDFT_pw::stype == 2 && PARAM.inp.out_excitation)
     {
         hamilt::MatrixBlock<std::complex<double>> h_mat_hybrid;
         TD_Velocity::td_vel_op->matrixHk_hybrid(h_mat_hybrid, pv);

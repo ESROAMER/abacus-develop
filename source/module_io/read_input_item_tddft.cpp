@@ -39,6 +39,12 @@ void ReadInput::item_rt_tddft()
         this->add_item(item);
     }
     {
+        Input_Item item("out_excitation");
+        item.annotation = "out_excitation";
+        read_sync_bool(input.out_excitation);
+        this->add_item(item);
+    }
+    {
         Input_Item item("td_vext");
         item.annotation = "add extern potential or not";
         read_sync_bool(input.td_vext);

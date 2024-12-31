@@ -824,16 +824,30 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
     {
         elecstate::DensityMatrix<std::complex<double>, double>* tmp_DM
             = dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->get_DM();
-
-        ModuleIO::write_current(istep,
-                                this->psi,
-                                pelec,
-                                kv,
-                                two_center_bundle_.overlap_orb.get(),
-                                tmp_DM->get_paraV_pointer(),
-                                orb_,
-                                this->velocity_mat,
-                                this->RA);
+        if(TD_Velocity::out_current_k)
+        {
+            ModuleIO::write_current_eachk(istep,
+                                    this->psi,
+                                    pelec,
+                                    kv,
+                                    two_center_bundle_.overlap_orb.get(),
+                                    tmp_DM->get_paraV_pointer(),
+                                    orb_,
+                                    this->velocity_mat,
+                                    this->RA);
+        }
+        else
+        {
+            ModuleIO::write_current(istep,
+                                    this->psi,
+                                    pelec,
+                                    kv,
+                                    two_center_bundle_.overlap_orb.get(),
+                                    tmp_DM->get_paraV_pointer(),
+                                    orb_,
+                                    this->velocity_mat,
+                                    this->RA);
+        }
     }
     std::cout << "Potential (Ry): " << std::setprecision(15) << this->pelec->f_en.etot <<std::endl;
 }
