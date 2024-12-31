@@ -33,11 +33,12 @@ void compute_ekb(const Parallel_Orbitals* pv,
 
     std::complex<double>* Eij = new std::complex<double>[pv->nloc];
     ModuleBase::GlobalFunc::ZEROS(Eij, pv->nloc);
-
-    std::complex<double> alpha = {-1.0, 0.0};
-    std::complex<double> beta = {1.0, 0.0};
-    ScalapackConnector::geadd('N', nlocal, nlocal, alpha, H_hybrid, 1, 1, pv->desc, beta, Htmp, 1, 1, pv->desc);
-
+    if(PARAM.inp.out_excitation)
+    {
+        std::complex<double> alpha = {-1.0, 0.0};
+        std::complex<double> beta = {1.0, 0.0};
+        ScalapackConnector::geadd('N', nlocal, nlocal, alpha, H_hybrid, 1, 1, pv->desc, beta, Htmp, 1, 1, pv->desc);
+    }
     ScalapackConnector::gemm('N',
                              'N',
                              nlocal,
