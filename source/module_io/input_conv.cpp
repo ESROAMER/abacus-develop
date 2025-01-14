@@ -78,7 +78,7 @@ void Input_Conv::read_td_efield()
     elecstate::H_TDDFT_pw::tstart = PARAM.inp.td_tstart;
     elecstate::H_TDDFT_pw::tend = PARAM.inp.td_tend;
 
-    elecstate::H_TDDFT_pw::dt = PARAM.mdp.md_dt / ModuleBase::AU_to_FS;
+    elecstate::H_TDDFT_pw::dt = PARAM.mdp.md_dt / PARAM.inp.estep_per_md / ModuleBase::AU_to_FS;
     elecstate::H_TDDFT_pw::dt_int = elecstate::H_TDDFT_pw::dt;
 
     // space domain parameters
@@ -367,6 +367,8 @@ void Input_Conv::Convert()
         GlobalC::exx_info.info_global.cal_exx = true;
         if (PARAM.inp.exx_use_ewald)
         {
+            GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
+            GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
             GlobalC::exx_info.info_global.use_ewald = true;
             GlobalC::exx_info.info_ewald.fq_type = Singular_Value::Fq_type(PARAM.inp.exx_fq_type);
             GlobalC::exx_info.info_global.ccp_type = Conv_Coulomb_Pot_K::Ccp_Type::Ccp;
@@ -390,6 +392,8 @@ void Input_Conv::Convert()
             || dft_functional_lower == "cam_pbeh")
     {
         GlobalC::exx_info.info_global.cal_exx = true;
+        GlobalC::exx_info.info_global.cam_alpha = std::stod(PARAM.inp.exx_cam_alpha);
+        GlobalC::exx_info.info_global.cam_beta = std::stod(PARAM.inp.exx_cam_beta);
         if (PARAM.inp.exx_use_ewald)
         {
             GlobalC::exx_info.info_global.use_ewald = true;
@@ -409,16 +413,15 @@ void Input_Conv::Convert()
         // EXX case, convert all EXX related variables
         // GlobalC::exx_info.info_global.cal_exx = true;
         GlobalC::exx_info.info_global.hybrid_alpha = std::stod(PARAM.inp.exx_hybrid_alpha);
-        GlobalC::exx_info.info_global.hybrid_beta = std::stod(PARAM.inp.exx_hybrid_beta);
         XC_Functional::set_hybrid_alpha(std::stod(PARAM.inp.exx_hybrid_alpha), 
-                                            std::stod(PARAM.inp.exx_hybrid_beta));
+                                            std::stod(PARAM.inp.exx_cam_alpha), 
+                                            std::stod(PARAM.inp.exx_cam_beta));
         GlobalC::exx_info.info_global.hse_omega = std::stod(PARAM.inp.exx_hse_omega);
         GlobalC::exx_info.info_global.separate_loop = PARAM.inp.exx_separate_loop;
         GlobalC::exx_info.info_global.hybrid_step = PARAM.inp.exx_hybrid_step;
         GlobalC::exx_info.info_global.mixing_beta_for_loop1 = PARAM.inp.exx_mixing_beta;
         GlobalC::exx_info.info_lip.lambda = PARAM.inp.exx_lambda;
 
-        GlobalC::exx_info.info_ri.Rcut_type = PARAM.inp.exx_spencer_type;
         GlobalC::exx_info.info_ri.real_number = std::stoi(PARAM.inp.exx_real_number);
         GlobalC::exx_info.info_ri.pca_threshold = PARAM.inp.exx_pca_threshold;
         GlobalC::exx_info.info_ri.C_threshold = PARAM.inp.exx_c_threshold;
@@ -432,6 +435,7 @@ void Input_Conv::Convert()
         GlobalC::exx_info.info_ri.cauchy_force_threshold = PARAM.inp.exx_cauchy_force_threshold;
         GlobalC::exx_info.info_ri.cauchy_stress_threshold = PARAM.inp.exx_cauchy_stress_threshold;
         GlobalC::exx_info.info_ri.ccp_rmesh_times = std::stod(PARAM.inp.exx_ccp_rmesh_times);
+        GlobalC::exx_info.info_ewald.ewald_qdiv = PARAM.inp.exx_ewald_qdiv;
 
         Exx_Abfs::Jle::Lmax = PARAM.inp.exx_opt_orb_lmax;
         Exx_Abfs::Jle::Ecut_exx = PARAM.inp.exx_opt_orb_ecut;
