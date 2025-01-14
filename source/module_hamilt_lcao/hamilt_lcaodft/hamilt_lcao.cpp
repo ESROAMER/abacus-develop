@@ -353,7 +353,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                              &GlobalC::GridD);
             this->getOperator()->add(td_nonlocal);
         }
-        if ((elecstate::H_TDDFT_pw::stype == 2))
+        if (elecstate::H_TDDFT_pw::stype == 2)
         {
             Operator<TK>* td_pot_mixing = new TD_mixing_pot<OperatorLCAO<TK, TR>>(this->hsk,
                                                                            this->kv->kvec_d,

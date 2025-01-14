@@ -1106,7 +1106,8 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
         // ModuleRPA::DFT_RPA_interface rpa_interface(GlobalC::exx_info.info_global);
         // rpa_interface.rpa_exx_lcao().info.files_abfs = GlobalV::rpa_orbitals;
         RPA_LRI<TK, double> rpa_lri_double(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
-        rpa_lri_double.cal_postSCF_exx(*dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
+        rpa_lri_double.cal_postSCF_exx(istep,
+                                       *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
                                        MPI_COMM_WORLD,
                                        this->kv,
                                        orb_);
