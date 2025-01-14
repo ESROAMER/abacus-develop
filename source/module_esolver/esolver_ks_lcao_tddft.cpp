@@ -186,7 +186,8 @@ void ESolver_KS_LCAO_TDDFT::runner(const int istep, UnitCell& ucell)
         velocity_mat->calculate_grad_term();
         velocity_mat->calculate_vcomm_r();
     }
-    for(int estep =0; estep < PARAM.inp.estep_per_md; estep++)
+    int estep_max = (istep == 0) ? PARAM.inp.estep_per_md +1 : PARAM.inp.estep_per_md;
+    for(int estep =0; estep < estep_max; estep++)
     {
         // calculate total time step
         this->totstep++;
@@ -687,7 +688,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
     }
 
     if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao
-        && (this->conv_esolver || iter == PARAM.inp.scf_nmax) && (((istep+1) % PARAM.inp.out_interval == 0) || istep == 0))
+        && (this->conv_esolver || iter == PARAM.inp.scf_nmax) && (istep % PARAM.inp.out_interval == 0) )
     {
         ModuleIO::write_wfc_nao(elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao,
                                 this->psi[0],
