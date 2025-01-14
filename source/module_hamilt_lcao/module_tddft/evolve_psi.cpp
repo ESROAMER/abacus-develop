@@ -86,7 +86,7 @@ void evolve_psi(const int nband,
     /// @input Stmp, Htmp, print_matrix
     /// @output U_operator
 
-    Propagator prop(propagator, pv, PARAM.mdp.md_dt);
+    Propagator prop(propagator, pv, elecstate::H_TDDFT_pw::dt);
     prop.compute_propagator_cn2_svpre(nlocal, Stmp, Htmp, U_operator_left, U_operator_right, print_matrix);
     //prop.compute_propagator(nlocal, Stmp, Htmp, H_laststep, U_operator, print_matrix);
 
