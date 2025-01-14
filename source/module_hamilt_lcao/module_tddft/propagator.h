@@ -20,7 +20,7 @@ class Propagator
     {
         this->ptype = ptype;
         this->ParaV = pv;
-        this->dt = dt / ModuleBase::AU_to_FS;
+        this->dt = dt ;
     }
     ~Propagator();
 
