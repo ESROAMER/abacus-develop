@@ -65,7 +65,6 @@ void Ewald_Vq<Tdata>::init(const LCAO_Orbitals& orb,
 
     this->atoms_vec.resize(GlobalC::ucell.nat);
     std::iota(this->atoms_vec.begin(), this->atoms_vec.end(), 0);
-    this->atoms.insert(this->atoms_vec.begin(), this->atoms_vec.end());
     this->nmp = {this->p_kv->nmp[0], this->p_kv->nmp[1], this->p_kv->nmp[2]};
 
     ModuleBase::timer::tick("Ewald_Vq", "init");
@@ -216,18 +215,14 @@ auto Ewald_Vq<Tdata>::cal_dVs_minus_gauss(const std::vector<TA>& list_A0,
 template <typename Tdata>
 double Ewald_Vq<Tdata>::cal_V_Rcut(const int it0, const int it1)
 {
-    // return this->g_abfs_ccp_rcut[it0] + this->g_lcaos_rcut[it1];
-    return this->g_lcaos_rcut[it0] + this->g_lcaos_rcut[it1];
+    return this->g_abfs_ccp_rcut[it0] + this->g_lcaos_rcut[it1];
 }
 
 template <typename Tdata>
 double Ewald_Vq<Tdata>::get_Rcut_max(const int it0, const int it1)
 {
-    double lcaos_rmax = this->lcaos_rcut[it0] //* this->info.ccp_rmesh_times
-                        + this->lcaos_rcut[it1];
-    double g_lcaos_rmax = this->g_lcaos_rcut[it0] //* this->info.ccp_rmesh_times
-                          + this->g_lcaos_rcut[it1];
-
+    double lcaos_rmax = this->lcaos_rcut[it0] * this->info.ccp_rmesh_times + this->lcaos_rcut[it1];
+    double g_lcaos_rmax = this->g_lcaos_rcut[it0] * this->info.ccp_rmesh_times + this->g_lcaos_rcut[it1];
     return std::min(lcaos_rmax, g_lcaos_rmax);
 }
 
@@ -552,7 +547,6 @@ auto Ewald_Vq<Tdata>::set_Vq_dVq_minus_gauss(const std::vector<TA>& list_A0,
     //           std::chrono::microseconds::period::num
     //                  / std::chrono::microseconds::period::den
     //           << " s" << std::endl;
-
     ModuleBase::timer::tick("Ewald_Vq", "set_Vq_dVq_minus_gauss");
     return datas;
 }
@@ -641,16 +635,32 @@ auto Ewald_Vq<Tdata>::set_Vq_dVq(const std::vector<TA>& list_A0_pair_k,
     const int shift_for_mpi = std::floor(this->nks0 / 2.0);
 
     // MPI: {ia0, {ia1, R}} to {ia0, ia1}
+    std::set<TA> atoms00;
+    std::set<TA> atoms01;
+    for (const auto& outerPair: Vs_dVs_minus_gauss_in)
+    {
+        atoms00.insert(outerPair.first);
+
+        for (const auto& innerPair: outerPair.second)
+            atoms01.insert(innerPair.first.first);
+    }
     std::map<TA, std::map<TAC, Tin>> Vs_dVs_minus_gauss
-        = RI_2D_Comm::comm_map2_first(this->mpi_comm, Vs_dVs_minus_gauss_in, this->atoms, this->atoms);
+        = RI_2D_Comm::comm_map2_first(this->mpi_comm, Vs_dVs_minus_gauss_in, atoms00, atoms01);
     std::map<TA, std::map<TAK, Tout>> Vq_dVq_minus_gauss = func_cal_Vq_dVq_minus_gauss(Vs_dVs_minus_gauss); //{ia0, ia1}
 
     // MPI: {ia0, {ia1, k}} to {ia0, ia1}
     std::map<TA, std::map<TAK, Tout>> Vq_dVq_gauss_out = func_cal_Vq_dVq_gauss(shift_for_mpi); //{ia0, {ia1, k}}
-    std::map<TA, std::map<TAK, Tout>> Vq_dVq_gauss = RI_2D_Comm::comm_map2_first(this->mpi_comm,
-                                                                                 Vq_dVq_gauss_out,
-                                                                                 this->atoms,
-                                                                                 this->atoms); //{ia0, ia1}
+    std::set<TA> atoms10;
+    std::set<TA> atoms11;
+    for (const auto& outerPair: Vq_dVq_gauss_out)
+    {
+        atoms10.insert(outerPair.first);
+
+        for (const auto& innerPair: outerPair.second)
+            atoms11.insert(innerPair.first.first);
+    }
+    std::map<TA, std::map<TAK, Tout>> Vq_dVq_gauss
+        = RI_2D_Comm::comm_map2_first(this->mpi_comm, Vq_dVq_gauss_out, atoms10, atoms11); //{ia0, ia1}
 
 #pragma omp parallel
     for (size_t i0 = 0; i0 < list_A0_pair_k.size(); ++i0)
@@ -704,7 +714,8 @@ auto Ewald_Vq<Tdata>::set_Vq_dVq(const std::vector<TA>& list_A0_pair_k,
             }
 
 #pragma omp critical(Ewald_Vq_set_Vq_dVq)
-            Vq_dVq[list_A0_pair_k[i0]][re_index] = Vq_dVq_minus_gauss[list_A0_pair_k[i0]][re_index] + data;
+            if (LRI_CV_Tools::exist(Vq_dVq_minus_gauss[list_A0_pair_k[i0]][re_index]))
+                Vq_dVq[list_A0_pair_k[i0]][re_index] = Vq_dVq_minus_gauss[list_A0_pair_k[i0]][re_index] + data;
         }
     }
 
@@ -776,19 +787,21 @@ auto Ewald_Vq<Tdata>::set_Vs_dVs(const std::vector<TA>& list_A0_pair_R,
                     const TA iat0 = list_A0_pair_R[i0];
                     const TA iat1 = list_A1_pair_R[i1].first;
                     const TC& cell1 = list_A1_pair_R[i1].second;
-
                     const std::complex<double> frac
                         = std::exp(-ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT
                                    * (this->kvec_c[ik] * (RI_Util::array3_to_Vector3(cell1) * GlobalC::ucell.latvec)))
                           * cfrac;
 
                     const TAK index = std::make_pair(iat1, std::array<int, 1>{static_cast<int>(ik)});
-                    Tout Vq_tmp = LRI_CV_Tools::convert<Tin_convert>(LRI_CV_Tools::mul2(frac, Vq[iat0][index]));
+                    if (LRI_CV_Tools::exist(Vq[iat0][index]))
+                    {
+                        Tout Vq_tmp = LRI_CV_Tools::convert<Tin_convert>(LRI_CV_Tools::mul2(frac, Vq[iat0][index]));
 
-                    if (!LRI_CV_Tools::exist(local_datas[iat0][list_A1_pair_R[i1]]))
-                        local_datas[iat0][list_A1_pair_R[i1]] = Vq_tmp;
-                    else
-                        local_datas[iat0][list_A1_pair_R[i1]] = local_datas[iat0][list_A1_pair_R[i1]] + Vq_tmp;
+                        if (!LRI_CV_Tools::exist(local_datas[iat0][list_A1_pair_R[i1]]))
+                            local_datas[iat0][list_A1_pair_R[i1]] = Vq_tmp;
+                        else
+                            local_datas[iat0][list_A1_pair_R[i1]] = local_datas[iat0][list_A1_pair_R[i1]] + Vq_tmp;
+                    }
                 }
             }
         }
