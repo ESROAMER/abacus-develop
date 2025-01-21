@@ -64,7 +64,7 @@ void ModuleIO::write_current(const int istep,
             current_term[dir] = TD_Velocity::td_vel_op->get_current_term_pointer(dir);
         }
     }
-
+    double omega=GlobalC::ucell.omega;
     // construct a DensityMatrix object
     // Since the function cal_dm_psi do not suport DMR in complex type, I replace it with two DMR in double type. Should
     // be refactored in the future.
@@ -183,7 +183,7 @@ void ModuleIO::write_current(const int istep,
         fout.open(filename, std::ios::app);
         fout << std::setprecision(16);
         fout << std::scientific;
-        fout << istep << " " << current_total[0] << " " << current_total[1] << " " << current_total[2] << std::endl;
+        fout << istep << " " << current_total[0]/omega << " " << current_total[1]/omega << " " << current_total[2]/omega << std::endl;
         fout.close();
     }
 
@@ -344,7 +344,7 @@ void ModuleIO::write_current_eachk(const int istep,
             current_term[dir] = TD_Velocity::td_vel_op->get_current_term_pointer(dir);
         }
     }
-
+    double omega=GlobalC::ucell.omega;
     // construct a DensityMatrix object
     // Since the function cal_dm_psi do not suport DMR in complex type, I replace it with two DMR in double type. Should
     // be refactored in the future.
@@ -479,7 +479,7 @@ void ModuleIO::write_current_eachk(const int istep,
                 fout.open(filename, std::ios::app);
                 fout << std::setprecision(16);
                 fout << std::scientific;
-                fout << istep << " " << current_ik[0] << " " << current_ik[1] << " " << current_ik[2] << std::endl;
+                fout << istep << " " << current_ik[0]/omega << " " << current_ik[1]/omega << " " << current_ik[2]/omega << std::endl;
                 fout.close();
             }
             // write end
@@ -492,7 +492,7 @@ void ModuleIO::write_current_eachk(const int istep,
         fout.open(filename, std::ios::app);
         fout << std::setprecision(16);
         fout << std::scientific;
-        fout << istep << " " << current_total[0] << " " << current_total[1] << " " << current_total[2] << std::endl;
+        fout << istep << " " << current_total[0]/omega << " " << current_total[1]/omega << " " << current_total[2]/omega << std::endl;
         fout.close();
     }
 
