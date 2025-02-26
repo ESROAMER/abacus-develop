@@ -295,6 +295,7 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_FALSE(param.inp.noncolin);
     EXPECT_FALSE(param.inp.lspinorb);
     EXPECT_DOUBLE_EQ(param.inp.soc_lambda, 1.0);
+    EXPECT_DOUBLE_EQ(param.inp.td_dt, -1.0);
     EXPECT_DOUBLE_EQ(param.inp.vec_start_x, 0.0);
     EXPECT_DOUBLE_EQ(param.inp.vec_start_y, 0.0);
     EXPECT_DOUBLE_EQ(param.inp.vec_start_z, 0.0);
