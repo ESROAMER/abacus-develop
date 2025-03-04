@@ -4,17 +4,17 @@
 #include "module_base/global_variable.h"
 #include "module_base/libm/libm.h"
 #include "module_base/parallel_reduce.h"
+#include "module_base/scalapack_connector.h"
 #include "module_base/timer.h"
 #include "module_base/tool_threading.h"
 #include "module_base/vector3.h"
-#include "module_base/scalapack_connector.h"
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_elecstate/potentials/H_TDDFT_pw.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h"
+#include "module_hamilt_lcao/module_hcontainer/hcontainer_funcs.h"
 #include "module_hamilt_lcao/module_tddft/td_velocity.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_parameter/parameter.h"
-#include "module_hamilt_lcao/module_hcontainer/hcontainer_funcs.h"
 #ifdef __EXX
 #include "module_ri/Exx_LRI.h"
 #endif
@@ -22,8 +22,8 @@
 #ifdef __LCAO
 void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
                               cal_r_overlap_R& r_calculator,
-                              const hamilt::HContainer<std::complex<double>>& sR,
-                              ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR)
+                              const hamilt::HContainer<double>& sR,
+                              ModuleBase::Vector3<hamilt::HContainer<double>*>& rR)
 {
     ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
     ModuleBase::timer::tick("ModuleIO", "set_rR_from_sR");
@@ -32,7 +32,7 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 #endif
     for (int i = 0; i < sR.size_atom_pairs(); i++)
     {
-        hamilt::AtomPair<std::complex<double>> atom_ij = sR.get_atom_pair(i);
+        hamilt::AtomPair<double> atom_ij = sR.get_atom_pair(i);
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic) nowait
 #endif
@@ -99,7 +99,7 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 #pragma omp critical(set_rR_from_sR)
                     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
                     {
-                        hamilt::BaseMatrix<std::complex<double>>* HlocR
+                        hamilt::BaseMatrix<double>* HlocR
                             = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
                         if (HlocR == nullptr)
                         {
@@ -122,9 +122,10 @@ void ModuleIO::cal_velocity_basis_k(
     const LCAO_Orbitals& orb,
     const Parallel_Orbitals* pv,
     const K_Vectors& kv,
-    const ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR,
-    const hamilt::HContainer<std::complex<double>>* sR,
-    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hs,
+    const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
+    const hamilt::HContainer<double>& sR,
+    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>&
+        Hs,
     std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_velocity_basis_k");
@@ -153,7 +154,7 @@ void ModuleIO::cal_velocity_basis_k(
         std::complex<double>* sk = new std::complex<double>[pv->nloc];
         ModuleBase::GlobalFunc::ZEROS(sk, pv->nloc);
         const int nrow = pv->get_row_size();
-        hamilt::folding_HR(*sR, sk, kv.kvec_d[ik], nrow, 1);
+        hamilt::folding_HR(sR, sk, kv.kvec_d[ik], nrow, 1);
         // 2. set inverse S(k) -> sk will be changed to sk_inv
         int* ipiv = new int[pv->nloc];
         int info = 0;
@@ -192,7 +193,7 @@ void ModuleIO::cal_velocity_basis_k(
             // 3.2 set partial S(k)
             std::complex<double>* partial_sk = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(partial_sk, pv->nloc);
-            hamilt::folding_partial_HR(*sR, partial_sk, kv.kvec_d[ik], i_alpha, nrow, 1);
+            hamilt::folding_partial_HR(sR, partial_sk, kv.kvec_d[ik], i_alpha, nrow, 1);
             // 3.3 set r(k)
             std::complex<double>* rk = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(rk, pv->nloc);
@@ -394,11 +395,11 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
         {
             // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
             ModuleBase::ComplexMatrix v_c; // local one
-            v_c.create(pv->ncol, nbands);
+            v_c.create(pv->nrow, pv->ncol);
             ScalapackConnector::gemm(N_char,
                                      N_char,
                                      nlocal,
-                                     nbands,
+                                     nlocal,
                                      nlocal,
                                      one_real,
                                      velocity_basis_k[ik][i_alpha],
@@ -414,11 +415,11 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      1,
                                      1,
                                      pv->desc);
-                // velocity_k_{n,m} = C^\dagger_{n,\mu} * v_c_{\mu,m}
-                ScalapackConnector::gemm(C_char,
+            // velocity_k_{n,m} = C^\dagger_{n,\mu} * v_c_{\mu,m}
+            ScalapackConnector::gemm(C_char,
                                      N_char,
                                      nlocal,
-                                     nbands,
+                                     nlocal,
                                      nlocal,
                                      one_real,
                                      psi[0].get_pointer(),
@@ -434,9 +435,8 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      1,
                                      1,
                                      pv->desc);
-            }
         }
-    
+    }
 
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 }
@@ -445,7 +445,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const Parallel_Orbitals* pv,
                                  const K_Vectors& kv,
                                  cal_r_overlap_R& r_calculator,
-                                 hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                                 const hamilt::HContainer<double>& sR,
                                  const Exx_LRI<std::complex<double>>& exx,
                                  const psi::Psi<std::complex<double>>* psi,
                                  std::vector<ModuleBase::Vector3<double>>& current_k)
@@ -457,23 +457,23 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     const int nbands = PARAM.inp.nbands;
 
     // init
-    ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*> rR;
+    ModuleBase::Vector3<hamilt::HContainer<double>*> rR;
     std::vector<ModuleBase::Vector3<std::complex<double>*>> velocity_basis_k;
     std::vector<std::array<ModuleBase::ComplexMatrix, 3>> velocity_k;
     velocity_basis_k.resize(kv.get_nks());
     velocity_k.resize(kv.get_nks());
     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
     {
-        rR[i_alpha] = new hamilt::HContainer<std::complex<double>>(pv);
+        rR[i_alpha] = new hamilt::HContainer<double>(pv);
         for (int ik = 0; ik < kv.get_nks(); ik++)
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
-            velocity_k[ik][i_alpha].create(nbands, nbands);
+            ModuleBase::GlobalFunc::ZEROS(velocity_basis_k[ik][i_alpha], pv->nloc);
+            velocity_k[ik][i_alpha].create(pv->nrow, pv->ncol);
         }
     }
     // set rR
-    const hamilt::HContainer<std::complex<double>>* sR = p_ham->getSR();
-    set_rR_from_sR(pv, r_calculator, *sR, rR);
+    set_rR_from_sR(pv, r_calculator, sR, rR);
     // set velocity_basis_k
     cal_velocity_basis_k(orb, pv, kv, rR, sR, exx.Hexxs, velocity_basis_k);
     // set velocity_k
@@ -483,6 +483,15 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     for (int ik = 0; ik < kv.get_nks(); ik++)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
             current_k[ik][i_alpha] += ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
+
+    for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
+    {
+        delete rR[i_alpha];
+        for (int ik = 0; ik < kv.get_nks(); ik++)
+        {
+            delete[] velocity_basis_k[ik][i_alpha];
+        }
+    }
 
     ModuleBase::TITLE("ModuleIO", "cal_current_exx");
 }
@@ -515,7 +524,7 @@ void ModuleIO::write_current(const int istep,
                              Record_adj& ra,
 #ifdef __EXX
                              cal_r_overlap_R& r_calculator,
-                             hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                             const hamilt::HContainer<double>& sR,
                              const Exx_LRI<std::complex<double>>& exx
 #endif
 )
@@ -659,7 +668,7 @@ void ModuleIO::write_current(const int istep,
     {
         std::vector<ModuleBase::Vector3<double>> current_k_exx;
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, p_ham, exx, psi, current_k_exx);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, exx, psi, current_k_exx);
         for (int dir = 0; dir < 3; dir++)
         {
             for (int ik = 0; ik < kv.get_nks(); ik++)
@@ -820,7 +829,7 @@ void ModuleIO::write_current_eachk(const int istep,
                                    Record_adj& ra,
 #ifdef __EXX
                                    cal_r_overlap_R& r_calculator,
-                                   hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                                   const hamilt::HContainer<double>& sR,
                                    const Exx_LRI<std::complex<double>>& exx
 #endif
 )
@@ -866,7 +875,7 @@ void ModuleIO::write_current_eachk(const int istep,
     if (GlobalC::exx_info.info_global.cal_exx)
     {
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, p_ham, exx, psi, current_k_exx);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, exx, psi, current_k_exx);
     }
 #endif
 

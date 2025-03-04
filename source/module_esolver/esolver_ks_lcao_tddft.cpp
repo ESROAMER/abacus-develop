@@ -846,7 +846,7 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     this->RA,
 #ifdef __EXX
                                     this->r_calculator,
-                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>*>(this->p_hamilt),
+                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR()),
                                     *this->exx_lri_complex
 #endif
                                     );
@@ -864,7 +864,7 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     this->RA,
 #ifdef __EXX
                                     this->r_calculator,
-                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>*>(this->p_hamilt),
+                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR()),
                                     *this->exx_lri_complex
 #endif
                                     );

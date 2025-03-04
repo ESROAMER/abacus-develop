@@ -23,7 +23,7 @@ void write_current_eachk(const int istep,
                          Record_adj& ra,
 #ifdef __EXX
                          cal_r_overlap_R& r_calculator,
-                         hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                         const hamilt::HContainer<double>& sR,
                          const Exx_LRI<std::complex<double>>& exx
 #endif
 );
@@ -39,7 +39,7 @@ void write_current(const int istep,
                    Record_adj& ra,
 #ifdef __EXX
                    cal_r_overlap_R& r_calculator,
-                   hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                   const hamilt::HContainer<double>& sR,
                    const Exx_LRI<std::complex<double>>& exx
 #endif
 );
@@ -58,15 +58,15 @@ void cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
 
 void set_rR_from_sR(const Parallel_Orbitals* pv,
                     cal_r_overlap_R& r_calculator,
-                    const hamilt::HContainer<std::complex<double>>& sR,
-                    ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR);
+                    const hamilt::HContainer<double>& sR,
+                    ModuleBase::Vector3<hamilt::HContainer<double>*>& rR);
 
 void cal_velocity_basis_k(
     const LCAO_Orbitals& orb,
     const Parallel_Orbitals* pv,
     const K_Vectors& kv,
-    const ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR,
-    const hamilt::HContainer<std::complex<double>>* sR,
+    const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
+    const hamilt::HContainer<double>& sR,
     const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hs,
     std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k);
 
@@ -77,13 +77,13 @@ void cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                          std::vector<std::array<ModuleBase::ComplexMatrix, 3>>& velocity_k);
 
 void cal_current_exx_k(const LCAO_Orbitals& orb,
-                       const Parallel_Orbitals* pv,
-                       const K_Vectors& kv,
-                       cal_r_overlap_R& r_calculator,
-                       hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
-                       const Exx_LRI<std::complex<double>>& exx,
-                       const psi::Psi<std::complex<double>>* psi,
-                       std::vector<ModuleBase::Vector3<double>>& current_k);
+                                 const Parallel_Orbitals* pv,
+                                 const K_Vectors& kv,
+                                 cal_r_overlap_R& r_calculator,
+                                 const hamilt::HContainer<double>& sR,
+                                 const Exx_LRI<std::complex<double>>& exx,
+                                 const psi::Psi<std::complex<double>>* psi,
+                                 std::vector<ModuleBase::Vector3<double>>& current_k);
 
 #endif // __LCAO
 } // namespace ModuleIO
