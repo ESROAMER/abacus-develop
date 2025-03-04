@@ -113,6 +113,7 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 #ifdef __EXX
     if (GlobalC::exx_info.info_global.cal_exx)
     {
+        this->r_calculator.init(this->pv, orb_);
         XC_Functional::set_xc_first_loop(ucell);
         // initialize 2-center radial tables for EXX-LRI
         if (GlobalC::exx_info.info_ri.real_number)
@@ -842,7 +843,13 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     tmp_DM->get_paraV_pointer(),
                                     orb_,
                                     this->velocity_mat,
-                                    this->RA);
+                                    this->RA,
+#ifdef __EXX
+                                    this->r_calculator,
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>*>(this->p_hamilt),
+                                    *this->exx_lri_complex
+#endif
+                                    );
         }
         else
         {
@@ -854,7 +861,13 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     tmp_DM->get_paraV_pointer(),
                                     orb_,
                                     this->velocity_mat,
-                                    this->RA);
+                                    this->RA,
+#ifdef __EXX
+                                    this->r_calculator,
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>*>(this->p_hamilt),
+                                    *this->exx_lri_complex
+#endif
+                                    );
         }
     }
     std::cout << "Potential (Ry): " << std::setprecision(15) << this->pelec->f_en.etot <<std::endl;

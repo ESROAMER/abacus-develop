@@ -46,16 +46,15 @@ class cal_r_overlap_R
     void out_rR(const int& istep);
     void out_rR_other(const int& istep, const std::set<Abfs::Vector3_Order<int>>& output_R_coor);
     
-
-  private:
-    void initialize_orb_table(const LCAO_Orbitals& orb);
-    void construct_orbs_and_orb_r(const LCAO_Orbitals& orb);
-
     std::vector<int> iw2ia;
     std::vector<int> iw2iL;
     std::vector<int> iw2im;
     std::vector<int> iw2iN;
     std::vector<int> iw2it;
+
+  private:
+    void initialize_orb_table(const LCAO_Orbitals& orb);
+    void construct_orbs_and_orb_r(const LCAO_Orbitals& orb);
 
     ModuleBase::Sph_Bessel_Recursive::D2* psb_ = nullptr;
     ORB_gaunt_table MGT;

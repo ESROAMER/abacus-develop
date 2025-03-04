@@ -7,17 +7,507 @@
 #include "module_base/timer.h"
 #include "module_base/tool_threading.h"
 #include "module_base/vector3.h"
+#include "module_base/scalapack_connector.h"
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_elecstate/potentials/H_TDDFT_pw.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h"
 #include "module_hamilt_lcao/module_tddft/td_velocity.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_parameter/parameter.h"
+#include "module_hamilt_lcao/module_hcontainer/hcontainer_funcs.h"
+#ifdef __EXX
+#include "module_ri/Exx_LRI.h"
+#endif
 
 #ifdef __LCAO
+void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
+                              cal_r_overlap_R& r_calculator,
+                              const hamilt::HContainer<std::complex<double>>& sR,
+                              ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR)
+{
+    ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
+    ModuleBase::timer::tick("ModuleIO", "set_rR_from_sR");
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    for (int i = 0; i < sR.size_atom_pairs(); i++)
+    {
+        hamilt::AtomPair<std::complex<double>> atom_ij = sR.get_atom_pair(i);
+#ifdef _OPENMP
+#pragma omp for schedule(dynamic) nowait
+#endif
+        // loop R-index
+        for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
+        {
+            // get reference of target atom-pair
+            const int iat1 = atom_ij.get_atom_i();
+            const int iat2 = atom_ij.get_atom_j();
+            const ModuleBase::Vector3<int> r_index = atom_ij.get_R_index(iR);
+            // ---------------------------------------------
+            // get info of orbitals of atom1 and atom2 from ucell
+            // ---------------------------------------------
+            int T1, I1;
+            GlobalC::ucell.iat2iait(iat1, &I1, &T1);
+            int T2, I2;
+            GlobalC::ucell.iat2iait(iat2, &I2, &T2);
+            Atom& atom1 = GlobalC::ucell.atoms[T1];
+            Atom& atom2 = GlobalC::ucell.atoms[T2];
+
+            // npol is the number of polarizations,
+            // 1 for non-magnetic (one Hamiltonian matrix only has spin-up or spin-down),
+            // 2 for magnetic (one Hamiltonian matrix has both spin-up and spin-down)
+            const int npol = GlobalC::ucell.get_npol();
+
+            const int* iw2l1 = atom1.iw2l;
+            const int* iw2n1 = atom1.iw2n;
+            const int* iw2m1 = atom1.iw2m;
+            const int* iw2l2 = atom2.iw2l;
+            const int* iw2n2 = atom2.iw2n;
+            const int* iw2m2 = atom2.iw2m;
+
+            auto row_indexes = pv->get_indexes_row(iat1);
+            auto col_indexes = pv->get_indexes_col(iat2);
+            const int step_trace = col_indexes.size() + 1;
+
+            const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
+            const ModuleBase::Vector3<double> tau2 = tau1 + GlobalC::ucell.cal_dtau(iat1, iat2, r_index);
+            for (int iw1l = 0; iw1l < row_indexes.size(); iw1l += npol)
+            {
+                const int iw1 = row_indexes[iw1l] / npol;
+                const int L1 = iw2l1[iw1];
+                const int N1 = iw2n1[iw1];
+                const int m1 = iw2m1[iw1];
+
+                for (int iw2l = 0; iw2l < col_indexes.size(); iw2l += npol)
+                {
+                    const int iw2 = col_indexes[iw2l] / npol;
+                    const int L2 = iw2l2[iw2];
+                    const int N2 = iw2n2[iw2];
+                    const int m2 = iw2m2[iw2];
+
+                    ModuleBase::Vector3<double> tmp_r = r_calculator.get_psi_r_psi(tau1 * GlobalC::ucell.lat0,
+                                                                                   T1,
+                                                                                   L1,
+                                                                                   m1,
+                                                                                   N1,
+                                                                                   tau2 * GlobalC::ucell.lat0,
+                                                                                   T2,
+                                                                                   L2,
+                                                                                   m2,
+                                                                                   N2);
+#ifdef _OPENMP
+#pragma omp critical(set_rR_from_sR)
+                    for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+                    {
+                        hamilt::BaseMatrix<std::complex<double>>* HlocR
+                            = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
+                        if (HlocR == nullptr)
+                        {
+                            rR[i_alpha]->insert_pair(atom_ij);
+                            HlocR = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
+                        }
+                        HlocR->add_element(iw1, iw2, tmp_r[i_alpha]);
+                    }
+#endif
+                }
+            }
+        }
+    }
+    ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
+}
+
+// for molecule, if vacuum size is small, the number of R of Hs is smaller than SR
+// which may lead to some errors
+void ModuleIO::cal_velocity_basis_k(
+    const LCAO_Orbitals& orb,
+    const Parallel_Orbitals* pv,
+    const K_Vectors& kv,
+    const ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*>& rR,
+    const hamilt::HContainer<std::complex<double>>* sR,
+    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hs,
+    std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
+{
+    ModuleBase::TITLE("ModuleIO", "cal_velocity_basis_k");
+    ModuleBase::timer::tick("ModuleIO", "cal_velocity_basis_k");
+
+    const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                          || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
+                             ? 1.0
+                             : GlobalC::exx_info.info_global.hybrid_alpha;
+    const int nlocal = PARAM.globalv.nlocal;
+    const char N_char = 'N';
+    const std::complex<double> one_imag = ModuleBase::IMAG_UNIT;
+    const std::complex<double> neg_one_imag = ModuleBase::NEG_IMAG_UNIT;
+    const std::complex<double> one_real = ModuleBase::ONE;
+    const std::complex<double> neg_one_real = ModuleBase::NEG_ONE;
+    const std::complex<double> zero_complex = ModuleBase::ZERO;
+
+    for (size_t ik; ik != kv.get_nks(); ++ik)
+    {
+        // set H(k), S(k)
+        // 1.1 set H(k)
+        std::complex<double>* hk = new std::complex<double>[pv->nloc];
+        ModuleBase::GlobalFunc::ZEROS(hk, pv->nloc);
+        RI_2D_Comm::add_Hexx(kv, ik, coeff, Hs, *pv, hk);
+        // 1.2 set S(k)
+        std::complex<double>* sk = new std::complex<double>[pv->nloc];
+        ModuleBase::GlobalFunc::ZEROS(sk, pv->nloc);
+        const int nrow = pv->get_row_size();
+        hamilt::folding_HR(*sR, sk, kv.kvec_d[ik], nrow, 1);
+        // 2. set inverse S(k) -> sk will be changed to sk_inv
+        int* ipiv = new int[pv->nloc];
+        int info = 0;
+        // 2.1 compute ipiv
+        ScalapackConnector::getrf(nlocal, nlocal, sk, 1, 1, pv->desc, ipiv, &info);
+        int lwork = -1;
+        int liwotk = -1;
+        std::vector<std::complex<double>> work(1, 0);
+        std::vector<int> iwork(1, 0);
+        // 2.2 compute work
+        ScalapackConnector::getri(nlocal, sk, 1, 1, pv->desc, ipiv, work.data(), &lwork, iwork.data(), &liwotk, &info);
+        lwork = work[0].real();
+        work.resize(lwork, 0);
+        liwotk = iwork[0];
+        iwork.resize(liwotk, 0);
+        // 2.3 compute inverse matrix of Sk
+        ScalapackConnector::getri(nlocal,
+                                  sk, // return sk^-1
+                                  1,
+                                  1,
+                                  pv->desc,
+                                  ipiv,
+                                  work.data(),
+                                  &lwork,
+                                  iwork.data(),
+                                  &liwotk,
+                                  &info);
+        assert(0 == info);
+        for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+        {
+            // 3. set partial_H(k), partial_S(k) and r(k)
+            // 3.1 set partial_H(k)
+            std::complex<double>* partial_hk = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(partial_hk, pv->nloc);
+            RI_2D_Comm::add_partial_Hexx(kv, ik, i_alpha, coeff, Hs, *pv, partial_hk);
+            // 3.2 set partial S(k)
+            std::complex<double>* partial_sk = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(partial_sk, pv->nloc);
+            hamilt::folding_partial_HR(*sR, partial_sk, kv.kvec_d[ik], i_alpha, nrow, 1);
+            // 3.3 set r(k)
+            std::complex<double>* rk = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(rk, pv->nloc);
+            hamilt::folding_HR(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1); // set r(k)
+            // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv *
+            // Hk) - Hk * Sk_inv * partial_Sk 4.1.1 Hk * Sk_inv (note 2.)
+            std::complex<double>* h_is = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(h_is, pv->nloc);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nlocal,
+                                     nlocal,
+                                     one_real,
+                                     hk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     sk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     h_is,
+                                     1,
+                                     1,
+                                     pv->desc);
+            // 4.1.2 (Hk * Sk_inv) * rk
+            std::complex<double>* h_is_r = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(h_is_r, pv->nloc);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nlocal,
+                                     nlocal,
+                                     one_real,
+                                     h_is,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     rk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     h_is_r,
+                                     1,
+                                     1,
+                                     pv->desc);
+            // 4.2.1 rk * Sk_inv (note 2.)
+            std::complex<double>* r_is = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(r_is, pv->nloc);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nlocal,
+                                     nlocal,
+                                     one_real,
+                                     rk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     sk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     r_is,
+                                     1,
+                                     1,
+                                     pv->desc);
+            // 4.2.2 (rk * Sk_inv) * Hk
+            std::complex<double>* r_is_h = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(r_is_h, pv->nloc);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nlocal,
+                                     nlocal,
+                                     one_real,
+                                     r_is,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     hk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     r_is_h,
+                                     1,
+                                     1,
+                                     pv->desc);
+            // 4.3.1 (Hk * Sk_inv) * partial_Sk
+            std::complex<double>* h_is_ps = new std::complex<double>[pv->nloc];
+            ModuleBase::GlobalFunc::ZEROS(h_is_ps, pv->nloc);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nlocal,
+                                     nlocal,
+                                     one_real,
+                                     h_is,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     partial_sk,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     h_is_ps,
+                                     1,
+                                     1,
+                                     pv->desc);
+            // 4.4 h_is_r will be changed to partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk)
+            ScalapackConnector::geadd('N',
+                                      nlocal,
+                                      nlocal,
+                                      one_real,
+                                      partial_hk,
+                                      1,
+                                      1,
+                                      pv->desc,
+                                      one_imag,
+                                      h_is_r,
+                                      1,
+                                      1,
+                                      pv->desc);
+            // 4.5 r_is_h will be changed to h_is_r - IMAG_UNIT * (rk * Sk_inv * Hk)
+            ScalapackConnector::geadd('N',
+                                      nlocal,
+                                      nlocal,
+                                      one_real,
+                                      h_is_r,
+                                      1,
+                                      1,
+                                      pv->desc,
+                                      neg_one_imag,
+                                      r_is_h,
+                                      1,
+                                      1,
+                                      pv->desc);
+            // 4.6 h_is_ps will be changed to r_is_h - Hk * Sk_inv * partial_Sk
+            ScalapackConnector::geadd('N',
+                                      nlocal,
+                                      nlocal,
+                                      one_real,
+                                      r_is_h,
+                                      1,
+                                      1,
+                                      pv->desc,
+                                      neg_one_real,
+                                      h_is_ps,
+                                      1,
+                                      1,
+                                      pv->desc);
+            // 5. copy h_is_ps to velocity_basis_k[ik][i_alpha]
+            BlasConnector::copy(pv->nloc, h_is_ps, 1, velocity_basis_k[ik][i_alpha], 1);
+
+            delete[] partial_hk;
+            delete[] partial_sk;
+            delete[] rk;
+            delete[] h_is;
+            delete[] h_is_r;
+            delete[] r_is;
+            delete[] r_is_h;
+            delete[] h_is_ps;
+        }
+        delete[] hk;
+        delete[] sk;
+    }
+    ModuleBase::timer::tick("ModuleIO", "cal_velocity_basis_k");
+}
+
+void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
+                                   const Parallel_Orbitals* pv,
+                                   const K_Vectors& kv,
+                                   const std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k,
+                                   std::vector<ModuleBase::Vector3<ModuleBase::ComplexMatrix>>& velocity_k)
+{
+    ModuleBase::TITLE("ModuleIO", "cal_velocity_matrix");
+    ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
+
+    const char T_char = 'T';
+    const int one_int = 1;
+    const double one_double = 1.0;
+    const double zero_double = 0.0;
+    const int nlocal = PARAM.globalv.nlocal;
+    const int nbands = PARAM.inp.nbands;
+
+    for (int ik = 0; ik < kv.get_nks(); ik++)
+    {
+        // 1. set C^*
+        psi->fix_k(ik);
+        psi::Psi<std::complex<double>> Dwfc(psi[0], 1);
+        std::complex<double>* p_dwfc = Dwfc.get_pointer();
+        for (int index = 0; index < Dwfc.size(); ++index)
+            p_dwfc[index] = conj(p_dwfc[index]);
+
+        // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{\mu,n} * v_{\mu,\nu} * C_{\nu,m}
+        // same as pdos in write_dos_lcao.cpp
+        for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+        {
+            ModuleBase::ComplexMatrix c_dagger_v; // local one
+            c_dagger_v.create(pv->ncol, pv->nrow);
+            for (int i = 0; i < nbands; ++i)
+            {
+                const int NB = i + 1;
+#ifdef __MPI
+                pzgemv_(&T_char,
+                        &nlocal,
+                        &nlocal,
+                        &one_double,
+                        velocity_basis_k[ik][i_alpha],
+                        &one_int,
+                        &one_int,
+                        pv->desc,
+                        p_dwfc,
+                        &one_int,
+                        &NB,
+                        pv->desc,
+                        &one_int,
+                        &zero_double,
+                        c_dagger_v.c,
+                        &one_int,
+                        &NB,
+                        pv->desc,
+                        &one_int);
+#endif
+                for (int j = 0; j < nlocal; ++j)
+                {
+                    if (pv->in_this_processor(j, i))
+                    {
+                        const int ir = pv->global2local_row(j);
+                        const int ic = pv->global2local_col(i);
+                        velocity_k[ik][i_alpha](ic, ir) = kv.wk[ik] * c_dagger_v(ic, ir) * psi[0](ic, ir);
+                    }
+                }
+            }
+        }
+    }
+
+    ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
+}
+
+void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
+                                 const Parallel_Orbitals* pv,
+                                 const K_Vectors& kv,
+                                 cal_r_overlap_R& r_calculator,
+                                 hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                                 const Exx_LRI<std::complex<double>>& exx,
+                                 const psi::Psi<std::complex<double>>* psi,
+                                 std::vector<ModuleBase::Vector3<double>>& current_k)
+{
+    ModuleBase::TITLE("ModuleIO", "cal_current_exx");
+    ModuleBase::timer::tick("ModuleIO", "cal_current_exx");
+
+    const int nlocal = PARAM.globalv.nlocal;
+    const int nbands = PARAM.inp.nbands;
+
+    // init
+    ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*> rR;
+    std::vector<ModuleBase::Vector3<std::complex<double>*>> velocity_basis_k;
+    std::vector<ModuleBase::Vector3<ModuleBase::ComplexMatrix>> velocity_k;
+    velocity_basis_k.resize(kv.get_nks());
+    for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    {
+        rR[i_alpha] = new hamilt::HContainer<std::complex<double>>(pv);
+        for (int ik = 0; ik < kv.get_nks(); ik++)
+        {
+            velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
+            velocity_k[ik][i_alpha].create(pv->ncol, pv->nrow);
+        }
+    }
+    // set rR
+    const hamilt::HContainer<std::complex<double>>* sR = p_ham->getSR();
+    set_rR_from_sR(pv, r_calculator, *sR, rR);
+    // set velocity_basis_k
+    cal_velocity_basis_k(orb, pv, kv, rR, sR, exx.Hexxs, velocity_basis_k);
+    // set velocity_k
+    cal_velocity_matrix(psi, pv, kv, velocity_basis_k, velocity_k);
+
+    // sum n and m for current_k
+    for (int ik = 0; ik < kv.get_nks(); ik++)
+    {
+        double local_current[3] = {0.0, 0.0, 0.0};
+        for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+        {
+            for (int i = 0; i < nbands; ++i)
+            {
+                for (int j = 0; j < nlocal; ++j)
+                {
+                    if (pv->in_this_processor(j, i))
+                    {
+                        const int ir = pv->global2local_row(j);
+                        const int ic = pv->global2local_col(i);
+                        local_current[i_alpha] += velocity_k[ik][i_alpha](ic, ir).real() / 2.0; // for unit
+                    }
+                }
+            }
+        }
+        Parallel_Reduce::reduce_all(local_current, 3);
+        for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+        {
+            current_k[ik][i_alpha] = local_current[i_alpha];
+        }
+    }
+
+    ModuleBase::TITLE("ModuleIO", "cal_current_exx");
+}
+
 void ModuleIO::cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
-                        elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
-                        int nspin)
+                          elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
+                          int nspin)
 {
     ModuleBase::TITLE("ModuleIO", "cal_tmp_DM");
     ModuleBase::timer::tick("ModuleIO", "cal_tmp_DM");
@@ -40,7 +530,13 @@ void ModuleIO::write_current(const int istep,
                              const Parallel_Orbitals* pv,
                              const LCAO_Orbitals& orb,
                              const TD_current* cal_current,
-                             Record_adj& ra)
+                             Record_adj& ra,
+#ifdef __EXX
+                             cal_r_overlap_R& r_calculator,
+                             hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                             const Exx_LRI<std::complex<double>>& exx
+#endif
+)
 {
 
     ModuleBase::TITLE("ModuleIO", "write_current");
@@ -64,11 +560,11 @@ void ModuleIO::write_current(const int istep,
             current_term[dir] = TD_Velocity::td_vel_op->get_current_term_pointer(dir);
         }
     }
-    double omega=GlobalC::ucell.omega;
+    double omega = GlobalC::ucell.omega;
     // construct a DensityMatrix object
     // Since the function cal_dm_psi do not suport DMR in complex type, I replace it with two DMR in double type. Should
     // be refactored in the future.
-    const int nspin_dm = std::map<int, int>({ {1,1},{2,2},{4,1} })[PARAM.inp.nspin];
+    const int nspin_dm = std::map<int, int>({{1, 1}, {2, 2}, {4, 1}})[PARAM.inp.nspin];
     elecstate::DensityMatrix<std::complex<double>, double> DM_real(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
     elecstate::DensityMatrix<std::complex<double>, double> DM_imag(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
     // calculate DMK
@@ -87,8 +583,8 @@ void ModuleIO::write_current(const int istep,
     {
         double local_current[3] = {0.0, 0.0, 0.0};
 #else
-        // ModuleBase::matrix& local_soverlap = soverlap;
-        double* local_current = current_total;
+    // ModuleBase::matrix& local_soverlap = soverlap;
+    double* local_current = current_total;
 #endif
         ModuleBase::Vector3<double> tau1, dtau, tau2;
 
@@ -117,8 +613,9 @@ void ModuleIO::write_current(const int istep,
                 double Rx = ra.info[iat][cb][0];
                 double Ry = ra.info[iat][cb][1];
                 double Rz = ra.info[iat][cb][2];
-                //std::cout<< "iat1: " << iat1 << " iat2: " << iat2 << " Rx: " << Rx << " Ry: " << Ry << " Rz:" << Rz << std::endl;
-                //  get BaseMatrix
+                // std::cout<< "iat1: " << iat1 << " iat2: " << iat2 << " Rx: " << Rx << " Ry: " << Ry << " Rz:" << Rz
+                // << std::endl;
+                //   get BaseMatrix
                 hamilt::BaseMatrix<double>* tmp_matrix_real
                     = DM_real.get_DMR_pointer(1)->find_matrix(iat1, iat2, Rx, Ry, Rz);
                 hamilt::BaseMatrix<double>* tmp_matrix_imag
@@ -157,7 +654,7 @@ void ModuleIO::write_current(const int istep,
                         // std::cout<<"mu: "<< mu <<" nu: "<< nu << std::endl;
                         // std::cout<<"dm2d1_real: "<< dm2d1_real << " dm2d1_imag: "<< dm2d1_imag << std::endl;
                         // std::cout<<"rvz: "<< rvz.real() << " " << rvz.imag() << std::endl;
-                        local_current[0] -= dm2d1_real * rvx.real() - dm2d1_imag * rvx.imag();    
+                        local_current[0] -= dm2d1_real * rvx.real() - dm2d1_imag * rvx.imag();
                         local_current[1] -= dm2d1_real * rvy.real() - dm2d1_imag * rvy.imag();
                         local_current[2] -= dm2d1_real * rvz.real() - dm2d1_imag * rvz.imag();
                     } // end kk
@@ -175,6 +672,21 @@ void ModuleIO::write_current(const int istep,
     }
 #endif
     Parallel_Reduce::reduce_all(current_total, 3);
+#ifdef __EXX
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
+        std::vector<ModuleBase::Vector3<double>> current_k_exx;
+        current_k_exx.resize(kv.get_nks());
+        cal_current_exx_k(orb, pv, kv, r_calculator, p_ham, exx, psi, current_k_exx);
+        for (int dir = 0; dir < 3; dir++)
+        {
+            for (int ik = 0; ik < kv.get_nks(); ik++)
+            {
+                current_total[dir] += current_k_exx[ik][dir];
+            }
+        }
+    }
+#endif
     // write end
     if (GlobalV::MY_RANK == 0)
     {
@@ -183,7 +695,8 @@ void ModuleIO::write_current(const int istep,
         fout.open(filename, std::ios::app);
         fout << std::setprecision(16);
         fout << std::scientific;
-        fout << istep << " " << current_total[0]/omega << " " << current_total[1]/omega << " " << current_total[2]/omega << std::endl;
+        fout << istep << " " << current_total[0] / omega << " " << current_total[1] / omega << " "
+             << current_total[2] / omega << std::endl;
         fout.close();
     }
 
@@ -191,11 +704,11 @@ void ModuleIO::write_current(const int istep,
     return;
 }
 void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
-                          elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
-                          const int ik,
-                          const int nspin,
-                          const int is,
-                          const bool reset)
+                            elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
+                            const int ik,
+                            const int nspin,
+                            const int is,
+                            const bool reset)
 {
     ModuleBase::TITLE("ModuleIO", "cal_tmp_DM_k");
     ModuleBase::timer::tick("ModuleIO", "cal_tmp_DM_k");
@@ -206,7 +719,7 @@ void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, doubl
 
     hamilt::HContainer<double>* tmp_DMR_real = DM_real.get_DMR_vector()[is - 1];
     hamilt::HContainer<double>* tmp_DMR_imag = DM_imag.get_DMR_vector()[is - 1];
-    if(reset)
+    if (reset)
     {
         tmp_DMR_real->set_zero();
         tmp_DMR_imag->set_zero();
@@ -239,22 +752,24 @@ void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, doubl
             if (PARAM.inp.nspin != 4)
             {
                 double arg_td = 0.0;
-                if(elecstate::H_TDDFT_pw::stype == 2)
+                if (elecstate::H_TDDFT_pw::stype == 2)
                 {
-                    //new
-                    //cal tddft phase for mixing gague
+                    // new
+                    // cal tddft phase for mixing gague
                     const int iat1 = tmp_ap_real.get_atom_i();
                     const int iat2 = tmp_ap_real.get_atom_j();
-                    ModuleBase::Vector3<double> dtau = TD_Velocity::td_vel_op->get_ucell()->cal_dtau(iat1, iat2, r_index);
+                    ModuleBase::Vector3<double> dtau
+                        = TD_Velocity::td_vel_op->get_ucell()->cal_dtau(iat1, iat2, r_index);
                     double& tmp_lat0 = TD_Velocity::td_vel_op->get_ucell()->lat0;
                     arg_td = TD_Velocity::td_vel_op->cart_At * dtau * tmp_lat0;
 
                     /*std::cout << "arg_td " << arg_td << std::endl;
-                    std::cout << "cart_At " << TD_Velocity::td_vel_op->cart_At[0] << " "<< TD_Velocity::td_vel_op->cart_At[1] << " " << TD_Velocity::td_vel_op->cart_At[2] << std::endl;
+                    std::cout << "cart_At " << TD_Velocity::td_vel_op->cart_At[0] << " "<<
+                    TD_Velocity::td_vel_op->cart_At[1] << " " << TD_Velocity::td_vel_op->cart_At[2] << std::endl;
                     std::cout << "dtau " << dtau[0] << " "<< dtau[1] << " " << dtau[2] << std::endl;
                     std::cout << "ucell->lat0 " << tmp_lat0 << std::endl;
                     std::cout << "iat1 " << iat1 << " " << "iat2 " << iat2 << std::endl;*/
-                    //new
+                    // new
                 }
                 // cal k_phase
                 // if TK==std::complex<double>, kphase is e^{ikR}
@@ -313,14 +828,20 @@ void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, doubl
 }
 
 void ModuleIO::write_current_eachk(const int istep,
-                             const psi::Psi<std::complex<double>>* psi,
-                             const elecstate::ElecState* pelec,
-                             const K_Vectors& kv,
-                             const TwoCenterIntegrator* intor,
-                             const Parallel_Orbitals* pv,
-                             const LCAO_Orbitals& orb,
-                             const TD_current* cal_current,
-                             Record_adj& ra)
+                                   const psi::Psi<std::complex<double>>* psi,
+                                   const elecstate::ElecState* pelec,
+                                   const K_Vectors& kv,
+                                   const TwoCenterIntegrator* intor,
+                                   const Parallel_Orbitals* pv,
+                                   const LCAO_Orbitals& orb,
+                                   const TD_current* cal_current,
+                                   Record_adj& ra,
+#ifdef __EXX
+                                   cal_r_overlap_R& r_calculator,
+                                   hamilt::HamiltLCAO<std::complex<double>, std::complex<double>>* p_ham,
+                                   const Exx_LRI<std::complex<double>>& exx
+#endif
+)
 {
 
     ModuleBase::TITLE("ModuleIO", "write_current");
@@ -344,11 +865,11 @@ void ModuleIO::write_current_eachk(const int istep,
             current_term[dir] = TD_Velocity::td_vel_op->get_current_term_pointer(dir);
         }
     }
-    double omega=GlobalC::ucell.omega;
+    double omega = GlobalC::ucell.omega;
     // construct a DensityMatrix object
     // Since the function cal_dm_psi do not suport DMR in complex type, I replace it with two DMR in double type. Should
     // be refactored in the future.
-    const int nspin_dm = std::map<int, int>({ {1,1},{2,2},{4,1} })[PARAM.inp.nspin];
+    const int nspin_dm = std::map<int, int>({{1, 1}, {2, 2}, {4, 1}})[PARAM.inp.nspin];
     elecstate::DensityMatrix<std::complex<double>, double> DM_real(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
     elecstate::DensityMatrix<std::complex<double>, double> DM_imag(pv, nspin_dm, kv.kvec_d, kv.get_nks() / nspin_dm);
     // calculate DMK
@@ -357,6 +878,15 @@ void ModuleIO::write_current_eachk(const int istep,
     // init DMR
     DM_real.init_DMR(ra, &GlobalC::ucell);
     DM_imag.init_DMR(ra, &GlobalC::ucell);
+
+    std::vector<ModuleBase::Vector3<double>> current_k_exx;
+#ifdef __EXX
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
+        current_k_exx.resize(kv.get_nks());
+        cal_current_exx_k(orb, pv, kv, r_calculator, p_ham, exx, psi, current_k_exx);
+    }
+#endif
 
     int nks = DM_real.get_DMK_nks();
     if (PARAM.inp.nspin == 2)
@@ -408,8 +938,9 @@ void ModuleIO::write_current_eachk(const int istep,
                         double Rx = ra.info[iat][cb][0];
                         double Ry = ra.info[iat][cb][1];
                         double Rz = ra.info[iat][cb][2];
-                        //std::cout<< "iat1: " << iat1 << " iat2: " << iat2 << " Rx: " << Rx << " Ry: " << Ry << " Rz:" << Rz << std::endl;
-                        //  get BaseMatrix
+                        // std::cout<< "iat1: " << iat1 << " iat2: " << iat2 << " Rx: " << Rx << " Ry: " << Ry << " Rz:"
+                        // << Rz << std::endl;
+                        //   get BaseMatrix
                         hamilt::BaseMatrix<double>* tmp_matrix_real
                             = DM_real.get_DMR_pointer(is)->find_matrix(iat1, iat2, Rx, Ry, Rz);
                         hamilt::BaseMatrix<double>* tmp_matrix_imag
@@ -448,7 +979,7 @@ void ModuleIO::write_current_eachk(const int istep,
                                 // std::cout<<"mu: "<< mu <<" nu: "<< nu << std::endl;
                                 // std::cout<<"dm2d1_real: "<< dm2d1_real << " dm2d1_imag: "<< dm2d1_imag << std::endl;
                                 // std::cout<<"rvz: "<< rvz.real() << " " << rvz.imag() << std::endl;
-                                local_current_ik[0] -= dm2d1_real * rvx.real() - dm2d1_imag * rvx.imag();    
+                                local_current_ik[0] -= dm2d1_real * rvx.real() - dm2d1_imag * rvx.imag();
                                 local_current_ik[1] -= dm2d1_real * rvy.real() - dm2d1_imag * rvy.imag();
                                 local_current_ik[2] -= dm2d1_real * rvz.real() - dm2d1_imag * rvz.imag();
                             } // end kk
@@ -468,6 +999,12 @@ void ModuleIO::write_current_eachk(const int istep,
             Parallel_Reduce::reduce_all(current_ik, 3);
             for (int i = 0; i < 3; ++i)
             {
+#ifdef __EXX
+                if (GlobalC::exx_info.info_global.cal_exx)
+                {
+                    current_ik[i] += current_k_exx[ik][i];
+                }
+#endif
                 current_total[i] += current_ik[i];
             }
             // MPI_Reduce(local_current_ik, current_ik, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -479,7 +1016,8 @@ void ModuleIO::write_current_eachk(const int istep,
                 fout.open(filename, std::ios::app);
                 fout << std::setprecision(16);
                 fout << std::scientific;
-                fout << istep << " " << current_ik[0]/omega << " " << current_ik[1]/omega << " " << current_ik[2]/omega << std::endl;
+                fout << istep << " " << current_ik[0] / omega << " " << current_ik[1] / omega << " "
+                     << current_ik[2] / omega << std::endl;
                 fout.close();
             }
             // write end
@@ -492,7 +1030,8 @@ void ModuleIO::write_current_eachk(const int istep,
         fout.open(filename, std::ios::app);
         fout << std::setprecision(16);
         fout << std::scientific;
-        fout << istep << " " << current_total[0]/omega << " " << current_total[1]/omega << " " << current_total[2]/omega << std::endl;
+        fout << istep << " " << current_total[0] / omega << " " << current_total[1] / omega << " "
+             << current_total[2] / omega << std::endl;
         fout.close();
     }
 

@@ -48,6 +48,15 @@ extern void add_Hexx(const K_Vectors& kv,
                      const Parallel_Orbitals& pv,
                      TK* hk);
 
+template <typename Tdata>
+extern void add_partial_Hexx(const K_Vectors& kv,
+                             const int ik,
+                             const int ix,
+                             const double alpha,
+                             const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>& Hs,
+                             const Parallel_Orbitals& pv,
+                             std::complex<double>* partial_hk);
+
 template <typename Tdata, typename TR>
 extern void add_HexxR(const int current_spin,
                       const double alpha,
@@ -78,9 +87,9 @@ extern inline int get_iwt(const int iat, const int iw_b, const int is_b);
 
 template <typename TA, typename TAC, typename T>
 extern std::map<TA, std::map<TAC, T>> comm_map2_first(const MPI_Comm& mpi_comm,
-                                                             const std::map<TA, std::map<TAC, T>>& Ds_in,
-                                                             const std::set<TA>& s0,
-                                                             const std::set<TA>& s1);
+                                                      const std::map<TA, std::map<TAC, T>>& Ds_in,
+                                                      const std::set<TA>& s0,
+                                                      const std::set<TA>& s1);
 template <typename TA, typename TAC, typename T, typename Tjudge>
 extern std::map<TA, std::map<TAC, T>> comm_map2(const MPI_Comm& mpi_comm,
                                                 const std::map<TA, std::map<TAC, T>>& Ds_in,
