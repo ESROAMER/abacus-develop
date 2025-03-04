@@ -393,9 +393,9 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
         // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{n,\mu} * v_{\mu,\nu} * C_{\nu,m}
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
+            ModuleBase::ComplexMatrix vk_c(nlocal, nlocal); // local one
             // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
-            ModuleBase::ComplexMatrix v_c; // local one
-            v_c.create(pv->nrow, pv->ncol);
+            ModuleBase::ComplexMatrix v_c(pv->nrow, pv->ncol); // local one
             ScalapackConnector::gemm(N_char,
                                      N_char,
                                      nlocal,
@@ -431,10 +431,17 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      1,
                                      pv->desc,
                                      zero_complex,
-                                     velocity_k[ik][i_alpha].c,
+                                     vk_c.c,
                                      1,
                                      1,
                                      pv->desc);
+
+            MPI_Allreduce(vk_c.c,
+                          velocity_k[ik][i_alpha].c,
+                          nlocal * nlocal,
+                          MPI_CXX_DOUBLE_COMPLEX,
+                          MPI_SUM,
+                          MPI_COMM_WORLD);
         }
     }
 
@@ -469,7 +476,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(velocity_basis_k[ik][i_alpha], pv->nloc);
-            velocity_k[ik][i_alpha].create(pv->nrow, pv->ncol);
+            velocity_k[ik][i_alpha].create(nlocal, nlocal);
         }
     }
     // set rR
@@ -482,7 +489,9 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     // sum n and m for current_k
     for (int ik = 0; ik < kv.get_nks(); ik++)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-            current_k[ik][i_alpha] += ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
+            for (int ib = 0; ib < nbands; ib++)
+                current_k[ik][i_alpha]
+                    += kv.wk[ik] * (ModuleBase::IMAG_UNIT * velocity_k[ik][i_alpha](ib, ib)).real() / 2.0; // for unit
 
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
