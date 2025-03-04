@@ -74,7 +74,7 @@ void cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                          const Parallel_Orbitals* pv,
                          const K_Vectors& kv,
                          const std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k,
-                         std::vector<ModuleBase::Vector3<ModuleBase::ComplexMatrix>>& velocity_k);
+                         std::vector<std::array<ModuleBase::ComplexMatrix, 3>>& velocity_k);
 
 void cal_current_exx_k(const LCAO_Orbitals& orb,
                        const Parallel_Orbitals* pv,

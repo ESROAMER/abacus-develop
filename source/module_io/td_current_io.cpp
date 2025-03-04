@@ -372,69 +372,71 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                    const Parallel_Orbitals* pv,
                                    const K_Vectors& kv,
                                    const std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k,
-                                   std::vector<ModuleBase::Vector3<ModuleBase::ComplexMatrix>>& velocity_k)
+                                   std::vector<std::array<ModuleBase::ComplexMatrix, 3>>& velocity_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_velocity_matrix");
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 
-    const char T_char = 'T';
-    const int one_int = 1;
-    const double one_double = 1.0;
+    const char N_char = 'N';
+    const char C_char = 'C';
+    const std::complex<double> one_real = ModuleBase::ONE;
+    const std::complex<double> zero_complex = ModuleBase::ZERO;
     const double zero_double = 0.0;
     const int nlocal = PARAM.globalv.nlocal;
     const int nbands = PARAM.inp.nbands;
 
     for (int ik = 0; ik < kv.get_nks(); ik++)
     {
-        // 1. set C^*
+        // 1. set C
         psi->fix_k(ik);
-        psi::Psi<std::complex<double>> Dwfc(psi[0], 1);
-        std::complex<double>* p_dwfc = Dwfc.get_pointer();
-        for (int index = 0; index < Dwfc.size(); ++index)
-            p_dwfc[index] = conj(p_dwfc[index]);
-
-        // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{\mu,n} * v_{\mu,\nu} * C_{\nu,m}
-        // same as pdos in write_dos_lcao.cpp
+        // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{n,\mu} * v_{\mu,\nu} * C_{\nu,m}
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
-            ModuleBase::ComplexMatrix c_dagger_v; // local one
-            c_dagger_v.create(pv->ncol, pv->nrow);
-            for (int i = 0; i < nbands; ++i)
-            {
-                const int NB = i + 1;
-#ifdef __MPI
-                pzgemv_(&T_char,
-                        &nlocal,
-                        &nlocal,
-                        &one_double,
-                        velocity_basis_k[ik][i_alpha],
-                        &one_int,
-                        &one_int,
-                        pv->desc,
-                        p_dwfc,
-                        &one_int,
-                        &NB,
-                        pv->desc,
-                        &one_int,
-                        &zero_double,
-                        c_dagger_v.c,
-                        &one_int,
-                        &NB,
-                        pv->desc,
-                        &one_int);
-#endif
-                for (int j = 0; j < nlocal; ++j)
-                {
-                    if (pv->in_this_processor(j, i))
-                    {
-                        const int ir = pv->global2local_row(j);
-                        const int ic = pv->global2local_col(i);
-                        velocity_k[ik][i_alpha](ic, ir) = kv.wk[ik] * c_dagger_v(ic, ir) * psi[0](ic, ir);
-                    }
-                }
+            // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
+            ModuleBase::ComplexMatrix v_c; // local one
+            v_c.create(pv->ncol, nbands);
+            ScalapackConnector::gemm(N_char,
+                                     N_char,
+                                     nlocal,
+                                     nbands,
+                                     nlocal,
+                                     one_real,
+                                     velocity_basis_k[ik][i_alpha],
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     psi[0].get_pointer(),
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     v_c.c,
+                                     1,
+                                     1,
+                                     pv->desc);
+                // velocity_k_{n,m} = C^\dagger_{n,\mu} * v_c_{\mu,m}
+                ScalapackConnector::gemm(C_char,
+                                     N_char,
+                                     nlocal,
+                                     nbands,
+                                     nlocal,
+                                     one_real,
+                                     psi[0].get_pointer(),
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     v_c.c,
+                                     1,
+                                     1,
+                                     pv->desc,
+                                     zero_complex,
+                                     velocity_k[ik][i_alpha].c,
+                                     1,
+                                     1,
+                                     pv->desc);
             }
         }
-    }
+    
 
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 }
@@ -457,15 +459,16 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     // init
     ModuleBase::Vector3<hamilt::HContainer<std::complex<double>>*> rR;
     std::vector<ModuleBase::Vector3<std::complex<double>*>> velocity_basis_k;
-    std::vector<ModuleBase::Vector3<ModuleBase::ComplexMatrix>> velocity_k;
+    std::vector<std::array<ModuleBase::ComplexMatrix, 3>> velocity_k;
     velocity_basis_k.resize(kv.get_nks());
+    velocity_k.resize(kv.get_nks());
     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
     {
         rR[i_alpha] = new hamilt::HContainer<std::complex<double>>(pv);
         for (int ik = 0; ik < kv.get_nks(); ik++)
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
-            velocity_k[ik][i_alpha].create(pv->ncol, pv->nrow);
+            velocity_k[ik][i_alpha].create(nbands, nbands);
         }
     }
     // set rR
@@ -478,29 +481,8 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
 
     // sum n and m for current_k
     for (int ik = 0; ik < kv.get_nks(); ik++)
-    {
-        double local_current[3] = {0.0, 0.0, 0.0};
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-        {
-            for (int i = 0; i < nbands; ++i)
-            {
-                for (int j = 0; j < nlocal; ++j)
-                {
-                    if (pv->in_this_processor(j, i))
-                    {
-                        const int ir = pv->global2local_row(j);
-                        const int ic = pv->global2local_col(i);
-                        local_current[i_alpha] += velocity_k[ik][i_alpha](ic, ir).real() / 2.0; // for unit
-                    }
-                }
-            }
-        }
-        Parallel_Reduce::reduce_all(local_current, 3);
-        for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-        {
-            current_k[ik][i_alpha] = local_current[i_alpha];
-        }
-    }
+            current_k[ik][i_alpha] += ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
 
     ModuleBase::TITLE("ModuleIO", "cal_current_exx");
 }
