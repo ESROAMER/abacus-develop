@@ -27,15 +27,21 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 {
     ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
     ModuleBase::timer::tick("ModuleIO", "set_rR_from_sR");
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
+    
+    // init
+    for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    {
+        for (int i = 0; i < sR.size_atom_pairs(); i++)
+        {
+            hamilt::AtomPair<double> atom_ij = sR.get_atom_pair(i);
+            rR[i_alpha]->insert_pair(atom_ij);
+        }
+        rR[i_alpha]->allocate(nullptr, true);
+    }
+
     for (int i = 0; i < sR.size_atom_pairs(); i++)
     {
         hamilt::AtomPair<double> atom_ij = sR.get_atom_pair(i);
-#ifdef _OPENMP
-#pragma omp for schedule(dynamic) nowait
-#endif
         // loop R-index
         for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
         {
@@ -95,20 +101,12 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
                                                                                    L2,
                                                                                    m2,
                                                                                    N2);
-#ifdef _OPENMP
-#pragma omp critical(set_rR_from_sR)
                     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
                     {
                         hamilt::BaseMatrix<double>* HlocR
                             = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
-                        if (HlocR == nullptr)
-                        {
-                            rR[i_alpha]->insert_pair(atom_ij);
-                            HlocR = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
-                        }
                         HlocR->add_element(iw1, iw2, tmp_r[i_alpha]);
                     }
-#endif
                 }
             }
         }
@@ -393,13 +391,13 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
         // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{n,\mu} * v_{\mu,\nu} * C_{\nu,m}
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
-            ModuleBase::ComplexMatrix vk_c(nlocal, nlocal); // local one
+            std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands*pv->nrow_bands]; // local one
             // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
-            ModuleBase::ComplexMatrix v_c(pv->nrow, pv->ncol); // local one
+            std::complex<double>* v_c = new std::complex<double>[pv->nloc_wfc];
             ScalapackConnector::gemm(N_char,
                                      N_char,
                                      nlocal,
-                                     nlocal,
+                                     nbands,
                                      nlocal,
                                      one_real,
                                      velocity_basis_k[ik][i_alpha],
@@ -411,37 +409,39 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      1,
                                      pv->desc,
                                      zero_complex,
-                                     v_c.c,
+                                     v_c,
                                      1,
                                      1,
                                      pv->desc);
             // velocity_k_{n,m} = C^\dagger_{n,\mu} * v_c_{\mu,m}
             ScalapackConnector::gemm(C_char,
                                      N_char,
-                                     nlocal,
-                                     nlocal,
+                                     nbands,
+                                     nbands,
                                      nlocal,
                                      one_real,
                                      psi[0].get_pointer(),
                                      1,
                                      1,
                                      pv->desc,
-                                     v_c.c,
+                                     v_c,
                                      1,
                                      1,
                                      pv->desc,
                                      zero_complex,
-                                     vk_c.c,
+                                     vk_c,
                                      1,
                                      1,
                                      pv->desc);
 
-            MPI_Allreduce(vk_c.c,
+            MPI_Allreduce(vk_c,
                           velocity_k[ik][i_alpha].c,
-                          nlocal * nlocal,
+                          nbands * nbands,
                           MPI_CXX_DOUBLE_COMPLEX,
                           MPI_SUM,
                           MPI_COMM_WORLD);
+            delete[] vk_c;
+            delete[] v_c;
         }
     }
 
@@ -476,7 +476,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(velocity_basis_k[ik][i_alpha], pv->nloc);
-            velocity_k[ik][i_alpha].create(nlocal, nlocal);
+            velocity_k[ik][i_alpha].create(nbands, nbands);
         }
     }
     // set rR
@@ -489,9 +489,8 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     // sum n and m for current_k
     for (int ik = 0; ik < kv.get_nks(); ik++)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-            for (int ib = 0; ib < nbands; ib++)
                 current_k[ik][i_alpha]
-                    += kv.wk[ik] * (ModuleBase::IMAG_UNIT * velocity_k[ik][i_alpha](ib, ib)).real() / 2.0; // for unit
+                    += kv.wk[ik] * ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
 
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
