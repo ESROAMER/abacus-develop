@@ -151,7 +151,7 @@ void ModuleIO::cal_velocity_basis_k(
     std::complex<double>* r_is_h = new std::complex<double>[pv->nloc];
     std::complex<double>* h_is_ps = new std::complex<double>[pv->nloc];
 
-    for (size_t ik; ik != kv.get_nks(); ++ik)
+    for (size_t ik = 0; ik != kv.get_nks(); ++ik)
     {
         // set H(k), S(k)
         // 1.1 set H(k)
