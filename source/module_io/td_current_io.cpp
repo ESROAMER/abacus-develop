@@ -122,8 +122,7 @@ void ModuleIO::cal_velocity_basis_k(
     const K_Vectors& kv,
     const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
     const hamilt::HContainer<double>& sR,
-    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>&
-        Hs,
+    const hamilt::HContainer<double>& hR,
     std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_velocity_basis_k");
@@ -141,17 +140,26 @@ void ModuleIO::cal_velocity_basis_k(
     const std::complex<double> neg_one_real = ModuleBase::NEG_ONE;
     const std::complex<double> zero_complex = ModuleBase::ZERO;
 
+    std::complex<double>* hk = new std::complex<double>[pv->nloc];
+    std::complex<double>* sk = new std::complex<double>[pv->nloc];
+    std::complex<double>* partial_hk = new std::complex<double>[pv->nloc];
+    std::complex<double>* partial_sk = new std::complex<double>[pv->nloc];
+    std::complex<double>* rk = new std::complex<double>[pv->nloc];
+    std::complex<double>* h_is = new std::complex<double>[pv->nloc];
+    std::complex<double>* h_is_r = new std::complex<double>[pv->nloc];
+    std::complex<double>* r_is = new std::complex<double>[pv->nloc];
+    std::complex<double>* r_is_h = new std::complex<double>[pv->nloc];
+    std::complex<double>* h_is_ps = new std::complex<double>[pv->nloc];
+
     for (size_t ik; ik != kv.get_nks(); ++ik)
     {
         // set H(k), S(k)
         // 1.1 set H(k)
-        std::complex<double>* hk = new std::complex<double>[pv->nloc];
         ModuleBase::GlobalFunc::ZEROS(hk, pv->nloc);
-        RI_2D_Comm::add_Hexx(kv, ik, coeff, Hs, *pv, hk);
-        // 1.2 set S(k)
-        std::complex<double>* sk = new std::complex<double>[pv->nloc];
-        ModuleBase::GlobalFunc::ZEROS(sk, pv->nloc);
         const int nrow = pv->get_row_size();
+        hamilt::folding_HR(hR, hk, kv.kvec_d[ik], nrow, 1);
+        // 1.2 set S(k)
+        ModuleBase::GlobalFunc::ZEROS(sk, pv->nloc);
         hamilt::folding_HR(sR, sk, kv.kvec_d[ik], nrow, 1);
         // 2. set inverse S(k) -> sk will be changed to sk_inv
         int* ipiv = new int[pv->nloc];
@@ -185,20 +193,16 @@ void ModuleIO::cal_velocity_basis_k(
         {
             // 3. set partial_H(k), partial_S(k) and r(k)
             // 3.1 set partial_H(k)
-            std::complex<double>* partial_hk = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(partial_hk, pv->nloc);
-            RI_2D_Comm::add_partial_Hexx(kv, ik, i_alpha, coeff, Hs, *pv, partial_hk);
+            hamilt::folding_partial_HR(hR, partial_hk, kv.kvec_d[ik], i_alpha, nrow, 1);
             // 3.2 set partial S(k)
-            std::complex<double>* partial_sk = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(partial_sk, pv->nloc);
             hamilt::folding_partial_HR(sR, partial_sk, kv.kvec_d[ik], i_alpha, nrow, 1);
             // 3.3 set r(k)
-            std::complex<double>* rk = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(rk, pv->nloc);
             hamilt::folding_HR(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1); // set r(k)
-            // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv *
-            // Hk) - Hk * Sk_inv * partial_Sk 4.1.1 Hk * Sk_inv (note 2.)
-            std::complex<double>* h_is = new std::complex<double>[pv->nloc];
+            // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv * Hk) - Hk * Sk_inv * partial_Sk 
+            //4.1.1 Hk * Sk_inv (note 2.)  
             ModuleBase::GlobalFunc::ZEROS(h_is, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -220,7 +224,6 @@ void ModuleIO::cal_velocity_basis_k(
                                      1,
                                      pv->desc);
             // 4.1.2 (Hk * Sk_inv) * rk
-            std::complex<double>* h_is_r = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(h_is_r, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -242,7 +245,6 @@ void ModuleIO::cal_velocity_basis_k(
                                      1,
                                      pv->desc);
             // 4.2.1 rk * Sk_inv (note 2.)
-            std::complex<double>* r_is = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(r_is, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -264,7 +266,6 @@ void ModuleIO::cal_velocity_basis_k(
                                      1,
                                      pv->desc);
             // 4.2.2 (rk * Sk_inv) * Hk
-            std::complex<double>* r_is_h = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(r_is_h, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -286,7 +287,6 @@ void ModuleIO::cal_velocity_basis_k(
                                      1,
                                      pv->desc);
             // 4.3.1 (Hk * Sk_inv) * partial_Sk
-            std::complex<double>* h_is_ps = new std::complex<double>[pv->nloc];
             ModuleBase::GlobalFunc::ZEROS(h_is_ps, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -351,19 +351,20 @@ void ModuleIO::cal_velocity_basis_k(
                                       pv->desc);
             // 5. copy h_is_ps to velocity_basis_k[ik][i_alpha]
             BlasConnector::copy(pv->nloc, h_is_ps, 1, velocity_basis_k[ik][i_alpha], 1);
-
-            delete[] partial_hk;
-            delete[] partial_sk;
-            delete[] rk;
-            delete[] h_is;
-            delete[] h_is_r;
-            delete[] r_is;
-            delete[] r_is_h;
-            delete[] h_is_ps;
+                          
         }
-        delete[] hk;
-        delete[] sk;
     }
+
+    delete[] hk;
+    delete[] sk;
+    delete[] partial_hk;
+    delete[] partial_sk;
+    delete[] rk;
+    delete[] h_is;
+    delete[] h_is_r;
+    delete[] r_is;
+    delete[] r_is_h;
+    delete[] h_is_ps;
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_basis_k");
 }
 
@@ -383,6 +384,8 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
     const double zero_double = 0.0;
     const int nlocal = PARAM.globalv.nlocal;
     const int nbands = PARAM.inp.nbands;
+    std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands*pv->nrow_bands]; // local one
+    std::complex<double>* v_c = new std::complex<double>[pv->nloc_wfc];
 
     for (int ik = 0; ik < kv.get_nks(); ik++)
     {
@@ -391,9 +394,9 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
         // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{n,\mu} * v_{\mu,\nu} * C_{\nu,m}
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
-            std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands*pv->nrow_bands]; // local one
+            ModuleBase::GlobalFunc::ZEROS(vk_c, pv->ncol_bands*pv->nrow_bands);
+            ModuleBase::GlobalFunc::ZEROS(v_c, pv->nloc_wfc);
             // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
-            std::complex<double>* v_c = new std::complex<double>[pv->nloc_wfc];
             ScalapackConnector::gemm(N_char,
                                      N_char,
                                      nlocal,
@@ -407,12 +410,12 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      psi[0].get_pointer(),
                                      1,
                                      1,
-                                     pv->desc,
+                                     pv->desc_wfc,
                                      zero_complex,
                                      v_c,
                                      1,
                                      1,
-                                     pv->desc);
+                                     pv->desc_wfc);
             // velocity_k_{n,m} = C^\dagger_{n,\mu} * v_c_{\mu,m}
             ScalapackConnector::gemm(C_char,
                                      N_char,
@@ -423,27 +426,30 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      psi[0].get_pointer(),
                                      1,
                                      1,
-                                     pv->desc,
+                                     pv->desc_wfc,
                                      v_c,
                                      1,
                                      1,
-                                     pv->desc,
+                                     pv->desc_wfc,
                                      zero_complex,
                                      vk_c,
                                      1,
                                      1,
-                                     pv->desc);
+                                     pv->desc_Eij);
 
-            MPI_Allreduce(vk_c,
-                          velocity_k[ik][i_alpha].c,
-                          nbands * nbands,
-                          MPI_CXX_DOUBLE_COMPLEX,
-                          MPI_SUM,
-                          MPI_COMM_WORLD);
-            delete[] vk_c;
-            delete[] v_c;
+            for (int i = 0; i < PARAM.inp.nbands; ++i)
+                  for (int j = 0; j < PARAM.inp.nbands; ++j)
+                      if (pv->in_this_processor(i, j))
+                      {
+                        const int ir = pv->global2local_row(j);
+                        const int ic = pv->global2local_col(i);
+                        velocity_k[ik][i_alpha](i, j) = vk_c[ic * pv->nrow + ir];
+                      }
         }
     }
+
+    delete[] vk_c;
+    delete[] v_c;
 
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 }
@@ -453,7 +459,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const K_Vectors& kv,
                                  cal_r_overlap_R& r_calculator,
                                  const hamilt::HContainer<double>& sR,
-                                 const Exx_LRI<std::complex<double>>& exx,
+                                 const hamilt::HContainer<double>& hR,
                                  const psi::Psi<std::complex<double>>* psi,
                                  std::vector<ModuleBase::Vector3<double>>& current_k)
 {
@@ -462,7 +468,6 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
 
     const int nlocal = PARAM.globalv.nlocal;
     const int nbands = PARAM.inp.nbands;
-
     // init
     ModuleBase::Vector3<hamilt::HContainer<double>*> rR;
     std::vector<ModuleBase::Vector3<std::complex<double>*>> velocity_basis_k;
@@ -482,23 +487,21 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     // set rR
     set_rR_from_sR(pv, r_calculator, sR, rR);
     // set velocity_basis_k
-    cal_velocity_basis_k(orb, pv, kv, rR, sR, exx.Hexxs, velocity_basis_k);
+    cal_velocity_basis_k(orb, pv, kv, rR, sR, hR, velocity_basis_k);
     // set velocity_k
     cal_velocity_matrix(psi, pv, kv, velocity_basis_k, velocity_k);
 
     // sum n and m for current_k
     for (int ik = 0; ik < kv.get_nks(); ik++)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-                current_k[ik][i_alpha]
+            current_k[ik][i_alpha]
                     += kv.wk[ik] * ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
-
+                
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
         delete rR[i_alpha];
         for (int ik = 0; ik < kv.get_nks(); ik++)
-        {
             delete[] velocity_basis_k[ik][i_alpha];
-        }
     }
 
     ModuleBase::TITLE("ModuleIO", "cal_current_exx");
@@ -533,7 +536,7 @@ void ModuleIO::write_current(const int istep,
 #ifdef __EXX
                              cal_r_overlap_R& r_calculator,
                              const hamilt::HContainer<double>& sR,
-                             const Exx_LRI<std::complex<double>>& exx
+                             const hamilt::HContainer<double>& hR
 #endif
 )
 {
@@ -676,7 +679,8 @@ void ModuleIO::write_current(const int istep,
     {
         std::vector<ModuleBase::Vector3<double>> current_k_exx;
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, exx, psi, current_k_exx);
+        //TODO: set HexxR to hContainer
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, current_k_exx);
         for (int dir = 0; dir < 3; dir++)
         {
             for (int ik = 0; ik < kv.get_nks(); ik++)
@@ -838,7 +842,7 @@ void ModuleIO::write_current_eachk(const int istep,
 #ifdef __EXX
                                    cal_r_overlap_R& r_calculator,
                                    const hamilt::HContainer<double>& sR,
-                                   const Exx_LRI<std::complex<double>>& exx
+                                   const hamilt::HContainer<double>& hR
 #endif
 )
 {
@@ -883,7 +887,7 @@ void ModuleIO::write_current_eachk(const int istep,
     if (GlobalC::exx_info.info_global.cal_exx)
     {
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, exx, psi, current_k_exx);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, current_k_exx);
     }
 #endif
 
