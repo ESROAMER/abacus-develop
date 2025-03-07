@@ -116,11 +116,13 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 }
 
 // need velocity gauge HR
-void ModuleIO::sum_HR(const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs,
-                      const Parallel_Orbitals& pv,
-                      const K_Vectors& kv,
-                      const hamilt::HContainer<double>& hR,
-                      hamilt::HContainer<std::complex<double>>* full_hR)
+void ModuleIO::sum_HR(
+    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>&
+        Hexxs,
+    const Parallel_Orbitals& pv,
+    const K_Vectors& kv,
+    const hamilt::HContainer<double>& hR,
+    hamilt::HContainer<std::complex<double>>* full_hR)
 {
     ModuleBase::TITLE("ModuleIO", "sum_HR");
     ModuleBase::timer::tick("ModuleIO", "sum_HR");
@@ -134,7 +136,7 @@ void ModuleIO::sum_HR(const std::vector<std::map<int, std::map<std::pair<int, st
         for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
         {
             const ModuleBase::Vector3<int> r_index = atom_ij.get_R_index(iR);
-            hamilt::AtomPair<std::complex<double>> atom_ij_complex(iat1, iat2, r_index, &pv); 
+            hamilt::AtomPair<std::complex<double>> atom_ij_complex(iat1, iat2, r_index, &pv);
             full_hR->insert_pair(atom_ij_complex);
         }
     }
@@ -582,6 +584,33 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     set_rR_from_sR(pv, r_calculator, sR, rR);
     // set velocity_basis_k
     cal_velocity_basis_k(orb, pv, kv, rR, sR, hR, velocity_basis_k);
+    if (elecstate::H_TDDFT_pw::stype == 2)
+    {
+        for (size_t ik = 0; ik != kv.get_nks(); ++ik)
+        {
+            for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+            {
+                for (int ir = 0; ir < pv->nrow; ++ir)
+                {
+                    const int iwt1 = pv.local2global_row(ir);
+                    const int iat1 = Globalc::ucell.iwt2iat[iwt1];
+                    for (int ic = 0; ic < pv->ncol; ++ic)
+                    {
+                        const int iwt2 = pv.local2global_row(ic);
+                        const int iat2 = Globalc::ucell.iwt2iat[iwt2];
+                        const int irc = ic * pv->nrow + ir;
+                        const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
+                        const ModuleBase::Vector3<double> tau2 = GlobalC::ucell.get_tau(iat2);
+                        if (pv->in_this_processor(ir, ic))
+                        {
+                            ModuleBase::Vector3<double> dtau = (tau2 - tau1) * GlobalC::ucell.lat0;
+                            velocity_basis_k[ik][i_alpha][irc] = std::exp(TD_Velocity::td_vel_op->cart_At * dtau) * velocity_basis_k[ik][i_alpha][irc];
+                        }
+                    }
+                }
+            }
+        }
+    }
     // set velocity_k
     cal_velocity_matrix(psi, pv, kv, velocity_basis_k, velocity_k);
 
@@ -619,20 +648,22 @@ void ModuleIO::cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>
     }
     ModuleBase::timer::tick("ModuleIO", "cal_tmp_DM");
 }
-void ModuleIO::write_current(const int istep,
-                             const psi::Psi<std::complex<double>>* psi,
-                             const elecstate::ElecState* pelec,
-                             const K_Vectors& kv,
-                             const TwoCenterIntegrator* intor,
-                             const Parallel_Orbitals* pv,
-                             const LCAO_Orbitals& orb,
-                             const TD_current* cal_current,
-                             Record_adj& ra,
+void ModuleIO::write_current(
+    const int istep,
+    const psi::Psi<std::complex<double>>* psi,
+    const elecstate::ElecState* pelec,
+    const K_Vectors& kv,
+    const TwoCenterIntegrator* intor,
+    const Parallel_Orbitals* pv,
+    const LCAO_Orbitals& orb,
+    const TD_current* cal_current,
+    Record_adj& ra,
 #ifdef __EXX
-                             cal_r_overlap_R& r_calculator,
-                             const hamilt::HContainer<double>& sR,
-                             const hamilt::HContainer<double>& hR,
-                             const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
+    cal_r_overlap_R& r_calculator,
+    const hamilt::HContainer<double>& sR,
+    const hamilt::HContainer<double>& hR,
+    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>&
+        Hexxs
 #endif
 )
 {
@@ -939,20 +970,22 @@ void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, doubl
 }
 
 // did not add EXX current
-void ModuleIO::write_current_eachk(const int istep,
-                                   const psi::Psi<std::complex<double>>* psi,
-                                   const elecstate::ElecState* pelec,
-                                   const K_Vectors& kv,
-                                   const TwoCenterIntegrator* intor,
-                                   const Parallel_Orbitals* pv,
-                                   const LCAO_Orbitals& orb,
-                                   const TD_current* cal_current,
-                                   Record_adj& ra,
+void ModuleIO::write_current_eachk(
+    const int istep,
+    const psi::Psi<std::complex<double>>* psi,
+    const elecstate::ElecState* pelec,
+    const K_Vectors& kv,
+    const TwoCenterIntegrator* intor,
+    const Parallel_Orbitals* pv,
+    const LCAO_Orbitals& orb,
+    const TD_current* cal_current,
+    Record_adj& ra,
 #ifdef __EXX
-                                   cal_r_overlap_R& r_calculator,
-                                   const hamilt::HContainer<double>& sR,
-                                   const hamilt::HContainer<double>& hR,
-                                   const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
+    cal_r_overlap_R& r_calculator,
+    const hamilt::HContainer<double>& sR,
+    const hamilt::HContainer<double>& hR,
+    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>&
+        Hexxs
 #endif
 )
 {
