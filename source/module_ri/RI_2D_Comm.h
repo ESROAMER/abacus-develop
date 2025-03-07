@@ -48,14 +48,14 @@ extern void add_Hexx(const K_Vectors& kv,
                      const Parallel_Orbitals& pv,
                      TK* hk);
 
-template <typename Tdata>
-extern void add_partial_Hexx(const K_Vectors& kv,
-                             const int ik,
-                             const int ix,
-                             const double alpha,
-                             const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>& Hs,
-                             const Parallel_Orbitals& pv,
-                             std::complex<double>* partial_hk);
+// template <typename Tdata>
+// extern void add_partial_Hexx(const K_Vectors& kv,
+//                              const int ik,
+//                              const int ix,
+//                              const double alpha,
+//                              const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>>& Hs,
+//                              const Parallel_Orbitals& pv,
+//                              std::complex<double>* partial_hk);
 
 template <typename Tdata, typename TR>
 extern void add_HexxR(const int current_spin,
