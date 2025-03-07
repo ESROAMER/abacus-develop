@@ -351,7 +351,6 @@ void ModuleIO::cal_velocity_basis_k(
                                       pv->desc);
             // 5. copy h_is_ps to velocity_basis_k[ik][i_alpha]
             BlasConnector::copy(pv->nloc, h_is_ps, 1, velocity_basis_k[ik][i_alpha], 1);
-                          
         }
     }
 
@@ -386,6 +385,8 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
     const int nbands = PARAM.inp.nbands;
     std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands*pv->nrow_bands]; // local one
     std::complex<double>* v_c = new std::complex<double>[pv->nloc_wfc];
+    // Parallel_2D pv_bands; 
+    // pv_bands.set(nbands, nbands, pv->nb, pv->blacs_ctxt);
 
     for (int ik = 0; ik < kv.get_nks(); ik++)
     {
@@ -437,14 +438,15 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                                      1,
                                      pv->desc_Eij);
 
-            for (int i = 0; i < PARAM.inp.nbands; ++i)
-                  for (int j = 0; j < PARAM.inp.nbands; ++j)
-                      if (pv->in_this_processor(i, j))
-                      {
-                        const int ir = pv->global2local_row(j);
-                        const int ic = pv->global2local_col(i);
-                        velocity_k[ik][i_alpha](i, j) = vk_c[ic * pv->nrow + ir];
-                      }
+            for (int ir = 0; ir < PARAM.inp.nbands; ++ir)
+            {
+                for (int ic = 0; ic < PARAM.inp.nbands; ++ic)
+                {
+                    const int irc = ic * pv_bands.nrow + ir;
+                    if (pv_bands.in_this_processor(ir, ic))
+                        velocity_k[ik][i_alpha](ir, ic) = vk_c[irc];
+                }
+            }
         }
     }
 
@@ -461,6 +463,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const hamilt::HContainer<double>& sR,
                                  const hamilt::HContainer<double>& hR,
                                  const psi::Psi<std::complex<double>>* psi,
+                                 const elecstate::ElecState* pelec,
                                  std::vector<ModuleBase::Vector3<double>>& current_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_current_exx");
@@ -492,10 +495,10 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     cal_velocity_matrix(psi, pv, kv, velocity_basis_k, velocity_k);
 
     // sum n and m for current_k
-    for (int ik = 0; ik < kv.get_nks(); ik++)
+    for (size_t ik = 0; ik != kv.get_nks(); ++ik)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-            current_k[ik][i_alpha]
-                    += kv.wk[ik] * ModuleBase::trace(velocity_k[ik][i_alpha]).real() / 2.0; // for unit
+            for (size_t ib = 0; ib != 3; ++ib)
+                current_k[ik][i_alpha] += pelec->wg(ik, ib) * velocity_k[ik][i_alpha](ib, ib).real() / 2.0; // for unit
                 
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
@@ -675,20 +678,21 @@ void ModuleIO::write_current(const int istep,
 #endif
     Parallel_Reduce::reduce_all(current_total, 3);
 #ifdef __EXX
-    if (GlobalC::exx_info.info_global.cal_exx)
-    {
+    //if (GlobalC::exx_info.info_global.cal_exx)
+    //{
         std::vector<ModuleBase::Vector3<double>> current_k_exx;
         current_k_exx.resize(kv.get_nks());
         //TODO: set HexxR to hContainer
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, current_k_exx);
+        ModuleBase::Vector3<double> current_new;
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, pelec, current_k_exx);
         for (int dir = 0; dir < 3; dir++)
         {
             for (int ik = 0; ik < kv.get_nks(); ik++)
             {
-                current_total[dir] += current_k_exx[ik][dir];
+                current_new[dir] -= current_k_exx[ik][dir];
             }
         }
-    }
+    //}
 #endif
     // write end
     if (GlobalV::MY_RANK == 0)
@@ -701,6 +705,15 @@ void ModuleIO::write_current(const int istep,
         fout << istep << " " << current_total[0] / omega << " " << current_total[1] / omega << " "
              << current_total[2] / omega << std::endl;
         fout.close();
+
+        std::string filename_new = PARAM.globalv.global_out_dir + "current_total_new.dat";
+        std::ofstream fout_new;
+        fout_new.open(filename_new, std::ios::app);
+        fout_new << std::setprecision(16);
+        fout_new << std::scientific;
+        fout_new << istep << " " << current_new[0] / omega << " " << current_new[1] / omega << " "
+             << current_new[2] / omega << std::endl;
+        fout_new.close();
     }
 
     ModuleBase::timer::tick("ModuleIO", "write_current");
@@ -884,11 +897,11 @@ void ModuleIO::write_current_eachk(const int istep,
 
     std::vector<ModuleBase::Vector3<double>> current_k_exx;
 #ifdef __EXX
-    if (GlobalC::exx_info.info_global.cal_exx)
-    {
+    //if (GlobalC::exx_info.info_global.cal_exx)
+    //{
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, current_k_exx);
-    }
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, pelec, current_k_exx);
+    //}
 #endif
 
     int nks = DM_real.get_DMK_nks();

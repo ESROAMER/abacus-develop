@@ -24,7 +24,7 @@ void write_current_eachk(const int istep,
 #ifdef __EXX
                          cal_r_overlap_R& r_calculator,
                          const hamilt::HContainer<double>& sR,
-                         const Exx_LRI<std::complex<double>>& exx
+                         const hamilt::HContainer<double>& hR
 #endif
 );
 
@@ -40,7 +40,7 @@ void write_current(const int istep,
 #ifdef __EXX
                    cal_r_overlap_R& r_calculator,
                    const hamilt::HContainer<double>& sR,
-                   const Exx_LRI<std::complex<double>>& exx
+                   const hamilt::HContainer<double>& hR
 #endif
 );
 
@@ -67,7 +67,7 @@ void cal_velocity_basis_k(
     const K_Vectors& kv,
     const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
     const hamilt::HContainer<double>& sR,
-    const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hs,
+    const hamilt::HContainer<double>& hR,
     std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k);
 
 void cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
@@ -81,8 +81,9 @@ void cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const K_Vectors& kv,
                                  cal_r_overlap_R& r_calculator,
                                  const hamilt::HContainer<double>& sR,
-                                 const Exx_LRI<std::complex<double>>& exx,
+                                 const hamilt::HContainer<double>& hR,
                                  const psi::Psi<std::complex<double>>* psi,
+                                 const elecstate::ElecState* pelec,
                                  std::vector<ModuleBase::Vector3<double>>& current_k);
 
 #endif // __LCAO
