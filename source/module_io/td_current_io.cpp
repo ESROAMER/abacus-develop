@@ -17,9 +17,58 @@
 #include "module_parameter/parameter.h"
 #ifdef __EXX
 #include "module_ri/Exx_LRI.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/operator_lcao/op_exx_lcao.h"
 #endif
 
 #ifdef __LCAO
+template <typename Tdata>
+void ModuleIO::set_hexxR(const K_Vectors& kv,
+                         const Parallel_Orbitals* pv,
+                         const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<Tdata>>>>& Hexxs,
+                         hamilt::HContainer<Tdata>* hexxR)
+{
+    ModuleBase::TITLE("ModuleIO", "set_hexxR_from_sR");
+    ModuleBase::timer::tick("ModuleIO", "set_hexxR_from_sR");
+
+    RI::Cell_Nearest<int, int, 3, double, 3> cell_nearest;
+    const bool use_cell_nearest = (ModuleBase::Vector3<double>(std::fmod(kv.get_koffset(0), 1.0),
+                                                               std::fmod(kv.get_koffset(1), 1.0),
+                                                               std::fmod(kv.get_koffset(2), 1.0))
+                                       .norm()
+                                   < 1e-10);
+    const std::array<int, 3> Rs_period = {kv.nmp[0], kv.nmp[1], kv.nmp[2]};
+    if (use_cell_nearest)
+    {
+        // set cell_nearest
+        std::map<int, std::array<double, 3>> atoms_pos;
+        for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
+        {
+            atoms_pos[iat] = RI_Util::Vector3_to_array3(
+                GlobalC::ucell.atoms[GlobalC::ucell.iat2it[iat]].tau[GlobalC::ucell.iat2ia[iat]]);
+        }
+        const std::array<std::array<double, 3>, 3> latvec = {RI_Util::Vector3_to_array3(GlobalC::ucell.a1),
+                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a2),
+                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a3)};
+        cell_nearest.init(atoms_pos, latvec, Rs_period);
+    }
+    const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                          || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
+                             ? 1.0
+                             : GlobalC::exx_info.info_global.hybrid_alpha;
+    for (int is = 0; is < PARAM.inp.nspin; ++is)
+    {
+        hamilt::reallocate_hcontainer(GlobalC::ucell.nat, hexxR, Rs_period, &cell_nearest);
+        RI_2D_Comm::add_HexxR(is,
+                              coeff,
+                              Hexxs,
+                              *pv,
+                              PARAM.globalv.npol,
+                              *hexxR,
+                              use_cell_nearest ? &cell_nearest : nullptr);
+    }
+
+    ModuleBase::timer::tick("ModuleIO", "set_hexxR_from_sR");
+}
 void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
                               cal_r_overlap_R& r_calculator,
                               const hamilt::HContainer<double>& sR,
@@ -27,7 +76,7 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 {
     ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
     ModuleBase::timer::tick("ModuleIO", "set_rR_from_sR");
-    
+
     // init
     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
     {
@@ -116,14 +165,14 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
 
 // for molecule, if vacuum size is small, the number of R of Hs is smaller than SR
 // which may lead to some errors
-void ModuleIO::cal_velocity_basis_k(
-    const LCAO_Orbitals& orb,
-    const Parallel_Orbitals* pv,
-    const K_Vectors& kv,
-    const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
-    const hamilt::HContainer<double>& sR,
-    const hamilt::HContainer<double>& hR,
-    std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
+template <typename Tdata>
+void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
+                                    const Parallel_Orbitals* pv,
+                                    const K_Vectors& kv,
+                                    const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
+                                    const hamilt::HContainer<double>& sR,
+                                    const hamilt::HContainer<Tdata>& hR,
+                                    std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_velocity_basis_k");
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_basis_k");
@@ -201,8 +250,9 @@ void ModuleIO::cal_velocity_basis_k(
             // 3.3 set r(k)
             ModuleBase::GlobalFunc::ZEROS(rk, pv->nloc);
             hamilt::folding_HR(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1); // set r(k)
-            // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv * Hk) - Hk * Sk_inv * partial_Sk 
-            //4.1.1 Hk * Sk_inv (note 2.)  
+            // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv *
+            // Hk) - Hk * Sk_inv * partial_Sk
+            // 4.1.1 Hk * Sk_inv (note 2.)
             ModuleBase::GlobalFunc::ZEROS(h_is, pv->nloc);
             ScalapackConnector::gemm(N_char,
                                      N_char,
@@ -383,10 +433,8 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
     const double zero_double = 0.0;
     const int nlocal = PARAM.globalv.nlocal;
     const int nbands = PARAM.inp.nbands;
-    std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands*pv->nrow_bands]; // local one
+    std::complex<double>* vk_c = new std::complex<double>[pv->ncol_bands * pv->nrow_bands]; // local one
     std::complex<double>* v_c = new std::complex<double>[pv->nloc_wfc];
-    // Parallel_2D pv_bands; 
-    // pv_bands.set(nbands, nbands, pv->nb, pv->blacs_ctxt);
 
     for (int ik = 0; ik < kv.get_nks(); ik++)
     {
@@ -395,7 +443,7 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
         // 2. set <\Psi_{n,\mu}|v_{\mu,\nu}|\Psi_{m,\nu}> = C^\dagger_{n,\mu} * v_{\mu,\nu} * C_{\nu,m}
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
-            ModuleBase::GlobalFunc::ZEROS(vk_c, pv->ncol_bands*pv->nrow_bands);
+            ModuleBase::GlobalFunc::ZEROS(vk_c, pv->ncol_bands * pv->nrow_bands);
             ModuleBase::GlobalFunc::ZEROS(v_c, pv->nloc_wfc);
             // v_c_{\mu,m} = v_{\mu,\nu} * C_{\nu,m}
             ScalapackConnector::gemm(N_char,
@@ -442,8 +490,8 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
             {
                 for (int ic = 0; ic < PARAM.inp.nbands; ++ic)
                 {
-                    const int irc = ic * pv_bands.nrow + ir;
-                    if (pv_bands.in_this_processor(ir, ic))
+                    const int irc = ic * pv->nrow + ir;
+                    if (pv->in_this_processor(ir, ic))
                         velocity_k[ik][i_alpha](ir, ic) = vk_c[irc];
                 }
             }
@@ -456,12 +504,13 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 }
 
+template <typename Tdata>
 void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const Parallel_Orbitals* pv,
                                  const K_Vectors& kv,
                                  cal_r_overlap_R& r_calculator,
                                  const hamilt::HContainer<double>& sR,
-                                 const hamilt::HContainer<double>& hR,
+                                 const hamilt::HContainer<Tdata>& hR,
                                  const psi::Psi<std::complex<double>>* psi,
                                  const elecstate::ElecState* pelec,
                                  std::vector<ModuleBase::Vector3<double>>& current_k)
@@ -499,17 +548,16 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
             for (size_t ib = 0; ib != 3; ++ib)
                 current_k[ik][i_alpha] += pelec->wg(ik, ib) * velocity_k[ik][i_alpha](ib, ib).real() / 2.0; // for unit
-                
+
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
-        delete rR[i_alpha];
+        delete[] rR[i_alpha];
         for (int ik = 0; ik < kv.get_nks(); ik++)
             delete[] velocity_basis_k[ik][i_alpha];
     }
 
     ModuleBase::TITLE("ModuleIO", "cal_current_exx");
 }
-
 void ModuleIO::cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
                           elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
                           int nspin)
@@ -539,7 +587,7 @@ void ModuleIO::write_current(const int istep,
 #ifdef __EXX
                              cal_r_overlap_R& r_calculator,
                              const hamilt::HContainer<double>& sR,
-                             const hamilt::HContainer<double>& hR
+                             const Exx_LRI<std::complex<double>>& exx
 #endif
 )
 {
@@ -678,13 +726,14 @@ void ModuleIO::write_current(const int istep,
 #endif
     Parallel_Reduce::reduce_all(current_total, 3);
 #ifdef __EXX
-    //if (GlobalC::exx_info.info_global.cal_exx)
-    //{
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
         std::vector<ModuleBase::Vector3<double>> current_k_exx;
         current_k_exx.resize(kv.get_nks());
-        //TODO: set HexxR to hContainer
         ModuleBase::Vector3<double> current_new;
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, pelec, current_k_exx);
+        hamilt::HContainer<std::complex<double>>* hexxR;
+        set_hexxR(kv, pv, exx.Hexxs, hexxR);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, *hexxR, psi, pelec, current_k_exx);
         for (int dir = 0; dir < 3; dir++)
         {
             for (int ik = 0; ik < kv.get_nks(); ik++)
@@ -692,7 +741,8 @@ void ModuleIO::write_current(const int istep,
                 current_new[dir] -= current_k_exx[ik][dir];
             }
         }
-    //}
+        delete[] hexxR;
+    }
 #endif
     // write end
     if (GlobalV::MY_RANK == 0)
@@ -705,15 +755,6 @@ void ModuleIO::write_current(const int istep,
         fout << istep << " " << current_total[0] / omega << " " << current_total[1] / omega << " "
              << current_total[2] / omega << std::endl;
         fout.close();
-
-        std::string filename_new = PARAM.globalv.global_out_dir + "current_total_new.dat";
-        std::ofstream fout_new;
-        fout_new.open(filename_new, std::ios::app);
-        fout_new << std::setprecision(16);
-        fout_new << std::scientific;
-        fout_new << istep << " " << current_new[0] / omega << " " << current_new[1] / omega << " "
-             << current_new[2] / omega << std::endl;
-        fout_new.close();
     }
 
     ModuleBase::timer::tick("ModuleIO", "write_current");
@@ -855,7 +896,7 @@ void ModuleIO::write_current_eachk(const int istep,
 #ifdef __EXX
                                    cal_r_overlap_R& r_calculator,
                                    const hamilt::HContainer<double>& sR,
-                                   const hamilt::HContainer<double>& hR
+                                   const Exx_LRI<std::complex<double>>& exx
 #endif
 )
 {
@@ -897,11 +938,15 @@ void ModuleIO::write_current_eachk(const int istep,
 
     std::vector<ModuleBase::Vector3<double>> current_k_exx;
 #ifdef __EXX
-    //if (GlobalC::exx_info.info_global.cal_exx)
-    //{
+    if (GlobalC::exx_info.info_global.cal_exx)
+    {
+        std::vector<ModuleBase::Vector3<double>> current_k_exx;
         current_k_exx.resize(kv.get_nks());
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, hR, psi, pelec, current_k_exx);
-    //}
+        hamilt::HContainer<std::complex<double>>* hexxR;
+        set_hexxR(kv, pv, exx.Hexxs, hexxR);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, *hexxR, psi, pelec, current_k_exx);
+        delete[] hexxR;
+    }
 #endif
 
     int nks = DM_real.get_DMK_nks();
@@ -1018,7 +1063,7 @@ void ModuleIO::write_current_eachk(const int istep,
 #ifdef __EXX
                 if (GlobalC::exx_info.info_global.cal_exx)
                 {
-                    current_ik[i] += current_k_exx[ik][i];
+                    current_ik[i] -= current_k_exx[ik][i];
                 }
 #endif
                 current_total[i] += current_ik[i];
