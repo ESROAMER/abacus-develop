@@ -16,59 +16,11 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_parameter/parameter.h"
 #ifdef __EXX
-#include "module_ri/Exx_LRI.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/operator_lcao/op_exx_lcao.h"
+#include "module_ri/Exx_LRI.h"
 #endif
 
 #ifdef __LCAO
-template <typename Tdata>
-void ModuleIO::set_hexxR(const K_Vectors& kv,
-                         const Parallel_Orbitals* pv,
-                         const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<Tdata>>>>& Hexxs,
-                         hamilt::HContainer<Tdata>* hexxR)
-{
-    ModuleBase::TITLE("ModuleIO", "set_hexxR_from_sR");
-    ModuleBase::timer::tick("ModuleIO", "set_hexxR_from_sR");
-
-    RI::Cell_Nearest<int, int, 3, double, 3> cell_nearest;
-    const bool use_cell_nearest = (ModuleBase::Vector3<double>(std::fmod(kv.get_koffset(0), 1.0),
-                                                               std::fmod(kv.get_koffset(1), 1.0),
-                                                               std::fmod(kv.get_koffset(2), 1.0))
-                                       .norm()
-                                   < 1e-10);
-    const std::array<int, 3> Rs_period = {kv.nmp[0], kv.nmp[1], kv.nmp[2]};
-    if (use_cell_nearest)
-    {
-        // set cell_nearest
-        std::map<int, std::array<double, 3>> atoms_pos;
-        for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
-        {
-            atoms_pos[iat] = RI_Util::Vector3_to_array3(
-                GlobalC::ucell.atoms[GlobalC::ucell.iat2it[iat]].tau[GlobalC::ucell.iat2ia[iat]]);
-        }
-        const std::array<std::array<double, 3>, 3> latvec = {RI_Util::Vector3_to_array3(GlobalC::ucell.a1),
-                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a2),
-                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a3)};
-        cell_nearest.init(atoms_pos, latvec, Rs_period);
-    }
-    const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
-                          || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
-                             ? 1.0
-                             : GlobalC::exx_info.info_global.hybrid_alpha;
-    for (int is = 0; is < PARAM.inp.nspin; ++is)
-    {
-        hamilt::reallocate_hcontainer(GlobalC::ucell.nat, hexxR, Rs_period, &cell_nearest);
-        RI_2D_Comm::add_HexxR(is,
-                              coeff,
-                              Hexxs,
-                              *pv,
-                              PARAM.globalv.npol,
-                              *hexxR,
-                              use_cell_nearest ? &cell_nearest : nullptr);
-    }
-
-    ModuleBase::timer::tick("ModuleIO", "set_hexxR_from_sR");
-}
 void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
                               cal_r_overlap_R& r_calculator,
                               const hamilt::HContainer<double>& sR,
@@ -163,15 +115,106 @@ void ModuleIO::set_rR_from_sR(const Parallel_Orbitals* pv,
     ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
 }
 
+// need velocity gauge HR
+void ModuleIO::sum_HR(const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs,
+                      const Parallel_Orbitals& pv,
+                      const K_Vectors& kv,
+                      const hamilt::HContainer<double>& hR,
+                      hamilt::HContainer<std::complex<double>>* full_hR)
+{
+    ModuleBase::TITLE("ModuleIO", "sum_HR");
+    ModuleBase::timer::tick("ModuleIO", "sum_HR");
+
+    // init complex full_hR
+    for (int i = 0; i < hR.size_atom_pairs(); i++)
+    {
+        hamilt::AtomPair<double> atom_ij = hR.get_atom_pair(i);
+        const int iat1 = atom_ij.get_atom_i();
+        const int iat2 = atom_ij.get_atom_j();
+        for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
+        {
+            const ModuleBase::Vector3<int> r_index = atom_ij.get_R_index(iR);
+            hamilt::AtomPair<std::complex<double>> atom_ij_complex(iat1, iat2, r_index, &pv); 
+            full_hR->insert_pair(atom_ij_complex);
+        }
+    }
+    full_hR->allocate(nullptr, true);
+
+    for (int ipair = 0; ipair < hR.size_atom_pairs(); ++ipair)
+    {
+        hamilt::AtomPair<double> atom_ij = hR.get_atom_pair(ipair);
+        const int iat1 = atom_ij.get_atom_i();
+        const int iat2 = atom_ij.get_atom_j();
+        // loop R-index
+        for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
+        {
+            const ModuleBase::Vector3<int> r_index = atom_ij.get_R_index(iR);
+            const hamilt::BaseMatrix<double>* HlocR = hR.find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
+            hamilt::BaseMatrix<std::complex<double>>* full_HlocR
+                = full_hR->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
+            for (int i = 0; i < atom_ij.get_row_size(); ++i)
+            {
+                for (int j = 0; j < atom_ij.get_col_size(); ++j)
+                {
+                    std::complex<double> v = HlocR->get_value(i, j);
+                    full_HlocR->add_element(i, j, std::complex<double>(v));
+                }
+            }
+        }
+    }
+
+    // add HexxR to complex full_hR
+    const double coeff = (GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Cam
+                          || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
+                             ? 1.0
+                             : GlobalC::exx_info.info_global.hybrid_alpha;
+    RI::Cell_Nearest<int, int, 3, double, 3> cell_nearest;
+    const bool use_cell_nearest = (ModuleBase::Vector3<double>(std::fmod(kv.get_koffset(0), 1.0),
+                                                               std::fmod(kv.get_koffset(1), 1.0),
+                                                               std::fmod(kv.get_koffset(2), 1.0))
+                                       .norm()
+                                   < 1e-10);
+    const std::array<int, 3> Rs_period = {kv.nmp[0], kv.nmp[1], kv.nmp[2]};
+    if (use_cell_nearest)
+    {
+        // set cell_nearest
+        std::map<int, std::array<double, 3>> atoms_pos;
+        for (int iat = 0; iat < GlobalC::ucell.nat; ++iat)
+        {
+            atoms_pos[iat] = RI_Util::Vector3_to_array3(
+                GlobalC::ucell.atoms[GlobalC::ucell.iat2it[iat]].tau[GlobalC::ucell.iat2ia[iat]]);
+        }
+        const std::array<std::array<double, 3>, 3> latvec = {RI_Util::Vector3_to_array3(GlobalC::ucell.a1),
+                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a2),
+                                                             RI_Util::Vector3_to_array3(GlobalC::ucell.a3)};
+        cell_nearest.init(atoms_pos, latvec, Rs_period);
+    }
+
+    for (size_t is = 0; is != PARAM.inp.nspin; ++is)
+    {
+        if (use_cell_nearest)
+        {
+            hamilt::reallocate_hcontainer(GlobalC::ucell.nat, full_hR, Rs_period, &cell_nearest);
+            RI_2D_Comm::add_HexxR(is, coeff, Hexxs, pv, PARAM.globalv.npol, *full_hR, &cell_nearest);
+        }
+        else
+        {
+            hamilt::reallocate_hcontainer(GlobalC::ucell.nat, full_hR, Rs_period);
+            RI_2D_Comm::add_HexxR(is, coeff, Hexxs, pv, PARAM.globalv.npol, *full_hR, nullptr);
+        }
+    }
+
+    ModuleBase::timer::tick("ModuleIO", "sum_HR");
+}
+
 // for molecule, if vacuum size is small, the number of R of Hs is smaller than SR
 // which may lead to some errors
-template <typename Tdata>
 void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
                                     const Parallel_Orbitals* pv,
                                     const K_Vectors& kv,
                                     const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
                                     const hamilt::HContainer<double>& sR,
-                                    const hamilt::HContainer<Tdata>& hR,
+                                    const hamilt::HContainer<std::complex<double>>& hR,
                                     std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k)
 {
     ModuleBase::TITLE("ModuleIO", "cal_velocity_basis_k");
@@ -504,13 +547,12 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
     ModuleBase::timer::tick("ModuleIO", "cal_velocity_matrix");
 }
 
-template <typename Tdata>
 void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
                                  const Parallel_Orbitals* pv,
                                  const K_Vectors& kv,
                                  cal_r_overlap_R& r_calculator,
                                  const hamilt::HContainer<double>& sR,
-                                 const hamilt::HContainer<Tdata>& hR,
+                                 const hamilt::HContainer<std::complex<double>>& hR,
                                  const psi::Psi<std::complex<double>>* psi,
                                  const elecstate::ElecState* pelec,
                                  std::vector<ModuleBase::Vector3<double>>& current_k)
@@ -546,12 +588,14 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     // sum n and m for current_k
     for (size_t ik = 0; ik != kv.get_nks(); ++ik)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+        {
             for (size_t ib = 0; ib != 3; ++ib)
-                current_k[ik][i_alpha] += pelec->wg(ik, ib) * velocity_k[ik][i_alpha](ib, ib).real() / 2.0; // for unit
+                current_k[ik][i_alpha] -= pelec->wg(ik, ib) * velocity_k[ik][i_alpha](ib, ib).real() / 2.0; // for unit
+        }
 
     for (size_t i_alpha = 0; i_alpha < 3; ++i_alpha)
     {
-        delete[] rR[i_alpha];
+        delete rR[i_alpha];
         for (int ik = 0; ik < kv.get_nks(); ik++)
             delete[] velocity_basis_k[ik][i_alpha];
     }
@@ -587,7 +631,8 @@ void ModuleIO::write_current(const int istep,
 #ifdef __EXX
                              cal_r_overlap_R& r_calculator,
                              const hamilt::HContainer<double>& sR,
-                             const Exx_LRI<std::complex<double>>& exx
+                             const hamilt::HContainer<double>& hR,
+                             const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
 #endif
 )
 {
@@ -729,19 +774,28 @@ void ModuleIO::write_current(const int istep,
     if (GlobalC::exx_info.info_global.cal_exx)
     {
         std::vector<ModuleBase::Vector3<double>> current_k_exx;
+        hamilt::HContainer<std::complex<double>>* full_hR;
+        full_hR = new hamilt::HContainer<std::complex<double>>(pv);
         current_k_exx.resize(kv.get_nks());
         ModuleBase::Vector3<double> current_new;
-        hamilt::HContainer<std::complex<double>>* hexxR;
-        set_hexxR(kv, pv, exx.Hexxs, hexxR);
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, *hexxR, psi, pelec, current_k_exx);
+        sum_HR(Hexxs, *pv, kv, hR, full_hR);
+        cal_current_exx_k(orb, pv, kv, r_calculator, sR, *full_hR, psi, pelec, current_k_exx);
         for (int dir = 0; dir < 3; dir++)
-        {
             for (int ik = 0; ik < kv.get_nks(); ik++)
-            {
-                current_new[dir] -= current_k_exx[ik][dir];
-            }
+                current_new[dir] += current_k_exx[ik][dir];
+        delete full_hR;
+
+        if (GlobalV::MY_RANK == 0)
+        {
+            std::string filename_new = PARAM.globalv.global_out_dir + "current_total_new.dat";
+            std::ofstream fout_new;
+            fout_new.open(filename_new, std::ios::app);
+            fout_new << std::setprecision(16);
+            fout_new << std::scientific;
+            fout_new << istep << " " << current_new[0] / omega << " " << current_new[1] / omega << " "
+                     << current_new[2] / omega << std::endl;
+            fout_new.close();
         }
-        delete[] hexxR;
     }
 #endif
     // write end
@@ -884,6 +938,7 @@ void ModuleIO::cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, doubl
     ModuleBase::timer::tick("ModuleIO", "cal_tmp_DM_k");
 }
 
+// did not add EXX current
 void ModuleIO::write_current_eachk(const int istep,
                                    const psi::Psi<std::complex<double>>* psi,
                                    const elecstate::ElecState* pelec,
@@ -896,7 +951,8 @@ void ModuleIO::write_current_eachk(const int istep,
 #ifdef __EXX
                                    cal_r_overlap_R& r_calculator,
                                    const hamilt::HContainer<double>& sR,
-                                   const Exx_LRI<std::complex<double>>& exx
+                                   const hamilt::HContainer<double>& hR,
+                                   const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
 #endif
 )
 {
@@ -935,19 +991,6 @@ void ModuleIO::write_current_eachk(const int istep,
     // init DMR
     DM_real.init_DMR(ra, &GlobalC::ucell);
     DM_imag.init_DMR(ra, &GlobalC::ucell);
-
-    std::vector<ModuleBase::Vector3<double>> current_k_exx;
-#ifdef __EXX
-    if (GlobalC::exx_info.info_global.cal_exx)
-    {
-        std::vector<ModuleBase::Vector3<double>> current_k_exx;
-        current_k_exx.resize(kv.get_nks());
-        hamilt::HContainer<std::complex<double>>* hexxR;
-        set_hexxR(kv, pv, exx.Hexxs, hexxR);
-        cal_current_exx_k(orb, pv, kv, r_calculator, sR, *hexxR, psi, pelec, current_k_exx);
-        delete[] hexxR;
-    }
-#endif
 
     int nks = DM_real.get_DMK_nks();
     if (PARAM.inp.nspin == 2)
@@ -1060,12 +1103,6 @@ void ModuleIO::write_current_eachk(const int istep,
             Parallel_Reduce::reduce_all(current_ik, 3);
             for (int i = 0; i < 3; ++i)
             {
-#ifdef __EXX
-                if (GlobalC::exx_info.info_global.cal_exx)
-                {
-                    current_ik[i] -= current_k_exx[ik][i];
-                }
-#endif
                 current_total[i] += current_ik[i];
             }
             // MPI_Reduce(local_current_ik, current_ik, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);

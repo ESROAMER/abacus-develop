@@ -24,7 +24,8 @@ void write_current_eachk(const int istep,
 #ifdef __EXX
                          cal_r_overlap_R& r_calculator,
                          const hamilt::HContainer<double>& sR,
-                         const Exx_LRI<std::complex<double>>& exx
+                         const hamilt::HContainer<double>& hR,
+                         const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
 #endif
 );
 
@@ -40,7 +41,8 @@ void write_current(const int istep,
 #ifdef __EXX
                    cal_r_overlap_R& r_calculator,
                    const hamilt::HContainer<double>& sR,
-                   const Exx_LRI<std::complex<double>>& exx
+                   const hamilt::HContainer<double>& hR,
+                   const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs
 #endif
 );
 
@@ -56,24 +58,23 @@ void cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
                 elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
                 const int nspin);
 
-template <typename Tdata>
-void set_hexxR(const K_Vectors& kv,
-               const Parallel_Orbitals* pv,
-               const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<Tdata>>>>& Hexxs,
-               hamilt::HContainer<Tdata>* hexxR);
-
 void set_rR_from_sR(const Parallel_Orbitals* pv,
                     cal_r_overlap_R& r_calculator,
                     const hamilt::HContainer<double>& sR,
                     ModuleBase::Vector3<hamilt::HContainer<double>*>& rR);
 
-template <typename Tdata>
+void sum_HR(const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>& Hexxs,
+            const Parallel_Orbitals& pv,
+            const K_Vectors& kv,
+            const hamilt::HContainer<double>& hR,
+            hamilt::HContainer<std::complex<double>>* full_hR);
+
 void cal_velocity_basis_k(const LCAO_Orbitals& orb,
                           const Parallel_Orbitals* pv,
                           const K_Vectors& kv,
                           const ModuleBase::Vector3<hamilt::HContainer<double>*>& rR,
                           const hamilt::HContainer<double>& sR,
-                          const hamilt::HContainer<Tdata>& hR,
+                          const hamilt::HContainer<std::complex<double>>& hR,
                           std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k);
 
 void cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
@@ -82,13 +83,12 @@ void cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
                          const std::vector<ModuleBase::Vector3<std::complex<double>*>>& velocity_basis_k,
                          std::vector<std::array<ModuleBase::ComplexMatrix, 3>>& velocity_k);
 
-template <typename Tdata>
 void cal_current_exx_k(const LCAO_Orbitals& orb,
                        const Parallel_Orbitals* pv,
                        const K_Vectors& kv,
                        cal_r_overlap_R& r_calculator,
                        const hamilt::HContainer<double>& sR,
-                       const hamilt::HContainer<Tdata>& hR,
+                       const hamilt::HContainer<std::complex<double>>& hR,
                        const psi::Psi<std::complex<double>>* psi,
                        const elecstate::ElecState* pelec,
                        std::vector<ModuleBase::Vector3<double>>& current_k);

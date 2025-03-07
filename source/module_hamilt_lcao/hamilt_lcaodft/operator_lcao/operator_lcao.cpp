@@ -177,14 +177,17 @@ void OperatorLCAO<TK, TR>::init(const int ik_in) {
         case calculation_type::lcao_exx:
         {
             //update HR first
-            if (!this->hr_done)
+            if (!this->hr_done && PARAM.inp.esolver_type != "tddft")
             {
                 this->contributeHR();
             }
 
+            if (PARAM.inp.esolver_type == "tddft")
+            {
+                this->contributeHk(ik_in);
+            }
             //update HK next
             //in cal_type=lcao_exx, HK only need to update from one node
-            // this->contributeHk(ik_in);
 
         break;
     }
