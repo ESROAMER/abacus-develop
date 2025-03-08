@@ -77,9 +77,9 @@ void cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
                 elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
                 const int nspin);
 
-void set_rR_from_sR(const Parallel_Orbitals* pv,
+void set_rR_from_hR(const Parallel_Orbitals* pv,
                     cal_r_overlap_R& r_calculator,
-                    const hamilt::HContainer<double>& sR,
+                    const hamilt::HContainer<std::complex<double>>* hR,
                     ModuleBase::Vector3<hamilt::HContainer<double>*>& rR);
 
 void sum_HR(
@@ -95,6 +95,10 @@ void sum_HR(
 
 template <typename Tadd, typename Tfull>
 void add_HR(const hamilt::HContainer<Tadd>* hR, hamilt::HContainer<Tfull>* full_hR);
+
+template <typename TR, typename TA>
+void init_from_hR(const hamilt::HContainer<TR>* hR,
+                            hamilt::HContainer<TA>* aimR);
 
 void cal_velocity_basis_k(const LCAO_Orbitals& orb,
                           const Parallel_Orbitals* pv,
