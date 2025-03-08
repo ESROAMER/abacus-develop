@@ -180,33 +180,6 @@ void TD_Velocity::initialize_current_term(const hamilt::HContainer<std::complex<
     ModuleBase::timer::tick("TD_Velocity", "initialize_current_term");
 }
 
-void TD_Velocity::initialize_kinetic_HR(const hamilt::HContainer<std::complex<double>>* HR,
-                                          const Parallel_Orbitals* paraV)
-{
-    ModuleBase::TITLE("TD_Velocity", "initialize_kinetic_HR");
-    ModuleBase::timer::tick("TD_Velocity", "initialize_kinetic_HR");
-
-    if (this->kinetic_HR == nullptr)
-        this->kinetic_HR = new hamilt::HContainer<std::complex<double>>(paraV);
-
-    for (int i = 0; i < HR->size_atom_pairs(); ++i)
-    {
-        hamilt::AtomPair<std::complex<double>>& tmp = HR->get_atom_pair(i);
-        for (int ir = 0; ir < tmp.get_R_size(); ++ir)
-        {
-            const ModuleBase::Vector3<int> R_index = tmp.get_R_index(ir);
-            const int iat1 = tmp.get_atom_i();
-            const int iat2 = tmp.get_atom_j();
-
-            hamilt::AtomPair<std::complex<double>> tmp1(iat1, iat2, R_index, paraV);
-            this->kinetic_HR->insert_pair(tmp1);
-        }
-    }
-    this->kinetic_HR->allocate(nullptr, true);
-
-    ModuleBase::timer::tick("TD_Velocity", "initialize_kinetic_HR");
-}
-
 void TD_Velocity::destroy_HS_R_td_sparse(void)
 {
     std::map<Abfs::Vector3_Order<int>, std::map<size_t, std::map<size_t, std::complex<double>>>>

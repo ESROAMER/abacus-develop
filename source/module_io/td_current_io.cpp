@@ -195,10 +195,10 @@ void ModuleIO::sum_HR(
     {
         if (TD_Velocity::td_vel_op == nullptr)
         {
-            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gague infos is null!");
+            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gauge infos is null!");
         }
-        const hamilt::HContainer<std::complex<double>>* kinetic_hR = TD_Velocity::td_vel_op->get_kinetic_HR_pointer();
-        add_HR(kinetic_hR, full_hR);
+        const hamilt::HContainer<std::complex<double>>* velocity_hR = TD_Velocity::td_vel_op->get_velocity_HR_pointer();
+        add_HR(velocity_hR, full_hR);
     }
 
     ModuleBase::timer::tick("ModuleIO", "sum_HR");
@@ -833,7 +833,7 @@ void ModuleIO::write_current(const int istep,
     {
         if (TD_Velocity::td_vel_op == nullptr)
         {
-            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gague infos is null!");
+            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gauge infos is null!");
         }
         for (int dir = 0; dir < 3; dir++)
         {
