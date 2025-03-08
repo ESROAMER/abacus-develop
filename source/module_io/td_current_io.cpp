@@ -592,12 +592,12 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
             {
                 for (int ir = 0; ir < pv->nrow; ++ir)
                 {
-                    const int iwt1 = pv.local2global_row(ir);
-                    const int iat1 = Globalc::ucell.iwt2iat[iwt1];
+                    const int iwt1 = pv->local2global_row(ir);
+                    const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
                     for (int ic = 0; ic < pv->ncol; ++ic)
                     {
-                        const int iwt2 = pv.local2global_row(ic);
-                        const int iat2 = Globalc::ucell.iwt2iat[iwt2];
+                        const int iwt2 = pv->local2global_row(ic);
+                        const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
                         const int irc = ic * pv->nrow + ir;
                         const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
                         const ModuleBase::Vector3<double> tau2 = GlobalC::ucell.get_tau(iat2);
