@@ -199,6 +199,10 @@ void ReadInput::item_exx()
                     para.input.exx_real_number = "0";
                 }
             }
+            if (para.input.esolver_type == "tddft" && (para.input.exx_hybrid_alpha != "0" || para.input.exx_use_ewald != false) && para.input.exx_real_number != "0")
+            {
+                ModuleBase::WARNING_QUIT("ReadInput", "For RT-TDDFT with hybrid functionals, only exx_real_number=0 is supported");
+            }
         };
         this->add_item(item);
     }
