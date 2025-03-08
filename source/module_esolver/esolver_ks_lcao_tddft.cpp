@@ -113,7 +113,6 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 #ifdef __EXX
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        this->r_calculator.init(this->pv, orb_);
         XC_Functional::set_xc_first_loop(ucell);
         // initialize 2-center radial tables for EXX-LRI
         if (GlobalC::exx_info.info_ri.real_number)
@@ -126,6 +125,9 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
         }
     }
 #endif
+
+    if (TD_Velocity::out_current_comm)
+        this->r_calculator.init(this->pv, orb_);
 
     // 8) initialize the charge density
     this->pelec->charge->allocate(PARAM.inp.nspin);
