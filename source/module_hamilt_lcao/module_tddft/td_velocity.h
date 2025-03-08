@@ -30,6 +30,9 @@ class TD_Velocity
     /// @brief switch to control the output of current
     static bool out_current;
 
+    /// @brief switch to control the output of current based on i[r, H] directly
+    static bool out_current_comm;
+
     /// @brief switch to control the format of the output current, in total or in each k-point
     static bool out_current_k;
 
@@ -66,6 +69,15 @@ class TD_Velocity
     {
         return this->current_term[i];
     }
+
+    // allocate memory for kinetic HR.
+    void initialize_kinetic_HR(const hamilt::HContainer<std::complex<double>>* HR, const Parallel_Orbitals* paraV);
+
+    hamilt::HContainer<std::complex<double>>* get_kinetic_HR_pointer() const
+    {
+        return this->kinetic_HR;
+    }
+
         // folding HR to hk, for mixing gague
     void folding_HR_td(const hamilt::HContainer<double>& hR,
                 std::complex<double>* hk,
@@ -115,6 +127,9 @@ class TD_Velocity
 
     /// @brief part of Momentum operator, -i∇ - i[r,Vnl]. Used to calculate current.
     std::vector<hamilt::HContainer<std::complex<double>>*> current_term = {nullptr, nullptr, nullptr};
+
+    /// @brief store kinetic hamilton
+    hamilt::HContainer<std::complex<double>>* kinetic_HR = nullptr;
 };
 
 #endif

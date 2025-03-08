@@ -358,6 +358,7 @@ struct Input_para
     bool out_efield = false;              ///< output the efield or not
     bool out_current = false;             ///< output the current or not
     bool out_current_k = false;           ///< output tddft current for all k points
+    bool out_current_comm = false;           ///< output the current using complete basis or not
     bool out_vecpot = false;              ///< output the vector potential or not
     bool restart_save = false;            ///< restart //Peize Lin add 2020-04-04
     bool rpa = false;                     ///< rpa calculation

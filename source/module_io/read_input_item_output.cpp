@@ -450,6 +450,12 @@ void ReadInput::item_output()
         this->add_item(item);
     }
     {
+        Input_Item item("out_current_comm");
+        item.annotation = "output current using complete basis or not";
+        read_sync_bool(input.out_current_comm);
+        this->add_item(item);
+    }
+    {
         Input_Item item("out_vecpot");
         item.annotation = "output TDDFT vector potential or not";
         read_sync_bool(input.out_vecpot);

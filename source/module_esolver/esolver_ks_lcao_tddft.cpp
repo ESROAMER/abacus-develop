@@ -843,13 +843,7 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     tmp_DM->get_paraV_pointer(),
                                     orb_,
                                     this->velocity_mat,
-                                    this->RA,
-#ifdef __EXX
-                                    this->r_calculator,
-                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR()),
-                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getHR()),
-                                    this->exx_lri_complex->Hexxs
-#endif
+                                    this->RA
                                     );
         }
         else
@@ -862,17 +856,47 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                     tmp_DM->get_paraV_pointer(),
                                     orb_,
                                     this->velocity_mat,
-                                    this->RA,
-#ifdef __EXX
-                                    this->r_calculator,
-                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR()),
-                                    *(dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getHR()),
-                                    this->exx_lri_complex->Hexxs
-#endif
+                                    this->RA
                                     );
         }
     }
+
+    if (TD_Velocity::out_current_comm == true)
+    {
+        if(TD_Velocity::out_current_k)
+        {
+            ModuleIO::write_current_eachk(istep,
+                                    this->psi,
+                                    pelec,
+                                    kv,
+                                    &this->pv,
+                                    orb_,
+                                    this->r_calculator,
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR(),
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getHR(),
+#ifdef __EXX
+                                    &(this->exx_lri_complex->Hexxs)
+#endif
+                                    );
+        }
+        else
+        {
+            ModuleIO::write_current(istep,
+                                    this->psi,
+                                    pelec,
+                                    kv,
+                                    &this->pv,
+                                    orb_,
+                                    this->r_calculator,
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getSR(),
+                                    dynamic_cast<hamilt::HamiltLCAO<std::complex<double>, double>*>(this->p_hamilt)->getHR(),
+#ifdef __EXX
+                                    &(this->exx_lri_complex->Hexxs)
+#endif
+                                    );        
+        }
+    
+    }
     std::cout << "Potential (Ry): " << std::setprecision(15) << this->pelec->f_en.etot <<std::endl;
 }
-
 } // namespace ModuleESolver

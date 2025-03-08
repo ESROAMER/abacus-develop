@@ -297,6 +297,7 @@ void Input_Conv::Convert()
     module_tddft::Evolve_elec::td_edm = PARAM.inp.td_edm;
     TD_Velocity::out_current = PARAM.inp.out_current;
     TD_Velocity::out_current_k = PARAM.inp.out_current_k;
+    TD_Velocity::out_current_comm = PARAM.inp.out_current_comm;
     TD_Velocity::out_vecpot = PARAM.inp.out_vecpot;
     TD_Velocity::init_vecpot_file = PARAM.inp.init_vecpot_file;
     read_td_efield();
