@@ -158,7 +158,7 @@ void ModuleIO::sum_HR(
             {
                 for (int j = 0; j < atom_ij.get_col_size(); ++j)
                 {
-                    std::complex<double> v = HlocR->get_value(i, j);
+                    double v = HlocR->get_value(i, j);
                     full_HlocR->add_element(i, j, std::complex<double>(v));
                 }
             }
@@ -618,7 +618,7 @@ void ModuleIO::cal_current_exx_k(const LCAO_Orbitals& orb,
     for (size_t ik = 0; ik != kv.get_nks(); ++ik)
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
-            for (size_t ib = 0; ib != 3; ++ib)
+            for (size_t ib = 0; ib != PARAM.inp.nbands; ++ib)
                 current_k[ik][i_alpha] -= pelec->wg(ik, ib) * velocity_k[ik][i_alpha](ib, ib).real() / 2.0; // for unit
         }
 
