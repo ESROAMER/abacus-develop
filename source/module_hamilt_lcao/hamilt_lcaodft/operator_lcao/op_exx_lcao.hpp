@@ -283,7 +283,7 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
                 this->kv,
                 ik,
                 coeff,
-                *this->Hexxd,
+                *this->Hexxc,
                 *this->hR->get_paraV(),
                 TD_Velocity::td_vel_op->cart_At,
                 this->hsk->get_hk());
