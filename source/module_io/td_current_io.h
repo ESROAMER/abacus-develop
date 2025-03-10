@@ -45,9 +45,10 @@ void write_current_eachk(
     const hamilt::HContainer<double>* hR,
 #ifdef __EXX
     const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>*
-        Hexxs = nullptr
+        Hexxs
+    = nullptr
 #endif
-    );
+);
 
 void write_current(
     const int istep,
@@ -61,9 +62,10 @@ void write_current(
     const hamilt::HContainer<double>* hR,
 #ifdef __EXX
     const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>*
-        Hexxs = nullptr
+        Hexxs
+    = nullptr
 #endif
-    );
+);
 
 /// @brief calculate sum_n[𝜌_(𝑛𝑘,𝜇𝜈)] for current calculation
 void cal_tmp_DM_k(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
@@ -77,7 +79,8 @@ void cal_tmp_DM(elecstate::DensityMatrix<std::complex<double>, double>& DM_real,
                 elecstate::DensityMatrix<std::complex<double>, double>& DM_imag,
                 const int nspin);
 
-void set_rR_from_hR(const Parallel_Orbitals* pv,
+void set_rR_from_hR(const LCAO_Orbitals& orb,
+                    const Parallel_Orbitals* pv,
                     cal_r_overlap_R& r_calculator,
                     const hamilt::HContainer<std::complex<double>>* hR,
                     ModuleBase::Vector3<hamilt::HContainer<double>*>& rR);
@@ -89,16 +92,21 @@ void sum_HR(
     hamilt::HContainer<std::complex<double>>* full_hR,
 #ifdef __EXX
     const std::vector<std::map<int, std::map<std::pair<int, std::array<int, 3>>, RI::Tensor<std::complex<double>>>>>*
-        Hexxs = nullptr
+        Hexxs
+    = nullptr
 #endif
-    );
+);
 
 template <typename Tadd, typename Tfull>
 void add_HR(const hamilt::HContainer<Tadd>* hR, hamilt::HContainer<Tfull>* full_hR);
 
+template <typename TA>
+void init_from_adj(const LCAO_Orbitals& orb,
+                   const Parallel_Orbitals* pv,
+                   std::vector<AdjacentAtomInfo>& adjs_all,
+                   hamilt::HContainer<TA>* aimR);
 template <typename TR, typename TA>
-void init_from_hR(const hamilt::HContainer<TR>* hR,
-                            hamilt::HContainer<TA>* aimR);
+void init_from_hR(const hamilt::HContainer<TR>* hR, hamilt::HContainer<TA>* aimR);
 
 void cal_velocity_basis_k(const LCAO_Orbitals& orb,
                           const Parallel_Orbitals* pv,
