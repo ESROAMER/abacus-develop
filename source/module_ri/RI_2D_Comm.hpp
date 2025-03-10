@@ -230,8 +230,8 @@ void RI_2D_Comm::add_Hexx_td(const K_Vectors& kv,
 
                 const std::complex<double> frac
                     = alpha
-                      * std::exp(ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT
-                                 * (kv.kvec_c[ik] * (r_index * GlobalC::ucell.latvec) + arg_td));
+                      * std::exp(ModuleBase::IMAG_UNIT
+                                 * ((ModuleBase::TWO_PI * kv.kvec_c[ik] * (r_index * GlobalC::ucell.latvec)) + arg_td));
 
                 const RI::Tensor<Tdata>& H = Hs_tmpB.second;
                 for (size_t iw0_b = 0; iw0_b < H.shape[0]; ++iw0_b)
