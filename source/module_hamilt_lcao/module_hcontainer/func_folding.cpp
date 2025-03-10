@@ -71,6 +71,7 @@ template<typename TR>
 void folding_partial_HR(const hamilt::HContainer<TR>& hR,
                 std::complex<double>* hk,
                 const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
                 const int ix,
                 const int ncol,
                 const int hk_type)
@@ -89,9 +90,10 @@ void folding_partial_HR(const hamilt::HContainer<TR>& hR,
             double sinp, cosp;
             ModuleBase::libm::sincos(arg, &sinp, &cosp);
             std::complex<double> kphase = std::complex<double>(cosp, sinp);
+            const ModuleBase::Vector3<double> dR_car = dR * ucell.latvec * ucell.lat0;
 
             tmp.find_R(r_index);
-            tmp.add_to_matrix(hk, ncol, kphase * ModuleBase::IMAG_UNIT * std::complex<double>(dR[ix]), hk_type);
+            tmp.add_to_matrix(hk, ncol, kphase * ModuleBase::IMAG_UNIT * std::complex<double>(dR_car[ix]), hk_type);
         }
     }
 }
@@ -111,12 +113,14 @@ template void folding_HR<double>(const hamilt::HContainer<double>& hR,
 template void folding_partial_HR<std::complex<double>>(const hamilt::HContainer<std::complex<double>>& hR,
                 std::complex<double>* hk,
                 const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
                 const int ix,
                 const int ncol,
                 const int hk_type);
 template void folding_partial_HR<double>(const hamilt::HContainer<double>& hR,
                 std::complex<double>* hk,
                 const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
                 const int ix,
                 const int ncol,
                 const int hk_type);
