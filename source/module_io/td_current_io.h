@@ -97,6 +97,13 @@ void sum_HR(
 #endif
 );
 
+// void folding_rR(const hamilt::HContainer<double>* rR,
+//                 const std::complex<double>* partial_sk,
+//                 std::complex<double>* rk,
+//                 const Parallel_Orbitals* pv,
+//                 const ModuleBase::Vector3<double>& kvec_d_in,
+//                 const int ncol,
+//                 const int hk_type);
 template <typename Tadd, typename Tfull>
 void add_HR(const hamilt::HContainer<Tadd>* hR, hamilt::HContainer<Tfull>* full_hR);
 
