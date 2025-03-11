@@ -21,6 +21,58 @@
 #endif
 
 #ifdef __LCAO
+// void ModuleIO::folding_rR(const hamilt::HContainer<double>* rR,
+//                           const std::complex<double>* partial_sk,
+//                           std::complex<double>* rk,
+//                           const Parallel_Orbitals* pv,
+//                           const ModuleBase::Vector3<double>& kvec_d_in,
+//                           const int ncol,
+//                           const int hk_type)
+// {
+    // std::complex<double>* rk_up = new std::complex<double>[pv->nloc];
+    // ModuleBase::GlobalFunc::ZEROS(rk_up, pv->nloc);
+    // std::complex<double>* partial_sk_up = new std::complex<double>[pv->nloc];
+    // ModuleBase::GlobalFunc::ZEROS(partial_sk_up, pv->nloc);
+
+    // hamilt::folding_HR(*rR, rk, kvec_d_in, ncol, 1); // set r(k) tmp
+    // for (int ir = 0; ir < pv->nrow; ir++)
+    // {
+    //     // const int iwt1 = pv->local2global_row(ir);
+    //     // const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
+    //     for (int ic = ir; ic < pv->ncol; ic++)  // store r(k) upper triangle
+    //     {
+    //         // const int iwt2 = pv->local2global_col(ic);
+    //         // const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
+    //         const int irc = ic * pv->nrow + ir;
+    //         rk_up(ir, ic) = rk[irc];
+    //         partial_sk_up(ir, ic) = partial_sk[irc];
+    //     }
+    // }
+    // rk_up += ModuleBase::IMAG_UNIT * partial_sk_up;
+    // ModuleBase::ComplexMatrix rk_down = ModuleBase::transpose(rk_up, true);
+    // for (int ir = 0; ir < pv->nrow; ir++)
+    // {
+    //     for (int ic = 0; ic <= ir; ic++)  // // set r(k) lower triangle
+    //     {
+    //         const int irc = ic * pv->nrow + ir;
+    //         rk[irc] = rk_down(ir, ic);
+    //     }
+    // }
+
+//     hamilt::folding_HR(*rR, rk, kvec_d_in, ncol, 1); // set r(k) tmp
+
+//     for (int ir = 0; ir < pv->nrow; ir++)    
+//     {
+//        for (int ic = 0; ic < ir; ic++)  // set r(k) lower triangle
+//        {
+//            const int irc = ic * pv->nrow + ir; 
+//            const int icr = ir * pv->ncol + ic; 
+//            rk[irc] = std::conj(rk[icr] + ModuleBase::IMAG_UNIT * partial_sk[icr]);
+//            std::cout<<"ir: "<<ir<<" ic: "<<ic<<" rk_up: "<<rk[icr]<<" partial_sk_up: "<<partial_sk[icr]<<" rk: "<<rk[irc]<<std::endl;
+//        }
+//     }
+// }
+
 template <typename TR, typename TA>
 void ModuleIO::init_from_hR(const hamilt::HContainer<TR>* hR, hamilt::HContainer<TA>* aimR)
 {
@@ -147,6 +199,8 @@ void ModuleIO::set_rR_from_hR(const LCAO_Orbitals& orb,
             auto col_indexes = pv->get_indexes_col(iat2);
 
             const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
+            // std::cout << "tau1: " << tau1 << " tau2: " << GlobalC::ucell.get_tau(iat2) << " r_index: " << r_index
+            //           << std::endl;
             const ModuleBase::Vector3<double> tau2 = tau1 + dtau;
             for (int iw1l = 0; iw1l < row_indexes.size(); iw1l += npol)
             {
@@ -162,6 +216,8 @@ void ModuleIO::set_rR_from_hR(const LCAO_Orbitals& orb,
                     const int N2 = iw2n2[iw2];
                     const int m2 = iw2m2[iw2];
 
+                    // std::cout<<"L1: "<<L1<<" L2: "<<L2<<" N1: "<<N1<<" N2: "<<N2<<" m1: "<<m1<<" m2:
+                    // "<<m2<<std::endl;
                     ModuleBase::Vector3<double> tmp_r = r_calculator.get_psi_r_psi(tau1 * GlobalC::ucell.lat0,
                                                                                    T1,
                                                                                    L1,
@@ -177,11 +233,96 @@ void ModuleIO::set_rR_from_hR(const LCAO_Orbitals& orb,
                         hamilt::BaseMatrix<double>* HlocR
                             = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
                         HlocR->add_element(iw1, iw2, tmp_r[i_alpha]);
+                        // if (i_alpha == 2)
+                        // {
+                        //     std::cout << "iw1: " << iw1 << " iw2: " << iw2 << " i_alpha: " << i_alpha
+                        //               << " tmp_r: " << tmp_r[i_alpha] << std::endl;
+                        // }
                     }
                 }
             }
         }
     }
+
+    // for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    //     init_from_hR(hR, rR[i_alpha]);
+
+    // //std::cout<<"hR->size_atom_pairs()"<<hR->size_atom_pairs()<<std::endl;
+    // for (int i = 0; i < hR->size_atom_pairs(); i++)
+    // {
+    //     hamilt::AtomPair<std::complex<double>> atom_ij = hR->get_atom_pair(i);
+    //     // loop R-index
+    //     //std::cout<<"HR size: "<<atom_ij.get_R_size()<<std::endl;
+    //     for (int iR = 0; iR < atom_ij.get_R_size(); iR++)
+    //     {
+    //         // get reference of target atom-pair
+    //         const int iat1 = atom_ij.get_atom_i();
+    //         const int iat2 = atom_ij.get_atom_j();
+    //         const ModuleBase::Vector3<int> r_index = atom_ij.get_R_index(iR);
+    //         // ---------------------------------------------
+    //         // get info of orbitals of atom1 and atom2 from ucell
+    //         // ---------------------------------------------
+    //         int T1, I1;
+    //         GlobalC::ucell.iat2iait(iat1, &I1, &T1);
+    //         int T2, I2;
+    //         GlobalC::ucell.iat2iait(iat2, &I2, &T2);
+    //         Atom& atom1 = GlobalC::ucell.atoms[T1];
+    //         Atom& atom2 = GlobalC::ucell.atoms[T2];
+    //         std::cout<<"iat1: "<<iat1<<" iat2: "<<iat2<<" r_index: "<<r_index<<std::endl;
+    //         // npol is the number of polarizations,
+    //         // 1 for non-magnetic (one Hamiltonian matrix only has spin-up or spin-down),
+    //         // 2 for magnetic (one Hamiltonian matrix has both spin-up and spin-down)
+    //         const int npol = GlobalC::ucell.get_npol();
+    //         //std::cout<<"npol: "<<npol<<std::endl;
+
+    //         const int* iw2l1 = atom1.iw2l;
+    //         const int* iw2n1 = atom1.iw2n;
+    //         const int* iw2m1 = atom1.iw2m;
+    //         const int* iw2l2 = atom2.iw2l;
+    //         const int* iw2n2 = atom2.iw2n;
+    //         const int* iw2m2 = atom2.iw2m;
+
+    //         auto row_indexes = pv->get_indexes_row(iat1);
+    //         auto col_indexes = pv->get_indexes_col(iat2);
+    //         const int step_trace = col_indexes.size() + 1;
+
+    //         const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
+    //         const ModuleBase::Vector3<double> tau2 = tau1 + GlobalC::ucell.cal_dtau(iat1, iat2, r_index);
+    //         std::cout<<"tau1: "<<tau1<<" tau2: "<<tau2<<std::endl;
+    //         for (int iw1l = 0; iw1l < row_indexes.size(); iw1l += npol)
+    //         {
+    //             const int iw1 = row_indexes[iw1l] / npol;
+    //             const int L1 = iw2l1[iw1];
+    //             const int N1 = iw2n1[iw1];
+    //             const int m1 = iw2m1[iw1];
+
+    //             for (int iw2l = 0; iw2l < col_indexes.size(); iw2l += npol)
+    //             {
+    //                 const int iw2 = col_indexes[iw2l] / npol;
+    //                 const int L2 = iw2l2[iw2];
+    //                 const int N2 = iw2n2[iw2];
+    //                 const int m2 = iw2m2[iw2];
+
+    //                 ModuleBase::Vector3<double> tmp_r = r_calculator.get_psi_r_psi(tau1 * GlobalC::ucell.lat0,
+    //                                                                                T1,
+    //                                                                                L1,
+    //                                                                                m1,
+    //                                                                                N1,
+    //                                                                                tau2 * GlobalC::ucell.lat0,
+    //                                                                                T2,
+    //                                                                                L2,
+    //                                                                                m2,
+    //                                                                                N2);
+    //                 for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    //                 {
+    //                     hamilt::BaseMatrix<double>* HlocR
+    //                         = rR[i_alpha]->find_matrix(iat1, iat2, r_index.x, r_index.y, r_index.z);
+    //                     HlocR->add_element(iw1, iw2, tmp_r[i_alpha]);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     ModuleBase::TITLE("ModuleIO", "set_rR_from_sR");
 }
 
@@ -202,6 +343,16 @@ void ModuleIO::sum_HR(
     // init complex full_hR
     init_from_hR(hR, full_hR);
     add_HR(hR, full_hR);
+
+    if (TD_Velocity::tddft_velocity)
+    {
+        if (TD_Velocity::td_vel_op == nullptr)
+        {
+            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gauge infos is null!");
+        }
+        const hamilt::HContainer<std::complex<double>>* velocity_hR = TD_Velocity::td_vel_op->get_velocity_HR_pointer();
+        add_HR(velocity_hR, full_hR);
+    }
 
 #ifdef __EXX
     // add HexxR to complex full_hR
@@ -248,16 +399,6 @@ void ModuleIO::sum_HR(
         }
     }
 #endif
-
-    if (TD_Velocity::tddft_velocity)
-    {
-        if (TD_Velocity::td_vel_op == nullptr)
-        {
-            ModuleBase::WARNING_QUIT("ModuleIO::write_current", "velocity gauge infos is null!");
-        }
-        const hamilt::HContainer<std::complex<double>>* velocity_hR = TD_Velocity::td_vel_op->get_velocity_HR_pointer();
-        add_HR(velocity_hR, full_hR);
-    }
 
     ModuleBase::timer::tick("ModuleIO", "sum_HR");
 }
@@ -333,16 +474,49 @@ void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
     std::complex<double>* r_is_h = new std::complex<double>[pv->nloc];
     std::complex<double>* h_is_ps = new std::complex<double>[pv->nloc];
 
+    // for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    // {
+    //     for (int i = 0; i < hR.size_atom_pairs(); ++i)
+    //     {
+    //         hamilt::AtomPair<double>& tmp = rR[i_alpha]->get_atom_pair(i);
+    //         std::cout<<"cal_velocity_basis_k: "<<rR[i_alpha]->size_atom_pairs()<<" R_size:
+    //         "<<tmp.get_R_size()<<std::endl; for(int ir = 0;ir < tmp.get_R_size(); ++ir )
+    //         {
+    //             const ModuleBase::Vector3<int> r_index = tmp.get_R_index(ir);
+    //             std::cout<<"r_index: "<<r_index<<std::endl;
+    //         }
+    //     }
+    // }
+
     for (size_t ik = 0; ik != kv.get_nks(); ++ik)
     {
         // set H(k), S(k)
         // 1.1 set H(k)
         ModuleBase::GlobalFunc::ZEROS(hk, pv->nloc);
         const int nrow = pv->get_row_size();
-        hamilt::folding_HR(hR, hk, kv.kvec_d[ik], nrow, 1);
+        if(elecstate::H_TDDFT_pw::stype == 2)
+            TD_Velocity::td_vel_op->folding_HR_td(hR, hk, kv.kvec_d[ik], nrow, 1);
+        else
+            hamilt::folding_HR(hR, hk, kv.kvec_d[ik], nrow, 1);
         // 1.2 set S(k)
         ModuleBase::GlobalFunc::ZEROS(sk, pv->nloc);
-        hamilt::folding_HR(sR, sk, kv.kvec_d[ik], nrow, 1);
+        if(elecstate::H_TDDFT_pw::stype == 2)
+            TD_Velocity::td_vel_op->folding_HR_td(sR, sk, kv.kvec_d[ik], nrow, 1);
+        else
+            hamilt::folding_HR(sR, sk, kv.kvec_d[ik], nrow, 1);
+
+        // for(int ir=0;ir< pv->nrow; ir++)
+        // {
+        //     const int iwt1 = pv->local2global_row(ir);
+        //     const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
+        //     for(int ic=0;ic< pv->ncol; ic++)
+        //     {
+        //         const int iwt2 = pv->local2global_col(ic);
+        //         const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
+        //         const int irc=ic*pv->nrow + ir;
+        //         std::cout<<"ik: "<<ik<<" iat1:"<<iat1<<" iat2:"<<iat2<<" iwt1: "<<iwt1<<" iwt2: "<<iwt2<<" sk: "<<sk[irc]<<std::endl;
+        //     }
+        // }
         // 2. set inverse S(k) -> sk will be changed to sk_inv
         int* ipiv = new int[pv->nloc];
         int info = 0;
@@ -376,13 +550,57 @@ void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
             // 3. set partial_H(k), partial_S(k) and r(k)
             // 3.1 set partial_H(k)
             ModuleBase::GlobalFunc::ZEROS(partial_hk, pv->nloc);
-            hamilt::folding_partial_HR(hR, partial_hk, kv.kvec_d[ik], GlobalC::ucell, i_alpha, nrow, 1);
+            if(elecstate::H_TDDFT_pw::stype == 2)
+                TD_Velocity::td_vel_op->folding_partial_HR_td(hR, partial_hk, kv.kvec_d[ik], i_alpha, nrow, 1);
+            else
+                hamilt::folding_partial_HR(hR, partial_hk, kv.kvec_d[ik], GlobalC::ucell, i_alpha, nrow, 1);
             // 3.2 set partial S(k)
             ModuleBase::GlobalFunc::ZEROS(partial_sk, pv->nloc);
-            hamilt::folding_partial_HR(sR, partial_sk, kv.kvec_d[ik], GlobalC::ucell, i_alpha, nrow, 1);
+            if(elecstate::H_TDDFT_pw::stype == 2)
+                TD_Velocity::td_vel_op->folding_partial_HR_td(sR, partial_sk, kv.kvec_d[ik], i_alpha, nrow, 1);
+            else
+                hamilt::folding_partial_HR(sR, partial_sk, kv.kvec_d[ik], GlobalC::ucell, i_alpha, nrow, 1);
+            //  if(i_alpha == 2)
+            // {
+            //     for(int ir=0;ir< pv->nrow; ir++)
+            //     {
+            //         const int iwt1 = pv->local2global_row(ir);
+            //         const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
+            //         for(int ic=0;ic< pv->ncol; ic++)
+            //         {
+            //             const int iwt2 = pv->local2global_col(ic);
+            //             const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
+            //             const int irc=ic*pv->nrow + ir;
+            //             std::cout<<"ik: "<<ik<<" i_alpha: "<<i_alpha<<" iat1:"<<iat1<<" iat2:"<<iat2<<" iwt1:
+            //             "<<iwt1<<" iwt2: "<<iwt2<<" partial_sk: "<<partial_sk[irc]<<std::endl;
+            //         }
+            //     }
+            // }
             // 3.3 set r(k)
+            //std::cout << "set r(k): " << "i_alpha: " << i_alpha << std::endl;
             ModuleBase::GlobalFunc::ZEROS(rk, pv->nloc);
-            hamilt::folding_HR(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1); // set r(k)
+            //folding_rR(rR[i_alpha], partial_sk, rk, pv, kv.kvec_d[ik], nrow, 1);
+            if(elecstate::H_TDDFT_pw::stype == 2)
+                TD_Velocity::td_vel_op->folding_HR_td(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1);
+            else
+                hamilt::folding_HR(*rR[i_alpha], rk, kv.kvec_d[ik], nrow, 1); // set r(k)
+            // if (i_alpha == 2)
+            // {
+            //     std::cout << "ik: " << ik << " i_alpha: " << i_alpha << std::endl;
+            //     for (int ir = 0; ir < pv->nrow; ir++)
+            //     {
+            //         const int iwt1 = pv->local2global_row(ir);
+            //         const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
+            //         for (int ic = 0; ic < pv->ncol; ic++)
+            //         {
+            //             const int iwt2 = pv->local2global_col(ic);
+            //             const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
+            //             const int irc = ic * pv->nrow + ir;
+            //             std::cout << " iat1: " << iat1 << " iat2: " << iat2 << " iw1: " << GlobalC::ucell.iwt2iw[iwt1]
+            //                       << " iw2: " << GlobalC::ucell.iwt2iw[iwt2] << " rk: " << rk[irc] << std::endl;
+            //         }
+            //     }
+            // }
             // 4. calculate <\vu,k|v_a|\mu,k> = partial_Hk + IMAG_UNIT * (Hk * Sk_inv * rk) - IMAG_UNIT * (rk * Sk_inv *
             // Hk) - Hk * Sk_inv * partial_Sk
             // 4.1.1 Hk * Sk_inv (note 2.)
@@ -534,6 +752,21 @@ void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
                                       pv->desc);
             // 5. copy h_is_ps to velocity_basis_k[ik][i_alpha]
             BlasConnector::copy(pv->nloc, h_is_ps, 1, velocity_basis_k[ik][i_alpha], 1);
+            // if(i_alpha == 2)
+            // {
+            //     for(int ir=0;ir< pv->nrow; ir++)
+            //     {
+            //         const int iwt1 = pv->local2global_row(ir);
+            //         const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
+            //         for(int ic=0;ic< pv->ncol; ic++)
+            //         {
+            //             const int iwt2 = pv->local2global_col(ic);
+            //             const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
+            //             const int irc=ic*pv->nrow + ir;
+            //             std::cout<<"ik: "<<ik<<" i_alpha: "<<i_alpha<<" iat1:"<<iat1<<" iat2:"<<iat2<<" v_basis_k: "<<velocity_basis_k[ik][i_alpha][irc]<<std::endl;
+            //         }
+            //     }
+            // }
         }
     }
 
@@ -621,11 +854,21 @@ void ModuleIO::cal_velocity_matrix(const psi::Psi<std::complex<double>>* psi,
 
             for (int ir = 0; ir < PARAM.inp.nbands; ++ir)
             {
+                // const int iwt1 = pv->local2global_row(ir);
+                // const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
                 for (int ic = 0; ic < PARAM.inp.nbands; ++ic)
                 {
                     const int irc = ic * pv->nrow + ir;
                     if (pv->in_this_processor(ir, ic))
+                    {
+                        // const int iwt2 = pv->local2global_col(ic);
+                        // const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
                         velocity_k[ik][i_alpha](ir, ic) = vk_c[irc];
+                        // if (i_alpha == 0)
+                        // {
+                        //     std::cout<<"ik: "<<ik<<" i_alpha: "<<i_alpha<<" iat1:"<<iat1<<" iat2:"<<iat2<<" vk: "<<velocity_basis_k[ik][i_alpha][irc]<<std::endl;
+                        // }
+                    }
                 }
             }
         }
@@ -660,6 +903,7 @@ void ModuleIO::cal_current_comm_k(const LCAO_Orbitals& orb,
     velocity_k.resize(kv.get_nks());
     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
     {
+        // rR[i_alpha] = new hamilt::HContainer<double>(pv);
         for (int ik = 0; ik < kv.get_nks(); ik++)
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];
@@ -671,34 +915,6 @@ void ModuleIO::cal_current_comm_k(const LCAO_Orbitals& orb,
     set_rR_from_hR(orb, pv, r_calculator, &hR, rR);
     // set velocity_basis_k
     cal_velocity_basis_k(orb, pv, kv, rR, sR, hR, velocity_basis_k);
-    if (elecstate::H_TDDFT_pw::stype == 2)
-    {
-        for (size_t ik = 0; ik != kv.get_nks(); ++ik)
-        {
-            for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-            {
-                for (int ir = 0; ir < pv->nrow; ++ir)
-                {
-                    const int iwt1 = pv->local2global_row(ir);
-                    const int iat1 = GlobalC::ucell.iwt2iat[iwt1];
-                    for (int ic = 0; ic < pv->ncol; ++ic)
-                    {
-                        const int iwt2 = pv->local2global_row(ic);
-                        const int iat2 = GlobalC::ucell.iwt2iat[iwt2];
-                        const int irc = ic * pv->nrow + ir;
-                        const ModuleBase::Vector3<double>& tau1 = GlobalC::ucell.get_tau(iat1);
-                        const ModuleBase::Vector3<double> tau2 = GlobalC::ucell.get_tau(iat2);
-                        if (pv->in_this_processor(ir, ic))
-                        {
-                            ModuleBase::Vector3<double> dtau = (tau2 - tau1) * GlobalC::ucell.lat0;
-                            velocity_basis_k[ik][i_alpha][irc]
-                                = std::exp(TD_Velocity::td_vel_op->cart_At * dtau) * velocity_basis_k[ik][i_alpha][irc];
-                        }
-                    }
-                }
-            }
-        }
-    }
     // set velocity_k
     cal_velocity_matrix(psi, pv, kv, velocity_basis_k, velocity_k);
 

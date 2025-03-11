@@ -82,15 +82,18 @@ class TD_Velocity
     }
 
         // folding HR to hk, for mixing gague
-    void folding_HR_td(const hamilt::HContainer<double>& hR,
+    template<typename TR>
+    void folding_HR_td(const hamilt::HContainer<TR>& hR,
                 std::complex<double>* hk,
                 const ModuleBase::Vector3<double>& kvec_d_in,
                 const int ncol,
                 const int hk_type);
 
-    void folding_HR_td_c(const hamilt::HContainer<std::complex<double>>& hR,
+    template<typename TR>
+    void folding_partial_HR_td(const hamilt::HContainer<TR>& hR,
                 std::complex<double>* hk,
                 const ModuleBase::Vector3<double>& kvec_d_in,
+                const int ix,
                 const int ncol,
                 const int hk_type);
 
@@ -134,5 +137,6 @@ class TD_Velocity
     /// @brief store kinetic hamilton
     hamilt::HContainer<std::complex<double>>* velocity_HR = nullptr;
 };
+#include "td_velocity.hpp"
 
 #endif
