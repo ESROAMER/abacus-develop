@@ -31,7 +31,8 @@ class cal_r_overlap_R
     bool binary = false;
 
     void init(const Parallel_Orbitals& pv, const LCAO_Orbitals& orb);
-        ModuleBase::Vector3<double> get_psi_r_psi(
+    void init_nonlocal(const Parallel_Orbitals& pv, const LCAO_Orbitals& orb);
+    ModuleBase::Vector3<double> get_psi_r_psi(
       const ModuleBase::Vector3<double>& R1,
       const int& T1,
       const int& L1,
@@ -43,6 +44,16 @@ class cal_r_overlap_R
       const int& m2,
       const int& N2
     );
+    void get_psi_r_beta(
+      std::vector<ModuleBase::Vector3<double>>& nlm,
+      const ModuleBase::Vector3<double>& R1,
+      const int& T1,
+      const int& L1,
+      const int& m1,
+      const int& N1,
+      const ModuleBase::Vector3<double>& R2,
+      const int& T2
+    );
     void out_rR(const int& istep);
     void out_rR_other(const int& istep, const std::set<Abfs::Vector3_Order<int>>& output_R_coor);
     
@@ -50,6 +61,7 @@ class cal_r_overlap_R
   private:
     void initialize_orb_table(const LCAO_Orbitals& orb);
     void construct_orbs_and_orb_r(const LCAO_Orbitals& orb);
+    void construct_orbs_and_nonlocal_and_orb_r(const LCAO_Orbitals& orb);
 
     std::vector<int> iw2ia;
     std::vector<int> iw2iL;
