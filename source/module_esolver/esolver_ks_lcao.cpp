@@ -75,12 +75,14 @@ ESolver_KS_LCAO<TK, TR>::ESolver_KS_LCAO()
     //  because some members like two_level_step are used outside if(cal_exx)
     if (GlobalC::exx_info.info_ri.real_number)
     {
-        this->exx_lri_double = std::make_shared<Exx_LRI<double>>(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
+        this->exx_lri_double
+            = std::make_shared<Exx_LRI<double>>(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
         this->exd = std::make_shared<Exx_LRI_Interface<TK, double>>(exx_lri_double);
     }
     else
     {
-        this->exx_lri_complex = std::make_shared<Exx_LRI<std::complex<double>>>(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
+        this->exx_lri_complex
+            = std::make_shared<Exx_LRI<std::complex<double>>>(GlobalC::exx_info.info_ri, GlobalC::exx_info.info_ewald);
         this->exc = std::make_shared<Exx_LRI_Interface<TK, std::complex<double>>>(exx_lri_complex);
     }
 #endif
@@ -198,7 +200,10 @@ void ESolver_KS_LCAO<TK, TR>::before_all_runners(const Input_para& inp, UnitCell
     {
         if (GlobalC::exx_info.info_global.cal_exx)
         {
-            XC_Functional::set_xc_first_loop(ucell);
+            if (PARAM.inp.init_wfc != "file")
+            { // if init_wfc==file, directly enter the EXX loop
+                XC_Functional::set_xc_first_loop(ucell);
+            }
             // initialize 2-center radial tables for EXX-LRI
             if (GlobalC::exx_info.info_ri.real_number)
             {
@@ -575,7 +580,16 @@ void ESolver_KS_LCAO<TK, TR>::iter_init(const int istep, const int iter)
     // electrons number.
     if (istep == 0 && this->wf.init_wfc == "file")
     {
-        if (iter == 1)
+        int exx_two_level_step = 0;
+#ifdef __EXX
+        if (GlobalC::exx_info.info_global.cal_exx)
+        {
+            // the following steps are only needed in the first outer exx loop
+            exx_two_level_step
+                = GlobalC::exx_info.info_ri.real_number ? this->exd->two_level_step : this->exc->two_level_step;
+        }
+#endif
+        if (iter == 1 && exx_two_level_step == 0)
         {
             std::cout << " WAVEFUN -> CHARGE " << std::endl;
 
@@ -945,9 +959,24 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(const int istep, int& iter)
     // 3) save exx matrix
     if (GlobalC::exx_info.info_global.cal_exx)
     {
-        GlobalC::exx_info.info_ri.real_number ?
-            this->exd->exx_iter_finish(this->kv, GlobalC::ucell, *this->p_hamilt, *this->pelec, *this->p_chgmix, this->scf_ene_thr, iter, istep, this->conv_esolver) :
-            this->exc->exx_iter_finish(this->kv, GlobalC::ucell, *this->p_hamilt, *this->pelec, *this->p_chgmix, this->scf_ene_thr, iter, istep, this->conv_esolver);
+        GlobalC::exx_info.info_ri.real_number ? this->exd->exx_iter_finish(this->kv,
+                                                                           GlobalC::ucell,
+                                                                           *this->p_hamilt,
+                                                                           *this->pelec,
+                                                                           *this->p_chgmix,
+                                                                           this->scf_ene_thr,
+                                                                           iter,
+                                                                           istep,
+                                                                           this->conv_esolver)
+                                              : this->exc->exx_iter_finish(this->kv,
+                                                                           GlobalC::ucell,
+                                                                           *this->p_hamilt,
+                                                                           *this->pelec,
+                                                                           *this->p_chgmix,
+                                                                           this->scf_ene_thr,
+                                                                           iter,
+                                                                           istep,
+                                                                           this->conv_esolver);
     }
 #endif
 
@@ -967,26 +996,26 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(const int istep, int& iter)
             }
             std::string fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_CHG.cube";
             ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
-                data,
-                is,
-                PARAM.inp.nspin,
-                0,
-                fn,
-                this->pelec->eferm.get_efval(is),
-                &(GlobalC::ucell),
-                3,
-                1);
+                                          data,
+                                          is,
+                                          PARAM.inp.nspin,
+                                          0,
+                                          fn,
+                                          this->pelec->eferm.get_efval(is),
+                                          &(GlobalC::ucell),
+                                          3,
+                                          1);
             if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
             {
                 fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_TAU.cube";
                 ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
-                    this->pelec->charge->kin_r_save[is],
-                    is,
-                    PARAM.inp.nspin,
-                    0,
-                    fn,
-                    this->pelec->eferm.get_efval(is),
-                    &(GlobalC::ucell));
+                                              this->pelec->charge->kin_r_save[is],
+                                              is,
+                                              PARAM.inp.nspin,
+                                              0,
+                                              fn,
+                                              this->pelec->eferm.get_efval(is),
+                                              &(GlobalC::ucell));
             }
         }
     }
@@ -1032,7 +1061,7 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
     {
         this->pelec->cal_tau(*(this->psi));
     }
-    
+
     // 2) call after_scf() of ESolver_KS
     ESolver_KS<TK>::after_scf(istep);
 
