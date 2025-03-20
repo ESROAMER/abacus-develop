@@ -95,16 +95,17 @@ void ModuleIO::init_from_hR(const hamilt::HContainer<TR>* hR, hamilt::HContainer
 
     ModuleBase::timer::tick("ModuleIO", "init_from_hR");
 }
-template <typename TA>
 void ModuleIO::init_from_adj(const LCAO_Orbitals& orb,
                              const Parallel_Orbitals* pv,
                              std::vector<AdjacentAtomInfo>& adjs_all,
-                             hamilt::HContainer<TA>* aimR)
+                             ModuleBase::Vector3<hamilt::HContainer<double>*>& rR)
 {
     ModuleBase::TITLE("ModuleIOTD_mixing_pot", "init_from_adj");
     ModuleBase::timer::tick("ModuleIO", "init_from_adj");
 
     auto orb_cutoff_ = orb.cutoffs();
+    adjs_all.clear();
+    adjs_all.reserve(GlobalC::ucell.nat);
 
     for (int iat1 = 0; iat1 < GlobalC::ucell.nat; iat1++)
     {
@@ -142,12 +143,18 @@ void ModuleIO::init_from_adj(const LCAO_Orbitals& orb,
             const int I2 = adjs.natom[ad];
             int iat2 = GlobalC::ucell.itia2iat(T2, I2);
             ModuleBase::Vector3<int>& R_index = adjs.box[ad];
-            hamilt::AtomPair<TA> tmp(iat1, iat2, R_index, pv);
-            aimR->insert_pair(tmp);
+            hamilt::AtomPair<double> tmp(iat1, iat2, R_index, pv);
+            for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+            {
+                rR[i_alpha]->insert_pair(tmp);
+            }
         }
     }
     // allocate the memory of BaseMatrix in HR, and set the new values to zero
-    aimR->allocate(nullptr, true);
+    for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
+    {
+        rR[i_alpha]->allocate(nullptr, true);
+    }
     ModuleBase::timer::tick("ModuleIO", "init_from_adj");
 }
 
@@ -162,14 +169,7 @@ void ModuleIO::set_rR_from_hR(const LCAO_Orbitals& orb,
 
     // init
     std::vector<AdjacentAtomInfo> adjs_all;
-    hamilt::HContainer<double>* tmp = new hamilt::HContainer<double>(pv);
-    init_from_adj(orb, pv, adjs_all, tmp);
-    for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
-    {
-        rR[i_alpha] = new hamilt::HContainer<double>(*tmp);
-        rR[i_alpha]->add(*tmp);
-        rR[i_alpha]->allocate(nullptr, true);
-    }
+    init_from_adj(orb, pv, adjs_all, rR);
 
     for (int iat1 = 0; iat1 < GlobalC::ucell.nat; iat1++)
     {
@@ -548,6 +548,7 @@ void ModuleIO::cal_velocity_basis_k(const LCAO_Orbitals& orb,
                                   iwork.data(),
                                   &liwotk,
                                   &info);
+        delete[] ipiv;
         assert(0 == info);
         for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
         {
@@ -910,7 +911,7 @@ void ModuleIO::cal_current_comm_k(const LCAO_Orbitals& orb,
     velocity_k.resize(kv.get_nks());
     for (size_t i_alpha = 0; i_alpha != 3; ++i_alpha)
     {
-        // rR[i_alpha] = new hamilt::HContainer<double>(pv);
+        rR[i_alpha] = new hamilt::HContainer<double>(pv);
         for (int ik = 0; ik < kv.get_nks(); ik++)
         {
             velocity_basis_k[ik][i_alpha] = new std::complex<double>[pv->nloc];

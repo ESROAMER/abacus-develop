@@ -107,11 +107,10 @@ void sum_HR(
 template <typename Tadd, typename Tfull>
 void add_HR(const hamilt::HContainer<Tadd>* hR, hamilt::HContainer<Tfull>* full_hR);
 
-template <typename TA>
 void init_from_adj(const LCAO_Orbitals& orb,
                    const Parallel_Orbitals* pv,
                    std::vector<AdjacentAtomInfo>& adjs_all,
-                   hamilt::HContainer<TA>* aimR);
+                   ModuleBase::Vector3<hamilt::HContainer<double>*>& rR);
 template <typename TR, typename TA>
 void init_from_hR(const hamilt::HContainer<TR>* hR, hamilt::HContainer<TA>* aimR);
 
