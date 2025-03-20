@@ -324,6 +324,14 @@ void cal_r_overlap_R::construct_orbs_and_nonlocal_and_orb_r(const LCAO_Orbitals&
                 Beta_r_uniform[0] = infoNL_.Beta[T].Proj[ip].getBeta_r(0) - slope * infoNL_.Beta[T].Proj[ip].getRadial(0);
             }
 
+            // Here, the operation beta_r / r is performed. To avoid divergence at r=0, beta_r(0) is set to beta_r(1). 
+            // However, this may introduce issues, so caution is needed.
+            for (int ir = 1; ir < nr_uniform; ir++)
+            {
+                Beta_r_uniform[ir] = Beta_r_uniform[ir] / rad[ir];
+            }
+            Beta_r_uniform[0] = Beta_r_uniform[1];
+
             orbs_nonlocal[T][ip].set_orbital_info(infoNL_.Beta[T].getLabel(),
                                                   infoNL_.Beta[T].getType(),
                                                   infoNL_.Beta[T].Proj[ip].getL(),
