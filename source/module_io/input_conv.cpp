@@ -77,8 +77,14 @@ void Input_Conv::read_td_efield()
 
     elecstate::H_TDDFT_pw::tstart = PARAM.inp.td_tstart;
     elecstate::H_TDDFT_pw::tend = PARAM.inp.td_tend;
-
-    elecstate::H_TDDFT_pw::dt = PARAM.mdp.md_dt / PARAM.inp.estep_per_md / ModuleBase::AU_to_FS;
+    if(PARAM.inp.td_dt!=-1.0)
+    {
+        elecstate::H_TDDFT_pw::dt = PARAM.inp.td_dt / ModuleBase::AU_to_FS;
+    }
+    else
+    {
+        elecstate::H_TDDFT_pw::dt = PARAM.mdp.md_dt / PARAM.inp.estep_per_md / ModuleBase::AU_to_FS;
+    }
     elecstate::H_TDDFT_pw::dt_int = elecstate::H_TDDFT_pw::dt;
 
     // space domain parameters

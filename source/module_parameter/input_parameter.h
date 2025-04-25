@@ -242,6 +242,7 @@ struct Input_para
     double bessel_descriptor_sigma = 0.1;           ///< spherical bessel smearing_sigma
 
     // ==============   #Parameters (9.rt-tddft) ===========================
+    double td_dt = -1.0;
     int estep_per_md = 1;           ///< number of electronic steps per MD step
     int estep_shift = 0;            ///< shift of electronic steps
     double vec_start_x = 0.0;
