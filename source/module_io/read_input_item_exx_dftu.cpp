@@ -89,7 +89,7 @@ void ReadInput::item_exx()
                 {
                     para.input.exx_hybrid_beta = "0.8";
                 }
-                else if (dft_functional_lower == "hse")
+                else if (para.input.exx_use_ewald && dft_functional_lower == "hse")
                 {
                     para.input.exx_hybrid_beta = "0.25";
                 }
@@ -113,7 +113,7 @@ void ReadInput::item_exx()
                 std::transform(dft_functional.begin(), dft_functional.end(), dft_functional_lower.begin(), tolower);
                 if (dft_functional_lower == "lc_pbe")
                 {
-                    para.input.exx_hse_omega = "0.11";
+                    para.input.exx_hse_omega = "0.33";
                 }
                 else if (dft_functional_lower == "lc_wpbe")
                 {
@@ -198,6 +198,10 @@ void ReadInput::item_exx()
                 {
                     para.input.exx_real_number = "0";
                 }
+            }
+            if (para.input.esolver_type == "tddft" && (para.input.exx_hybrid_alpha != "0" || para.input.exx_use_ewald != false) && para.input.exx_real_number != "0")
+            {
+                ModuleBase::WARNING_QUIT("ReadInput", "For RT-TDDFT with hybrid functionals, only exx_real_number=0 is supported");
             }
         };
         this->add_item(item);

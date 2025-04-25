@@ -2,6 +2,7 @@
 #define W_ABACUS_DEVELOP_ABACUS_DEVELOP_SOURCE_MODULE_ESOLVER_ESOLVER_KS_LCAO_TDDFT_H
 #include "esolver_ks.h"
 #include "esolver_ks_lcao.h"
+#include "module_io/cal_r_overlap_R.h"
 #include "module_elecstate/elecstate_lcao_tddft.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/record_adj.h"
 #include "module_psi/psi.h"
@@ -57,6 +58,8 @@ class ESolver_KS_LCAO_TDDFT : public ESolver_KS_LCAO<std::complex<double>, doubl
     TD_current* velocity_mat = nullptr;
 
     TD_Velocity* td_p = nullptr;
+
+    cal_r_overlap_R r_calculator;
 };
 
 } // namespace ModuleESolver

@@ -69,6 +69,10 @@ class cal_r_overlap_R
     std::vector<int> iw2iN;
     std::vector<int> iw2it;
 
+  private:
+    void initialize_orb_table(const LCAO_Orbitals& orb);
+    void construct_orbs_and_orb_r(const LCAO_Orbitals& orb);
+
     ModuleBase::Sph_Bessel_Recursive::D2* psb_ = nullptr;
     ORB_gaunt_table MGT;
 

@@ -67,6 +67,38 @@ void folding_HR(const hamilt::HContainer<TR>& hR,
     }*/
 }
 
+template<typename TR>
+void folding_partial_HR(const hamilt::HContainer<TR>& hR,
+                std::complex<double>* hk,
+                const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
+                const int ix,
+                const int ncol,
+                const int hk_type)
+{
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (int i = 0; i < hR.size_atom_pairs(); ++i)
+    {
+        hamilt::AtomPair<TR>& tmp = hR.get_atom_pair(i);
+        for(int ir = 0;ir < tmp.get_R_size(); ++ir )
+        {
+            const ModuleBase::Vector3<int> r_index = tmp.get_R_index(ir);
+            const ModuleBase::Vector3<double> dR(r_index.x, r_index.y, r_index.z);
+            const double arg = (kvec_d_in * dR) * ModuleBase::TWO_PI;
+            double sinp, cosp;
+            ModuleBase::libm::sincos(arg, &sinp, &cosp);
+            std::complex<double> kphase = std::complex<double>(cosp, sinp);
+            const ModuleBase::Vector3<double> dR_car = dR * ucell.latvec * ucell.lat0;
+
+            tmp.find_R(r_index);
+            tmp.add_to_matrix(hk, ncol, kphase * ModuleBase::IMAG_UNIT * std::complex<double>(dR_car[ix]), hk_type);
+        }
+    }
+}
+
+
 // template instantiation
 template void folding_HR<std::complex<double>>(const hamilt::HContainer<std::complex<double>>& hR,
                                             std::complex<double>* hk,
@@ -78,6 +110,20 @@ template void folding_HR<double>(const hamilt::HContainer<double>& hR,
                                 const ModuleBase::Vector3<double>& kvec_d_in,
                                 const int ncol,
                                 const int hk_type);
+template void folding_partial_HR<std::complex<double>>(const hamilt::HContainer<std::complex<double>>& hR,
+                std::complex<double>* hk,
+                const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
+                const int ix,
+                const int ncol,
+                const int hk_type);
+template void folding_partial_HR<double>(const hamilt::HContainer<double>& hR,
+                std::complex<double>* hk,
+                const ModuleBase::Vector3<double>& kvec_d_in,
+                UnitCell& ucell,
+                const int ix,
+                const int ncol,
+                const int hk_type);
 // special case for double
 void folding_HR(const hamilt::HContainer<double>& hR,
                 double* hk,

@@ -348,6 +348,10 @@ void TDEkinetic<OperatorLCAO<TK, TR>>::contributeHR()
         {
             TD_Velocity::td_vel_op->initialize_current_term(this->hR_tmp, paraV);
         }
+        if (TD_Velocity::out_current_comm)
+        {
+            TD_Velocity::td_vel_op->set_velocity_HR(this->hR_tmp);
+        }
         // calculate the values in hR_tmp
         this->update_td();
         this->hR_tmp->set_zero();

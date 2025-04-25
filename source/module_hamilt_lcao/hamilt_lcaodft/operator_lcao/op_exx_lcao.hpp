@@ -8,6 +8,8 @@
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_hamilt_general/module_xc/xc_functional.h"
 #include "module_io/restart_exx_csr.h"
+#include "module_elecstate/potentials/H_TDDFT_pw.h"
+#include "module_hamilt_lcao/module_tddft/td_velocity.h"
 
 namespace hamilt
 {
@@ -203,7 +205,14 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHR()
 {
     ModuleBase::TITLE("OperatorEXX", "contributeHR");
     // Peize Lin add 2016-12-03
-    if (this->istep == 0 && PARAM.inp.calculation != "nscf" && this->two_level_step != nullptr && *this->two_level_step == 0 && !this->restart) { return; }  //in the non-exx loop, do nothing 
+    if (this->istep == 0
+        && PARAM.inp.calculation != "nscf"
+        && this->two_level_step != nullptr && *this->two_level_step == 0
+        && PARAM.inp.init_wfc != "file"
+        && !this->restart)
+    {
+        return;
+    }  //in the non-exx loop, do nothing 
     if (this->add_hexx_type == Add_Hexx_Type::k) { return; }
 
     if (XC_Functional::get_func_type() == 4 || XC_Functional::get_func_type() == 5)
@@ -276,23 +285,36 @@ void OperatorEXX<OperatorLCAO<TK, TR>>::contributeHk(int ik)
                               || GlobalC::exx_info.info_global.ccp_type == Conv_Coulomb_Pot_K::Ccp_Type::Ccp)
                                  ? 1.0
                                  : GlobalC::exx_info.info_global.hybrid_alpha;
-        if (GlobalC::exx_info.info_ri.real_number) {
-            RI_2D_Comm::add_Hexx(
-                this->kv,
-                ik,
-                coeff,
-                *this->Hexxd,
-                *this->hR->get_paraV(),
-                this->hsk->get_hk());
-        } else {
-            RI_2D_Comm::add_Hexx(
+        if (PARAM.inp.esolver_type == "tddft" && elecstate::H_TDDFT_pw::stype == 2){
+            RI_2D_Comm::add_Hexx_td(
                 this->kv,
                 ik,
                 coeff,
                 *this->Hexxc,
                 *this->hR->get_paraV(),
+                TD_Velocity::td_vel_op->cart_At,
                 this->hsk->get_hk());
-}
+        }
+        else{
+            if (GlobalC::exx_info.info_ri.real_number) {
+                RI_2D_Comm::add_Hexx(
+                    this->kv,
+                    ik,
+                    coeff,
+                    *this->Hexxd,
+                    *this->hR->get_paraV(),
+                    this->hsk->get_hk());
+            } else {
+                RI_2D_Comm::add_Hexx(
+                    this->kv,
+                    ik,
+                    coeff,
+                    *this->Hexxc,
+                    *this->hR->get_paraV(),
+                    this->hsk->get_hk());
+            }
+        }
+
     }
 }
 

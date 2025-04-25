@@ -36,6 +36,7 @@ bool module_tddft::Evolve_elec::out_dipole;
 bool module_tddft::Evolve_elec::out_efield;
 bool TD_Velocity::out_current;
 bool TD_Velocity::out_current_k;
+bool TD_Velocity::out_current_comm;
 bool TD_Velocity::out_vecpot;
 bool TD_Velocity::init_vecpot_file;
 double module_tddft::Evolve_elec::td_print_eij;
