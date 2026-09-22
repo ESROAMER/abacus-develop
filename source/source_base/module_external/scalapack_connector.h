@@ -19,6 +19,9 @@
 // =========================================================
 
 #ifdef __MPI
+#ifdef MKL_ILP64
+#include "ilp64_scalapack_connector.h"
+#else
 
 #include <complex>
 
@@ -146,7 +149,7 @@ extern "C"
 	void pzgetri_(
 		const int *n, 
 		const std::complex<double> *A, const int *ia, const int *ja, const int *desca,
-		int *ipiv, const std::complex<double> *work, const int *lwork, const int *iwork, const int *liwork, const int *info);
+			int *ipiv, const std::complex<double> *work, const int *lwork, int *iwork, const int *liwork, int *info);
 
     void pzgeadd_(
 		const char *transa,
@@ -180,6 +183,7 @@ extern "C"
 	void Cpcgemr2d (int m, int n, std::complex<float> *ptrmyblock, int ia, int ja, int *ma, std::complex<float> *ptrmynewblock, int ib, int jb, int *mb, int globcontext);
 }
 
+#endif // MKL_ILP64
 	template <typename T>
 	struct block2d_data_type
 	{
@@ -382,7 +386,7 @@ public:
 	void getri(
 		const int n, 
 		const std::complex<double> *A, const int ia, const int ja, const int *desca, int *ipiv, 
-		const std::complex<double> *work, const int *lwork, const int *iwork, const int *liwork, int *info)
+		const std::complex<double> *work, const int *lwork, int *iwork, const int *liwork, int *info)
 	{
 		pzgetri_(&n, A, &ia, &ja, desca, ipiv, work, lwork, iwork, liwork, info);
 	}

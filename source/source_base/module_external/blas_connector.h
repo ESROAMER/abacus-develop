@@ -4,6 +4,10 @@
 #include <complex>
 #include "source_base/module_device/types.h"
 #include "../macros.h"
+#ifdef MKL_ILP64
+#include "ilp64_blas_connector.h"
+#else
+
 
 // These still need to be linked in the header file
 // Because quite a lot of code will directly use the original cblas kernels.
@@ -195,6 +199,7 @@ void dsyrk_(const char* uplo, const char* trans, const int* n, const int* k,
             double* c,
             const int* ldc);
 }
+#endif
 
 // Class BlasConnector provide the connector to fortran lapack routine.
 // The entire function in this class are static and inline function.

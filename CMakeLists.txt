@@ -335,6 +335,15 @@ if(ENABLE_OPENMP)
   find_package(OpenMP REQUIRED)
 endif()
 
+set(MKL_INTERFACE "lp64" CACHE STRING
+    "MKL integer interface used by ABACUS")
+set_property(CACHE MKL_INTERFACE PROPERTY STRINGS lp64 ilp64)
+string(TOLOWER "${MKL_INTERFACE}" _abacus_mkl_interface)
+if(NOT _abacus_mkl_interface MATCHES "^(lp64|ilp64)$")
+  message(FATAL_ERROR
+          "MKL_INTERFACE must be either lp64 or ilp64, got '${MKL_INTERFACE}'.")
+endif()
+
 if(DEFINED ENV{MKLROOT} AND NOT DEFINED MKLROOT)
   set(MKLROOT "$ENV{MKLROOT}")
 endif()
@@ -365,6 +374,11 @@ endif()
 
 if(NOT USE_KML AND NOT MKL_FOUND AND NOT USE_SW)
   find_package(FFTW3 REQUIRED)
+endif()
+
+if(_abacus_mkl_interface STREQUAL "ilp64" AND NOT MKL_FOUND)
+  message(FATAL_ERROR
+          "MKL_INTERFACE=ilp64 requires an MKL build (MKLROOT or MKL_ROOT).")
 endif()
 
 if(ENABLE_DFTD4)

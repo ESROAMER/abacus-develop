@@ -59,6 +59,9 @@
 //"xxx" specifies the type of problem, for example:
 //  - gv stands for generalized eigenvalue
 
+#ifdef MKL_ILP64
+#include "ilp64_lapack_connector.h"
+#else
 // The following declarations cover only a subset of LAPACK routines.
 // If you need a LAPACK function that is not included here, feel free to add its declaration as needed.
 extern "C"
@@ -323,6 +326,7 @@ void dsysv_(const char* uplo, const int* n, const int* nrhs,
 double dlange_(const char* norm, const int* m, const int* n, const double* A, const int* lda, double* work);
 double zlange_(const char* norm, const int* m, const int* n, const std::complex<double>* A, const int* lda, double* work);
 }  // extern "C"
+#endif
 
 #ifdef GATHER_INFO
 #define zhegvx_ zhegvx_i

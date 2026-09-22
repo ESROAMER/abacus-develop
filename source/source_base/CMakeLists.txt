@@ -11,6 +11,7 @@ add_library(
     OBJECT
     assoc_laguerre.cpp
     module_external/blas_connector_base.cpp
+    module_external/ilp64_connector.cpp
     module_external/blas_connector_vector.cpp
     module_external/blas_connector_matrix.cpp
     clebsch_gordan_coeff.cpp

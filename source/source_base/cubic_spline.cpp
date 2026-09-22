@@ -1,4 +1,5 @@
 #include "cubic_spline.h"
+#include "source_base/module_external/lapack_connector.h"
 
 #include <cassert>
 #include <algorithm>
@@ -8,11 +9,6 @@
 
 using ModuleBase::CubicSpline;
 
-extern "C"
-{
-    // solve a tridiagonal linear system
-    void dgtsv_(int* N, int* NRHS, double* DL, double* D, double* DU, double* B, int* LDB, int* INFO);
-};
 
 
 CubicSpline::BoundaryCondition::BoundaryCondition(BoundaryType type)

@@ -3,10 +3,7 @@
 #include "elpa_runtime_check.h"
 
 #include "elpa_solver.h"
-extern "C"
-{
 #include "cblacs.h"
-}
 #include "utils.h"
 #include <cfloat>
 #include <complex>

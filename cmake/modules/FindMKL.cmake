@@ -1,6 +1,6 @@
 # Find the oneMKL components used by ABACUS.
 #
-# ABACUS uses the LP64 BLAS/LAPACK, FFTW3 and, with MPI, BLACS/ScaLAPACK
+# ABACUS uses the selected LP64/ILP64 BLAS/LAPACK, FFTW3 and, with MPI, BLACS/ScaLAPACK
 # interfaces directly.  This module therefore provides complete link closures:
 #
 #   abacus::mkl              BLAS, LAPACK and FFTW3 compatibility interfaces
@@ -32,19 +32,21 @@ if(TARGET abacus::mkl)
   return()
 endif()
 
-# ABACUS declares and calls LP64 Fortran-style symbols directly, so ILP64 is not
-# ABI-compatible with its integer arguments.
-if(DEFINED MKL_INTERFACE)
-  string(TOLOWER "${MKL_INTERFACE}" _mkl_integer_interface)
-  if(NOT _mkl_integer_interface STREQUAL "lp64")
-    message(FATAL_ERROR "ABACUS supports only MKL_INTERFACE=lp64.")
-  endif()
+# ABACUS selects the integer ABI explicitly so the linker and connector layer
+# use the same LP64 or ILP64 interface.
+set(MKL_INTERFACE "lp64" CACHE STRING
+    "MKL integer interface used by ABACUS")
+set_property(CACHE MKL_INTERFACE PROPERTY STRINGS lp64 ilp64)
+string(TOLOWER "${MKL_INTERFACE}" _mkl_integer_interface)
+if(NOT _mkl_integer_interface MATCHES "^(lp64|ilp64)$")
+  message(FATAL_ERROR
+          "MKL_INTERFACE must be either lp64 or ilp64, got '${MKL_INTERFACE}'.")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(_mkl_interface_name mkl_gf_lp64)
+  set(_mkl_interface_name mkl_gf_${_mkl_integer_interface})
 else()
-  set(_mkl_interface_name mkl_intel_lp64)
+  set(_mkl_interface_name mkl_intel_${_mkl_integer_interface})
 endif()
 
 set(_mkl_root_hints "${MKLROOT}" "${MKL_ROOT}" "$ENV{MKLROOT}")
@@ -92,7 +94,7 @@ if(ENABLE_MPI)
     message(FATAL_ERROR "MKL_MPI must be AUTO, openmpi, intelmpi, or mpich.")
   endif()
 
-  set(_mkl_blacs_name mkl_blacs_${_mkl_mpi}_lp64)
+  set(_mkl_blacs_name mkl_blacs_${_mkl_mpi}_${_mkl_integer_interface})
 endif()
 
 # These are result variables of this finder, not user configuration inputs.
@@ -163,7 +165,7 @@ find_library(_abacus_mkl_core
 
 if(ENABLE_MPI)
   find_library(_abacus_mkl_scalapack
-    NAMES mkl_scalapack_lp64
+    NAMES mkl_scalapack_${_mkl_integer_interface}
     PATHS ${_mkl_root_hints}
     PATH_SUFFIXES lib/intel64 lib
     NO_DEFAULT_PATH)

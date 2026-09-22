@@ -3,6 +3,10 @@
 
 #include <complex>
 
+#ifdef MKL_ILP64
+#include "source_base/module_external/ilp64_blas_connector.h"
+#else
+
 #if defined(__CUDA)
 #include <base/third_party/cublas.h>
 #elif defined(__ROCM)
@@ -133,6 +137,8 @@ void ztrsm_(const char *side, const char *uplo, const char *transa, const char *
             std::complex<double> *b, const int *ldb);
 
 }
+
+#endif // MKL_ILP64
 
 namespace container {
 

@@ -18,7 +18,6 @@
 
 #include <complex>
 
-
 #if defined(__CUDA)
 #include <base/third_party/cusolver.h>
 #elif defined(__ROCM)
@@ -208,6 +207,10 @@ void cungqr_(const int* m, const int* n, const int* k, std::complex<float>* A, c
 void zungqr_(const int* m, const int* n, const int* k, std::complex<double>* A, const int* lda, const std::complex<double>* tau, std::complex<double> *work, const int* lwork, int* info);
 
 }
+
+#if defined(MKL_ILP64)
+#include "source_base/module_external/ilp64_lapack_connector.h"
+#endif
 
 // Class LapackConnector provide the connector to fortran lapack routine.
 // The entire function in this class are static and inline function.

@@ -30,6 +30,9 @@
 #define BLACS_CONNECTOR_H
 
 #include <complex>
+#ifdef MKL_ILP64
+#include "ilp64_blacs_connector.h"
+#else
 
 extern "C"
 {
@@ -61,6 +64,7 @@ extern "C"
     void Czgebr2d(int ConTxt, char *scope, char *top, int m, int n, std::complex<double> *A, int lda, int rsrc, int csrc);
 }
 
+#endif // MKL_ILP64
 // unified interface for broadcast
 template <typename T>
 void Cxgebs2d(int ConTxt, char *scope, char *top, int m, int n, T *A, int lda)
@@ -119,6 +123,7 @@ void Cxgebr2d(int ConTxt, char *scope, char *top, int m, int n, T *A, int lda, i
 }
 
 
+#ifndef MKL_ILP64
 #ifdef __MPI
 #include <mpi.h>
 extern "C"
@@ -127,5 +132,6 @@ extern "C"
     MPI_Comm Cblacs2sys_handle(int BlacsCtxt);
 }
 #endif // __MPI
+#endif // MKL_ILP64
 
 #endif

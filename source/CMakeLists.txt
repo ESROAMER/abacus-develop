@@ -47,6 +47,8 @@ set(_abacus_feature_definitions
   $<$<BOOL:${USE_DSP}>:__DSP>
   $<$<BOOL:${USE_SW}>:__SW>
   $<$<BOOL:${USE_KML}>:__KML>
+  $<$<AND:$<NOT:$<BOOL:${USE_KML}>>,$<BOOL:${MKL_FOUND}>,$<STREQUAL:${_abacus_mkl_interface},ilp64>>:ABACUS_MKL_ILP64>
+  $<$<AND:$<NOT:$<BOOL:${USE_KML}>>,$<BOOL:${MKL_FOUND}>,$<STREQUAL:${_abacus_mkl_interface},ilp64>>:MKL_ILP64>
   $<$<AND:$<NOT:$<BOOL:${USE_KML}>>,$<BOOL:${MKL_FOUND}>>:__MKL>
   $<$<BOOL:${USE_CUDA}>:__CUDA>
   $<$<BOOL:${USE_CUDA}>:__UT_USE_CUDA>
