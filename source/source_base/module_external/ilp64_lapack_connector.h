@@ -121,7 +121,10 @@ inline void abacus_ilp64_dsyevx_(const char* jobz, const char* range, const char
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_dsyevx_(jobz, range, uplo, &n_ilp64, a, &lda_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
@@ -139,7 +142,10 @@ inline void abacus_ilp64_cheevx_(const char* jobz, const char* range, const char
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_cheevx_(jobz, range, uplo, &n_ilp64, a, &lda_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, rwork, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
@@ -157,7 +163,10 @@ inline void abacus_ilp64_zheevx_(const char* jobz, const char* range, const char
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_zheevx_(jobz, range, uplo, &n_ilp64, a, &lda_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, rwork, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
@@ -177,7 +186,10 @@ inline void abacus_ilp64_dsygvx_(const int* itype, const char* jobz, const char*
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_dsygvx_(&itype_ilp64, jobz, range, uplo, &n_ilp64, a, &lda_ilp64, b, &ldb_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
@@ -197,7 +209,10 @@ inline void abacus_ilp64_chegvx_(const int* itype, const char* jobz, const char*
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_chegvx_(&itype_ilp64, jobz, range, uplo, &n_ilp64, a, &lda_ilp64, b, &ldb_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, rwork, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
@@ -217,7 +232,10 @@ inline void abacus_ilp64_zhegvx_(const int* itype, const char* jobz, const char*
     MKL_INT lwork_ilp64 = static_cast<MKL_INT>(*lwork);
     MKL_INT info_ilp64 = 0;
     abacus_mkl_zhegvx_(&itype_ilp64, jobz, range, uplo, &n_ilp64, a, &lda_ilp64, b, &ldb_ilp64, vl, vu, &il_ilp64, &iu_ilp64, abstol, &m_ilp64, w, z, &ldz_ilp64, work, &lwork_ilp64, rwork, iwork_ilp64.data(), ifail_ilp64.data(), &info_ilp64);
-    for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    if (*lwork != -1)
+    {
+        for (std::size_t i = 0; i < ifail_ilp64.size(); ++i) ifail[i] = static_cast<int>(ifail_ilp64[i]);
+    }
     *m = static_cast<int>(m_ilp64);
     *info = static_cast<int>(info_ilp64);
 }
