@@ -11,7 +11,6 @@ add_library(
     OBJECT
     assoc_laguerre.cpp
     module_external/blas_connector_base.cpp
-    module_external/ilp64_connector.cpp
     module_external/blas_connector_vector.cpp
     module_external/blas_connector_matrix.cpp
     clebsch_gordan_coeff.cpp
@@ -88,6 +87,10 @@ add_library(
     module_parallel/para_bridge.cpp
     ${LIBM_SRC}
 )
+
+if(NOT USE_KML AND MKL_FOUND AND _abacus_mkl_interface STREQUAL "ilp64")
+  target_sources(base PRIVATE module_external/ilp64_connector.cpp)
+endif()
 
 target_link_libraries(base PUBLIC container)
 if (USE_DSP)
