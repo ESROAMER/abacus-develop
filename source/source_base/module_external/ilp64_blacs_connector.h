@@ -2,6 +2,7 @@
 #define ABACUS_ILP64_BLACS_CONNECTOR_H
 
 #include <complex>
+#include <vector>
 #include <mkl_types.h>
 
 #ifdef __MPI
@@ -113,12 +114,21 @@ inline MPI_Comm Cblacs2sys_handle(int blacs_ctxt)
 
 inline void Cigebs2d(int ctxt, char* scope, char* top, int m, int n, int* a, int lda)
 {
-    abacus_mkl_Cigebs2d(static_cast<MKL_INT>(ctxt), scope, top, static_cast<MKL_INT>(m), static_cast<MKL_INT>(n), reinterpret_cast<MKL_INT*>(a), static_cast<MKL_INT>(lda));
+    // Integer payloads, not only dimensions, use MKL_INT in ILP64 BLACS.
+    std::vector<MKL_INT> buffer(static_cast<std::size_t>(m) * n);
+    for (int j = 0; j < n; ++j)
+        for (int i = 0; i < m; ++i)
+            buffer[static_cast<std::size_t>(j) * m + i] = a[static_cast<std::size_t>(j) * lda + i];
+    abacus_mkl_Cigebs2d(static_cast<MKL_INT>(ctxt), scope, top, static_cast<MKL_INT>(m), static_cast<MKL_INT>(n), buffer.data(), static_cast<MKL_INT>(m));
 }
 
 inline void Cigebr2d(int ctxt, char* scope, char* top, int m, int n, int* a, int lda, int rsrc, int csrc)
 {
-    abacus_mkl_Cigebr2d(static_cast<MKL_INT>(ctxt), scope, top, static_cast<MKL_INT>(m), static_cast<MKL_INT>(n), reinterpret_cast<MKL_INT*>(a), static_cast<MKL_INT>(lda), static_cast<MKL_INT>(rsrc), static_cast<MKL_INT>(csrc));
+    std::vector<MKL_INT> buffer(static_cast<std::size_t>(m) * n);
+    abacus_mkl_Cigebr2d(static_cast<MKL_INT>(ctxt), scope, top, static_cast<MKL_INT>(m), static_cast<MKL_INT>(n), buffer.data(), static_cast<MKL_INT>(m), static_cast<MKL_INT>(rsrc), static_cast<MKL_INT>(csrc));
+    for (int j = 0; j < n; ++j)
+        for (int i = 0; i < m; ++i)
+            a[static_cast<std::size_t>(j) * lda + i] = static_cast<int>(buffer[static_cast<std::size_t>(j) * m + i]);
 }
 
 inline void Csgebs2d(int ctxt, char* scope, char* top, int m, int n, float* a, int lda)
