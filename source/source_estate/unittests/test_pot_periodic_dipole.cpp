@@ -1,5 +1,5 @@
 #include "source_base/constants.h"
-#include "source_estate/module_pot/h_tddft_pw.h"
+#include "source_estate/module_pot/pot_periodic_dipole.h"
 #include "source_estate/module_pot/td_field_manager.h"
 #include "source_io/module_parameter/input_parameter.h"
 
@@ -12,7 +12,7 @@ namespace
 
 // A low cutoff leaves precisely +/- (2pi/20,0,0) and G=0.
 // This checks the real FFT normalization, sign, translated source and ionic force.
-TEST(HtdDftPW, PeriodicSingleMode)
+TEST(PotPeriodicDipoleTest, PeriodicSingleMode)
 {
     UnitCell cell;
     cell.lat0 = 2.0;
@@ -46,13 +46,13 @@ TEST(HtdDftPW, PeriodicSingleMode)
         input.td_ttype = {3, 3};
         input.td_vext_dire = {1, 1};
         input.td_heavi_t0 = {10.0, 10.0};
-        input.td_dipole_width = {0.5};
-        input.td_space_type = {0, 2};
-        input.td_heavi_amp = {0.0, 1.0};
-        input.td_dipole_position = {22.3, 1.0, 2.0};
+        input.td_dipole_width = {0.5, 0.5};
+        input.td_stype = 3;
+        input.td_heavi_amp = {-0.25, 1.25};
+        input.td_dipole_position = {2.3, 1.0, 2.0, 22.3, 1.0, 2.0};
         auto manager = elecstate::create_td_field_manager(input);
         manager->prepare_sample(0);
-        elecstate::H_TDDFT_pw potential(&grid, &cell, manager);
+        elecstate::PotPeriodicDipole potential(grid, cell, manager);
         std::vector<double> v(grid.nrxx, 0.0);
         potential.cal_fixed_v(v.data());
         for (int ix = 0; ix < grid.nx; ++ix)
@@ -63,7 +63,7 @@ TEST(HtdDftPW, PeriodicSingleMode)
             EXPECT_NEAR(v[ir], expected, 1e-12);
         }
         ModuleBase::matrix force(1, 3);
-        elecstate::H_TDDFT_pw::compute_force(cell, grid, *manager, force);
+        elecstate::PotPeriodicDipole::compute_force(cell, grid, *manager, force);
         const double ion_phase = g * (6.2 - 2.3);
         const double expected_force = scale * g * std::cos(ion_phase);
         EXPECT_NEAR(force(0, 0), expected_force, 1e-12);

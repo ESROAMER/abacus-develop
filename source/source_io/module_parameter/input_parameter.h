@@ -344,8 +344,7 @@ struct Input_para
     int td_exp_order = 4; ///< Fixed Taylor polynomial order.
     double td_exp_thr = 0.0; ///< Zero selects the precision-dependent exponential tolerance.
     int td_exp_krylov_dim = 32; ///< Maximum Lanczos dimension before frozen-operator subdivision.
-    int td_stype = 0;                ///< type of space domain  0 : length gauge  1: velocity gauge
-    std::vector<int> td_space_type;          ///< Per component: 0 uniform, 2 periodic Gaussian dipole.
+    int td_stype = 0;                ///< 0 length, 1 velocity, 2 hybrid, 3 periodic Gaussian dipoles
     std::vector<double> td_dipole_position;  ///< Cartesian triplets (Bohr), in dipole occurrence order.
     std::vector<double> td_dipole_width;     ///< Gaussian standard deviation (Bohr) for each dipole.
     std::vector<int> td_ttype = {0}; ///< type of time domain

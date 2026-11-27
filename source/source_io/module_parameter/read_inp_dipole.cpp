@@ -2,7 +2,6 @@
 #include "read_input_tool.h"
 #include "source_base/tool_quit.h"
 
-#include <algorithm>
 #include <cmath>
 
 namespace ModuleIO
@@ -12,9 +11,9 @@ namespace
 
 void check_dipole_setup(const Input_para& input)
 {
-    if (input.basis_type != "lcao" || input.esolver_type != "tddft" || input.td_stype != 0 || input.init_vecpot)
+    if (input.basis_type != "lcao" || input.esolver_type != "tddft" || input.init_vecpot)
     {
-        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require analytic LCAO RT-TDDFT fields in length gauge.");
+        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require analytic LCAO RT-TDDFT fields (td_stype=3).");
     }
     if (input.calculation != "md" || input.mdp.md_nstep != 1 || input.mdp.md_restart || input.cal_stress || input.symmetry != "-1")
     {
@@ -26,17 +25,16 @@ void check_dipole_setup(const Input_para& input)
 
 void check_periodic_dipoles(const Input_para& input)
 {
-    const auto& types = input.td_space_type;
-    if (!types.empty() && types.size() != input.td_ttype.size())
+    if (input.td_stype != 3)
     {
-        ModuleBase::WARNING_QUIT("ReadInput", "td_space_type must match the number of td_ttype entries.");
+        if (!input.td_dipole_position.empty() || !input.td_dipole_width.empty())
+        {
+            ModuleBase::WARNING_QUIT("ReadInput", "Dipole geometry requires td_stype=3.");
+        }
+        return;
     }
-    const std::size_t count = std::count(types.begin(), types.end(), 2);
-    const std::size_t uniform = std::count(types.begin(), types.end(), 0);
-    if (count + uniform != types.size())
-    {
-        ModuleBase::WARNING_QUIT("ReadInput", "td_space_type accepts 0 (uniform) or 2 (3D periodic dipole).");
-    }
+    check_dipole_setup(input);
+    const std::size_t count = input.td_ttype.size();
     if (input.td_dipole_position.size() != 3 * count || input.td_dipole_width.size() != count)
     {
         ModuleBase::WARNING_QUIT("ReadInput", "Each dipole needs three td_dipole_position values and one td_dipole_width.");
@@ -55,38 +53,19 @@ void check_periodic_dipoles(const Input_para& input)
             ModuleBase::WARNING_QUIT("ReadInput", "td_dipole_position values must be finite.");
         }
     }
-    if (count > 0)
-    {
-        check_dipole_setup(input);
-    }
 }
 
 void ReadInput::item_periodic_dipole()
 {
     {
-        Input_Item item("td_space_type");
-        item.annotation = "spatial model of each external source";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Integer";
-        item.description = R"(Spatial model per td_ttype entry. Use 0 for a uniform field and 2 for a Gaussian dipole repeated in all three lattice directions with zero macroscopic field. Omission selects uniform fields. Dipoles require LCAO length-gauge RT-TDDFT with fixed ions and cell (calculation=md, md_nstep=1, md_restart=false, cal_stress=false, symmetry=-1). td_vext_dire selects the Cartesian moment axis. All five waveforms accept signed dipole moments in e*Bohr.)";
-        item.default_value = "empty (all uniform)";
-        item.unit = "";
-        item.set_availability("esolver_type==tddft");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_space_type);
-        };
-        sync_intvec(input.td_space_type, para.input.td_space_type.size(), 0);
-        this->add_item(item);
-    }
-    {
         Input_Item item("td_dipole_position");
         item.annotation = "periodic dipole positions";
         item.category = "Real-Time TDDFT (Common)";
         item.type = "Vector of Real";
-        item.description = R"(Cartesian x y z coordinates in Bohr for each periodic dipole, in occurrence order, skipping uniform components. Translating a source by a lattice vector gives the same potential.)";
+        item.description = R"(Cartesian x y z coordinates in Bohr for each periodic dipole, in occurrence order of td_ttype. Translating a source by a lattice vector gives the same potential.)";
         item.default_value = "empty";
         item.unit = "Bohr";
-        item.set_availability("esolver_type==tddft");
+        item.set_availability("esolver_type==tddft and td_stype==3");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_dipole_position);
         };
@@ -101,7 +80,7 @@ void ReadInput::item_periodic_dipole()
         item.description = R"(One finite, strictly positive Gaussian standard deviation in Bohr per periodic dipole, in occurrence order. The density plane-wave basis must resolve this length.)";
         item.default_value = "empty";
         item.unit = "Bohr";
-        item.set_availability("esolver_type==tddft");
+        item.set_availability("esolver_type==tddft and td_stype==3");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_dipole_width);
         };

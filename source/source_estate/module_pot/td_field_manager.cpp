@@ -48,7 +48,7 @@ int integration_subdivisions(const double omega, const double dt, const int gaug
 {
     // Length gauge samples only the beginning of each electronic step and does
     // not integrate the field in time.
-    if (gauge == 0)
+    if (gauge == 0 || gauge == 3)
     {
         return 1;
     }
@@ -133,7 +133,7 @@ void TDFieldManager::sample_field(const int step)
         const double time_ha = step * dt_ha_;
         const TDFieldSample sample(step, 0, field.subdivisions(), time_ha);
         field_vals_ha_[index] = field.electric_field(sample);
-        if (!field.periodic_dipole())
+        if (gauge_ != 3)
         {
             efield_ha_[field.direction()] += field_vals_ha_[index];
         }
@@ -142,7 +142,7 @@ void TDFieldManager::sample_field(const int step)
 
 void TDFieldManager::prepare_sample(const int step)
 {
-    if (step < 0 || (gauge_ != 0 && step != 0))
+    if (step < 0 || (uses_vector_potential() && step != 0))
     {
         ModuleBase::WARNING_QUIT("TDFieldManager::prepare_sample", "Use interval preparation after the initial vector-potential endpoint.");
     }
@@ -170,7 +170,7 @@ void TDFieldManager::prepare_sample(const int step)
 
 void TDFieldManager::prepare_interval(const int left_step, const int sample_step)
 {
-    if (left_step < 0 || sample_step != left_step + 1)
+    if (!uses_vector_potential() || left_step < 0 || sample_step != left_step + 1)
     {
         ModuleBase::WARNING_QUIT("TDFieldManager::prepare_interval", "Expected consecutive interval endpoints.");
     }
@@ -229,7 +229,7 @@ void TDFieldManager::read_restart(const std::string& file_dir)
     double dt = 0.0;
     if (!(state >> current_step_ >> interval_left_ >> gauge >> dt >> file_source) || !(left >> A_left_ha_.x >> A_left_ha_.y >> A_left_ha_.z)
         || !(right >> A_right_ha_.x >> A_right_ha_.y >> A_right_ha_.z) || current_step_ < 0 || interval_left_ < -1
-        || (gauge_ == 0 && interval_left_ != -1) || (gauge_ != 0 && interval_left_ != current_step_ - 1)
+        || (!uses_vector_potential() && interval_left_ != -1) || (uses_vector_potential() && interval_left_ != current_step_ - 1)
         || file_source != !A_samples_ha_.empty() || gauge != gauge_ || !std::isfinite(dt) || std::abs(dt - dt_ha_) > 1.0e-12 * dt_ha_)
     {
         ModuleBase::WARNING_QUIT("TDFieldManager::read_restart", "Invalid or incompatible field restart state.");
@@ -293,7 +293,7 @@ ModuleBase::Vector3<double> TDFieldManager::substep_a(const TDFieldState& full, 
     }
     ModuleBase::Vector3<double> result = full.left;
     const int left_step = current_step_ - 1;
-    if (gauge_ != 0 && enabled_ && left_step >= start_step_ && left_step <= end_step_)
+    if (uses_vector_potential() && enabled_ && left_step >= start_step_ && left_step <= end_step_)
     {
         // Anchor each prefix integral to the original left endpoint. A failed trial
         // never contributes to the field integral or changes the original right endpoint.
@@ -347,7 +347,7 @@ TDFieldState TDFieldManager::subinterval(const TDFieldState& full, int index, in
         for (std::size_t i = 0; i < fields_.size(); ++i)
         {
             state.values[i] = fields_[i].electric_field(sample);
-            if (!fields_[i].periodic_dipole())
+            if (gauge_ != 3)
             {
                 state.electric[fields_[i].direction()] += state.values[i];
             }
@@ -365,7 +365,7 @@ void TDFieldManager::write_restart(const std::string& file_dir) const
 {
     std::ofstream file((file_dir + "Restart_td.txt").c_str());
     file << std::setprecision(17) << "# Hartree atomic units; step indices start at 0.\n"
-         << "# gauge: 0=length, 1=velocity, 2=hybrid; source: 0=field, 1=file\n"
+         << "# gauge: 0=length, 1=velocity, 2=hybrid, 3=periodic dipoles; source: 0=field, 1=file\n"
          << "# step  left_step(-1=none)  gauge  dt  source\n"
          << current_step_ << " " << interval_left_ << " " << gauge_ << " " << dt_ha_ << " " << !A_samples_ha_.empty() << "\n"
          << A_left_ha_.x << " " << A_left_ha_.y << " " << A_left_ha_.z << "  # A_left: x y z\n"
@@ -404,6 +404,11 @@ void TDFieldManager::select_A_prop()
 bool TDFieldManager::file_source() const
 {
     return !A_samples_ha_.empty();
+}
+
+bool TDFieldManager::uses_vector_potential() const
+{
+    return gauge_ == 1 || gauge_ == 2;
 }
 
 int TDFieldManager::gauge() const
@@ -466,7 +471,7 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
     std::vector<std::size_t> occurrences(5, 0);
     std::vector<TDField> fields;
     fields.reserve(input.td_ttype.size());
-    std::size_t dipole_index = 0;
+    const bool periodic = input.td_stype == 3;
 
     // File input supplies A and its derived E, so unused analytic waveform parameters need not be populated.
     const std::size_t field_count = input.init_vecpot ? 0 : input.td_ttype.size();
@@ -475,17 +480,15 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         const int field_type = input.td_ttype[field_index];
         const std::size_t occurrence = occurrences[field_type]++;
         std::unique_ptr<PeriodicDipole> dipole;
-        const bool periodic = !input.td_space_type.empty() && input.td_space_type.at(field_index) == 2;
         if (periodic)
         {
             dipole.reset(new PeriodicDipole);
-            const std::size_t offset = 3 * dipole_index;
+            const std::size_t offset = 3 * field_index;
             for (int axis = 0; axis < 3; ++axis)
             {
                 dipole->position[axis] = input.td_dipole_position.at(offset + axis);
             }
-            dipole->width = input.td_dipole_width.at(dipole_index);
-            ++dipole_index;
+            dipole->width = input.td_dipole_width.at(field_index);
         }
         std::unique_ptr<TDFieldProfile> profile;
         int subdivisions = 1;
@@ -526,7 +529,7 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         }
         else if (field_type == 3)
         {
-            subdivisions = input.td_stype == 0 ? 1 : 2;
+            subdivisions = (input.td_stype == 0 || periodic) ? 1 : 2;
             const double amplitude = source_amplitude(input.td_heavi_amp.at(occurrence), periodic);
             profile.reset(new TDHeavisideProfile(input.td_heavi_t0.at(occurrence), amplitude));
         }

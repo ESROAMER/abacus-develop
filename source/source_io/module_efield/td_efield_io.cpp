@@ -65,20 +65,18 @@ void prep_td_field_out(const std::string& output_dir, const elecstate::TDFieldMa
     }
     const auto& fields = manager.fields();
     const std::size_t count = manager.file_source() ? 0 : fields.size();
-    bool has_dipole = false;
+    const bool dipole = manager.gauge() == 3;
     for (std::size_t i = 0; i < count; ++i)
     {
-        const auto* source = fields[i].periodic_dipole();
-        const bool dipole = source != nullptr;
         const std::string path = field_out_path(output_dir, i, dipole);
         std::ofstream output(path.c_str());
         if (!output)
         {
             ModuleBase::WARNING_QUIT("ModuleIO::prep_td_field_out", "Cannot prepare source file " + path);
         }
-        if (source)
+        if (dipole)
         {
-            has_dipole = true;
+            const auto* source = fields[i].periodic_dipole();
             const int direction = fields[i].direction() + 1;
             output << std::setprecision(17) << "# time(fs) moment(e*Bohr); Cartesian direction=" << direction
                    << "; source(Bohr)=" << source->position.x << " " << source->position.y << " " << source->position.z
@@ -103,9 +101,9 @@ void prep_td_field_out(const std::string& output_dir, const elecstate::TDFieldMa
     {
         output << "endpoint finite differences\n";
     }
-    else if (has_dipole)
+    else if (dipole)
     {
-        output << "sum of uniform analytic fields (dipole sources excluded)\n";
+        output << "periodic dipoles: zero macroscopic field\n";
     }
     else
     {
@@ -136,11 +134,11 @@ void write_td_field(const elecstate::TDFieldManager& manager, const std::string&
         return;
     }
 
+    const bool dipole = manager.gauge() == 3;
     const std::vector<double>& field_values = manager.field_vals_ha();
     for (std::size_t field_index = 0; field_index < field_values.size(); ++field_index)
     {
         // Keep one file per input occurrence even when directions repeat.
-        const bool dipole = manager.fields()[field_index].periodic_dipole() != nullptr;
         const std::string output_path = field_out_path(output_dir, field_index, dipole);
         std::ofstream output(output_path.c_str(), std::ofstream::app);
         if (!output)

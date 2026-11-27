@@ -76,6 +76,8 @@ class TDFieldManager
 
     /** @brief Return the spatial-gauge selector supplied by `td_stype`. */
     int gauge() const;
+    /// Velocity and hybrid gauges advance vector-potential endpoints.
+    bool uses_vector_potential() const;
 
     /** @brief Return the current zero-based electronic-step index. */
     int current_step() const;

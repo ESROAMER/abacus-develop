@@ -151,7 +151,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::runner(BaseCell &basecell, const int ist
     }
     // Prepare the endpoint field before before_scf initializes the potential and constructs TD operators.
     const int first_estep = this->totstep + 1;
-    if (this->inp_->td_stype == 0 || first_estep == 0)
+    if (!td_field_manager_->uses_vector_potential() || first_estep == 0)
     {
         td_field_manager_->prepare_sample(first_estep);
     }
@@ -217,7 +217,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::runner(BaseCell &basecell, const int ist
         this->totstep++;
         this->print_step();
         // update At
-        if (this->inp_->td_stype > 0)
+        if (td_field_manager_->uses_vector_potential())
         {
             if (this->totstep == 0)
             {
@@ -243,8 +243,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::runner(BaseCell &basecell, const int ist
             ModuleBase::GlobalFunc::OUT(
                 GlobalV::ofs_running, "Cartesian vector potential Az(t)", td_p->endpoint_A()[2]);
         }
-
-        if (this->inp_->td_stype == 0)
+        else
         {
             td_field_manager_->prepare_sample(this->totstep);
         }

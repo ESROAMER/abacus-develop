@@ -15,7 +15,7 @@ Input_para dipole_input()
     input.calculation = "md";
     input.mdp.md_nstep = 1;
     input.symmetry = "-1";
-    input.td_space_type = {2};
+    input.td_stype = 3;
     input.td_dipole_position = {10.0, 11.0, 12.0};
     input.td_dipole_width = {0.5};
     return input;
@@ -32,8 +32,8 @@ TEST(PeriodicDipoleInput, ValidAndLegacy)
 TEST(PeriodicDipoleInput, RejectUnsupportedAndMalformedInputs)
 {
     const std::vector<std::function<void(Input_para&)>> changes = {
-        [](Input_para& input) { input.td_space_type = {1, 0}; },
-        [](Input_para& input) { input.td_space_type = {1}; },
+        [](Input_para& input) { input.td_ttype = {0, 0}; },
+        [](Input_para& input) { input.td_stype = 0; },
         [](Input_para& input) { input.td_dipole_position.pop_back(); },
         [](Input_para& input) { input.td_dipole_width.clear(); },
         [](Input_para& input) { input.td_dipole_width[0] = 0.0; },

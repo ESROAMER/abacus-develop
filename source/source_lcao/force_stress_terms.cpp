@@ -9,6 +9,8 @@
 #include "source_estate/module_pot/efield.h"
 #include "source_estate/module_pot/gatefield.h"
 #include "source_estate/module_pot/h_tddft_pw.h"
+#include "source_estate/module_pot/pot_periodic_dipole.h"
+#include "source_estate/module_pot/td_field_manager.h"
 #include "source_hamilt/module_surchem/surchem.h"
 #include "source_hamilt/module_vdw/vdw.h"
 #include "source_io/module_parameter/parameter.h"
@@ -82,7 +84,14 @@ void cal_external_field_forces(UnitCell& ucell,
     if (td_field != nullptr)
     {
         parts.fefield_tddft.create(ucell.nat, 3);
-        elecstate::H_TDDFT_pw::compute_force(ucell, *rhopw, *td_field, parts.fefield_tddft);
+        if (td_field->gauge() == 3)
+        {
+            elecstate::PotPeriodicDipole::compute_force(ucell, *rhopw, *td_field, parts.fefield_tddft);
+        }
+        else
+        {
+            elecstate::H_TDDFT_pw::compute_force(ucell, *td_field, parts.fefield_tddft);
+        }
     }
 
     //! atomic forces from gate field

@@ -544,14 +544,15 @@ For a nonorthogonal LCAO basis:
     }
     {
         Input_Item item("td_stype");
-        item.domain.add_requirement("init_vecpot==false", "td_stype in [0, 1, 2]");
+        item.domain.add_requirement("init_vecpot==false", "td_stype in [0, 1, 2, 3]");
         item.annotation = "type of electric field in space domain";
         item.category = "Real-Time TDDFT (Common)";
         item.type = "Integer";
-        item.description = R"(Type of electric field in the space domain, i.e. the gauge of the electric field.
+        item.description = R"(Spatial coupling of the analytic external field.
 * `0`: Length gauge, available for PW and LCAO.
 * `1`: Velocity gauge, available for PW and LCAO.
-* `2`: Hybrid gauge, available only for LCAO. See J. Chem. Theory Comput. 2025, 21, 3335-3341 for more information.)";
+* `2`: Hybrid gauge, available only for LCAO. See J. Chem. Theory Comput. 2025, 21, 3335-3341 for more information.
+* `3`: Three-dimensionally periodic Gaussian dipoles (fixed-geometry LCAO). Supply one Cartesian position triplet and one width per td_ttype entry. Each waveform amplitude is a signed dipole moment in e*Bohr along td_vext_dire.)";
         item.default_value = "0";
         item.unit = "";
         read_sync_int(input.td_stype);

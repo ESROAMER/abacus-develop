@@ -315,6 +315,7 @@ OBJS_ELECSTAT=elecstate.o\
     pot_local.o\
     h_hartree_pw.o\
     h_tddft_pw.o\
+    pot_periodic_dipole.o\
     pot_xc.o\
     pot_ml_exx.o\
     pot_ml_exx_label.o\

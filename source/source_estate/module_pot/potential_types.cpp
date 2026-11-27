@@ -2,6 +2,7 @@
 #include "efield.h"
 #include "gatefield.h"
 #include "pot_local.h"
+#include "pot_periodic_dipole.h"
 #include "pot_pcc.h"
 #include "pot_sccs.h"
 #include "pot_sep.h"
@@ -88,6 +89,14 @@ PotBase* Potential::get_pot_type(const std::string& pot_type, const Input_para& 
     {
         // The RT-TDDFT ESolver injects this manager before potential
         // registration so the potential does not own a separate time counter.
+        if (input.td_stype == 3)
+        {
+            if (!this->td_field_manager_)
+            {
+                ModuleBase::WARNING_QUIT("Potential::get_pot_type", "Periodic dipole sources require a field manager.");
+            }
+            return new PotPeriodicDipole(*this->rho_basis_, *this->ucell_, this->td_field_manager_);
+        }
         return new H_TDDFT_pw(this->rho_basis_, this->ucell_, this->td_field_manager_);
     }
 #ifdef __MLALGO

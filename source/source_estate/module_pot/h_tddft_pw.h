@@ -46,17 +46,15 @@ class H_TDDFT_pw : public PotBase
      * @brief Compute ionic force of electric field.
      *
      * @param[in] cell Information of cell.
-     * @param[in] basis Density plane-wave basis used for the periodic potential.
      * @param[in] manager Current field state owned by the RT solver.
      * @param[out] fe Electric-field force, F = qE.
      */
-    static void compute_force(const UnitCell& cell, const ModulePW::PW_Basis& basis, const TDFieldManager& manager, ModuleBase::matrix& fe);
+    static void compute_force(const UnitCell& cell, const TDFieldManager& manager, ModuleBase::matrix& fe);
 
   private:
     void cal_v_space_length(std::vector<double>& vext_space, int direction);
     double cal_v_space_length_potential(double coordinate) const;
 
-    std::vector<std::vector<double>> dipole_space_; ///< Cached unit-moment potential per periodic occurrence.
     const UnitCell* ucell_ = nullptr;
     std::shared_ptr<TDFieldManager> field_manager_;
 };

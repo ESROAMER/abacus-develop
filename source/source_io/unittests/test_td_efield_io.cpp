@@ -155,7 +155,7 @@ TEST_F(TDEFieldIOTest, ReportsOutputOpenFailures)
     EXPECT_EXIT(ModuleIO::write_td_field(*manager, invalid_directory), testing::ExitedWithCode(1), "");
 }
 
-TEST(TDEFieldIO, MixedDipoleAndUniformUnits)
+TEST(TDEFieldIO, TwoPeriodicDipoles)
 {
     Input_para input;
     input.td_vext = true;
@@ -164,9 +164,9 @@ TEST(TDEFieldIO, MixedDipoleAndUniformUnits)
     input.td_dt = ModuleBase::AU_to_FS;
     input.td_ttype = {3, 3};
     input.td_vext_dire = {1, 1};
-    input.td_space_type = {2, 0};
-    input.td_dipole_position = {1.0, 2.0, 3.0};
-    input.td_dipole_width = {0.5};
+    input.td_stype = 3;
+    input.td_dipole_position = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    input.td_dipole_width = {0.5, 0.75};
     input.td_heavi_t0 = {2.0, 2.0};
     input.td_heavi_amp = {-0.25, 3.0};
     const auto manager = elecstate::create_td_field_manager(input);
@@ -179,13 +179,13 @@ TEST(TDEFieldIO, MixedDipoleAndUniformUnits)
     const auto half = manager->subinterval(full, 0, 2);
     manager->bind_field(half);
     EXPECT_DOUBLE_EQ(manager->field_vals_ha()[0], -0.25);
-    const double uniform = 3.0 * ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
-    EXPECT_NEAR(manager->efield_ha()[0], uniform, 1e-14);
+    EXPECT_DOUBLE_EQ(manager->field_vals_ha()[1], 3.0);
+    EXPECT_DOUBLE_EQ(manager->efield_ha()[0], 0.0);
     manager->bind_field(full);
     ModuleIO::write_td_field(*manager, prefix);
 
     const std::string dipole_path = prefix + "dipole_1.txt";
-    const std::string field_path = prefix + "efield_2.txt";
+    const std::string field_path = prefix + "dipole_2.txt";
     const std::string total_path = prefix + "efield_total.txt";
     std::ifstream dipole(dipole_path.c_str());
     std::ifstream field(field_path.c_str());
@@ -200,10 +200,12 @@ TEST(TDEFieldIO, MixedDipoleAndUniformUnits)
     double value = 0.0;
     ASSERT_TRUE(dipole >> time >> value);
     EXPECT_DOUBLE_EQ(value, -0.25);
+    std::getline(field, header);
+    EXPECT_NE(header.find("sigma(Bohr)=0.75"), std::string::npos);
     ASSERT_TRUE(field >> time >> value);
     EXPECT_DOUBLE_EQ(value, 3.0);
     ASSERT_TRUE(total >> time >> value);
-    EXPECT_DOUBLE_EQ(value, 3.0);
+    EXPECT_DOUBLE_EQ(value, 0.0);
     EXPECT_NE(log.str().find(dipole_path), std::string::npos);
     std::remove(dipole_path.c_str());
     std::remove(field_path.c_str());
