@@ -82,7 +82,7 @@ void cal_external_field_forces(UnitCell& ucell,
     if (td_field != nullptr)
     {
         parts.fefield_tddft.create(ucell.nat, 3);
-        elecstate::H_TDDFT_pw::compute_force(ucell, *td_field, parts.fefield_tddft);
+        elecstate::H_TDDFT_pw::compute_force(ucell, *rhopw, *td_field, parts.fefield_tddft);
     }
 
     //! atomic forces from gate field

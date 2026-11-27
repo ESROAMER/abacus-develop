@@ -89,11 +89,12 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::before_all_runners(BaseCell &basecell, c
     {
         td_field_manager_->read_restart(PARAM.globalv.global_readin_dir);
     }
-    if (inp.out_efield && GlobalV::MY_RANK == 0)
+    const bool is_root = GlobalV::MY_RANK == 0;
+    if (inp.out_efield && is_root)
     {
-        ModuleIO::prep_td_field_out(output_dir, *td_field_manager_, inp.mdp.md_restart);
+        ModuleIO::prep_td_field_out(output_dir, *td_field_manager_, inp.mdp.md_restart, GlobalV::ofs_running);
     }
-    if (inp.out_vecpot && GlobalV::MY_RANK == 0)
+    if (inp.out_vecpot && is_root)
     {
         if (inp.init_vecpot)
         {

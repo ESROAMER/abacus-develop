@@ -99,7 +99,7 @@ void ESolver_KS_PW_TDDFT<T, Device>::before_all_runners(BaseCell &basecell, cons
     {
         if (inp.out_efield)
         {
-            ModuleIO::prep_td_field_out(output_dir, *this->td_field_manager_, false);
+            ModuleIO::prep_td_field_out(output_dir, *this->td_field_manager_, false, log_);
         }
         if (inp.out_vecpot)
         {

@@ -18,7 +18,7 @@ struct TDFieldState
 {
     bool active = false;
     double dt = 0.0;
-    std::vector<double> values;
+    std::vector<double> values; ///< Per source, atomic electric field or dipole moment in e*Bohr.
     ModuleBase::Vector3<double> left;
     ModuleBase::Vector3<double> right;
     ModuleBase::Vector3<double> propagation;
@@ -95,7 +95,7 @@ class TDFieldManager
     /** @brief Return all configured fields in input-occurrence order. */
     const std::vector<TDField>& fields() const;
 
-    /** @brief Return per-occurrence field samples for the current step. */
+    /** @brief Return signed amplitudes in atomic units: electric field for uniform sources, moment for dipoles. */
     const std::vector<double>& field_vals_ha() const;
 
     /** @brief Return the direction-summed sampled electric field in Hartree atomic units. */

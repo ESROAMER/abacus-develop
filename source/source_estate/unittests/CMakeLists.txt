@@ -149,6 +149,9 @@ if(ENABLE_MPI)
     LIBS parameter base device planewave_serial
     SOURCES test_potential_new.cpp
             test_td_field.cpp
+            test_td_field_manager.cpp
+            test_h_tddft_pw.cpp
+            ../module_pot/h_tddft_pw.cpp
             ../module_pot/potential_new.cpp
             ../module_pot/td_field.cpp
             ../module_pot/td_field_profiles.cpp

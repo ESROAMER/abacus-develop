@@ -152,6 +152,7 @@ class ReadInput
     void item_deepks();
     // items for real time tddft
     void item_rt_tddft();
+    void item_periodic_dipole();
     // items for td-ofdft
     void item_tdofdft();
     // items for linear response tddft
@@ -212,6 +213,9 @@ bool filter_nonascii_and_comment(std::ifstream& ifs, std::stringstream& out_asci
  * @param input Input parameters after all values and dynamic defaults are resolved.
  */
 void check_td_efield_parameters(const Input_para& input);
+
+/// Validate the spatial list, dipole geometry and supported propagation setup.
+void check_periodic_dipoles(const Input_para& input);
 
 } // namespace ModuleIO
 

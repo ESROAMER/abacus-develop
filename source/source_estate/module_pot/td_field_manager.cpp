@@ -66,10 +66,10 @@ double angular_frequency(const double frequency)
     return frequency * 2.0 * ModuleBase::PI * ModuleBase::AU_to_FS;
 }
 
-double field_amplitude(const double amplitude)
+double source_amplitude(const double amplitude, const bool periodic)
 {
-    // Convert the user-visible V/Angstrom scale to the propagation field unit.
-    return amplitude * ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
+    // Uniform INPUT amplitudes are V/Angstrom; dipole moments are already in e*Bohr.
+    return periodic ? amplitude : amplitude * ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
 }
 
 } // namespace
@@ -133,7 +133,10 @@ void TDFieldManager::sample_field(const int step)
         const double time_ha = step * dt_ha_;
         const TDFieldSample sample(step, 0, field.subdivisions(), time_ha);
         field_vals_ha_[index] = field.electric_field(sample);
-        efield_ha_[field.direction()] += field_vals_ha_[index];
+        if (!field.periodic_dipole())
+        {
+            efield_ha_[field.direction()] += field_vals_ha_[index];
+        }
     }
 }
 
@@ -344,7 +347,10 @@ TDFieldState TDFieldManager::subinterval(const TDFieldState& full, int index, in
         for (std::size_t i = 0; i < fields_.size(); ++i)
         {
             state.values[i] = fields_[i].electric_field(sample);
-            state.electric[fields_[i].direction()] += state.values[i];
+            if (!fields_[i].periodic_dipole())
+            {
+                state.electric[fields_[i].direction()] += state.values[i];
+            }
         }
     }
     return state;
@@ -460,6 +466,7 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
     std::vector<std::size_t> occurrences(5, 0);
     std::vector<TDField> fields;
     fields.reserve(input.td_ttype.size());
+    std::size_t dipole_index = 0;
 
     // File input supplies A and its derived E, so unused analytic waveform parameters need not be populated.
     const std::size_t field_count = input.init_vecpot ? 0 : input.td_ttype.size();
@@ -467,59 +474,78 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
     {
         const int field_type = input.td_ttype[field_index];
         const std::size_t occurrence = occurrences[field_type]++;
+        std::unique_ptr<PeriodicDipole> dipole;
+        const bool periodic = !input.td_space_type.empty() && input.td_space_type.at(field_index) == 2;
+        if (periodic)
+        {
+            dipole.reset(new PeriodicDipole);
+            const std::size_t offset = 3 * dipole_index;
+            for (int axis = 0; axis < 3; ++axis)
+            {
+                dipole->position[axis] = input.td_dipole_position.at(offset + axis);
+            }
+            dipole->width = input.td_dipole_width.at(dipole_index);
+            ++dipole_index;
+        }
         std::unique_ptr<TDFieldProfile> profile;
         int subdivisions = 1;
         if (field_type == 0)
         {
             const double omega = angular_frequency(input.td_gauss_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
+            const double amplitude = source_amplitude(input.td_gauss_amp.at(occurrence), periodic);
             profile.reset(new TDGaussianProfile(omega,
                                                 input.td_gauss_phase.at(occurrence),
                                                 input.td_gauss_sigma.at(occurrence) / ModuleBase::AU_to_FS,
                                                 input.td_gauss_t0.at(occurrence),
-                                                field_amplitude(input.td_gauss_amp.at(occurrence)),
+                                                amplitude,
                                                 dt));
         }
         else if (field_type == 1)
         {
             const double omega = angular_frequency(input.td_trape_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
+            const double amplitude = source_amplitude(input.td_trape_amp.at(occurrence), periodic);
             profile.reset(new TDTrapezoidProfile(omega,
                                                  input.td_trape_phase.at(occurrence),
                                                  input.td_trape_t1.at(occurrence),
                                                  input.td_trape_t2.at(occurrence),
                                                  input.td_trape_t3.at(occurrence),
-                                                 field_amplitude(input.td_trape_amp.at(occurrence))));
+                                                 amplitude));
         }
         else if (field_type == 2)
         {
             const double omega1 = angular_frequency(input.td_trigo_freq1.at(occurrence));
             subdivisions = integration_subdivisions(omega1, dt, input.td_stype);
+            const double amplitude = source_amplitude(input.td_trigo_amp.at(occurrence), periodic);
             profile.reset(new TDTrigonometricProfile(omega1,
                                                      angular_frequency(input.td_trigo_freq2.at(occurrence)),
                                                      input.td_trigo_phase1.at(occurrence),
                                                      input.td_trigo_phase2.at(occurrence),
-                                                     field_amplitude(input.td_trigo_amp.at(occurrence))));
+                                                     amplitude));
         }
         else if (field_type == 3)
         {
             subdivisions = input.td_stype == 0 ? 1 : 2;
-            profile.reset(new TDHeavisideProfile(input.td_heavi_t0.at(occurrence), field_amplitude(input.td_heavi_amp.at(occurrence))));
+            const double amplitude = source_amplitude(input.td_heavi_amp.at(occurrence), periodic);
+            profile.reset(new TDHeavisideProfile(input.td_heavi_t0.at(occurrence), amplitude));
         }
         else if (field_type == 4)
         {
             const double omega = angular_frequency(input.td_supsine_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
+            const double amplitude = source_amplitude(input.td_supsine_amp.at(occurrence), periodic);
             profile.reset(new TDSupersineProfile(omega,
                                                  input.td_supsine_phase.at(occurrence),
                                                  input.td_supsine_sigma.at(occurrence),
                                                  input.td_supsine_tstart.at(occurrence),
                                                  input.td_supsine_tend.at(occurrence),
-                                                 field_amplitude(input.td_supsine_amp.at(occurrence)),
+                                                 amplitude,
                                                  dt));
         }
 
-        fields.push_back(TDField(input.td_vext_dire.at(field_index) - 1, std::move(profile), subdivisions));
+        const int direction = input.td_vext_dire.at(field_index) - 1;
+        fields.emplace_back(direction, std::move(profile), subdivisions, std::move(dipole));
     }
 
     return std::shared_ptr<TDFieldManager>(new TDFieldManager(input.td_vext,

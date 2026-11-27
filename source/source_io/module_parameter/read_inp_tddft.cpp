@@ -25,6 +25,7 @@ struct FieldParameterRule
 
 void check_td_efield_parameters(const Input_para& input)
 {
+    check_periodic_dipoles(input);
     // File input replaces the analytic waveforms, whose unused parameter arrays may be incomplete.
     if (input.init_vecpot)
     {
@@ -556,6 +557,7 @@ For a nonorthogonal LCAO basis:
         read_sync_int(input.td_stype);
         this->add_item(item);
     }
+    this->item_periodic_dipole();
     {
         Input_Item item("td_ttype");
         item.annotation = "type of electric field in time domain";
@@ -691,7 +693,7 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
         item.type = "Vector of Real";
         item.description = R"(Electric-field scale $E_0$ in the Gaussian-pulse formula. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
         item.default_value = "0.25";
-        item.unit = "V/Angstrom";
+        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
         item.set_availability("td_ttype contains 0");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_gauss_amp);
@@ -781,7 +783,7 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
         item.type = "Vector of Real";
         item.description = R"(Electric-field scale $E_0$ in the trapezoid-pulse formula. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
         item.default_value = "2.74";
-        item.unit = "V/Angstrom";
+        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
         item.set_availability("td_ttype contains 1");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_trape_amp);
@@ -856,7 +858,7 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
         item.type = "Vector of Real";
         item.description = R"(Electric-field scale $E_0$ in the trigonometric-pulse formula. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
         item.default_value = "2.74";
-        item.unit = "V/Angstrom";
+        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
         item.set_availability("td_ttype contains 2");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_trigo_amp);
@@ -886,7 +888,7 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
         item.type = "Vector of Real";
         item.description = R"(Electric-field scale $E_0$ in the Heaviside-pulse definition. Supply exactly one value for each `td_ttype 3` occurrence, in occurrence order.)";
         item.default_value = "1.0";
-        item.unit = "V/Angstrom";
+        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
         item.set_availability("td_ttype contains 3");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_heavi_amp);
@@ -901,7 +903,7 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
         item.type = "Vector of Real";
         item.description = R"(Carrier electric-field scale $E_0$ of each supersine pulse. This is not a normalization of the complete waveform maximum, because the envelope-derivative term also contributes. Supply exactly one value for each `td_ttype 4` occurrence, in occurrence order.)";
         item.default_value = "0.27";
-        item.unit = "V/Angstrom";
+        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
         item.set_availability("td_ttype contains 4");
         item.read_value = [](const Input_Item& item, Parameter& para) {
             parse_expression(item.str_values, para.input.td_supsine_amp);

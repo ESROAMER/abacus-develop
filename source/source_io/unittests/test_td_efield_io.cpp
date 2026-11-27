@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -152,6 +153,61 @@ TEST_F(TDEFieldIOTest, ReportsOutputOpenFailures)
     const int next_step = manager->current_step() + 1;
     manager->prepare_sample(next_step);
     EXPECT_EXIT(ModuleIO::write_td_field(*manager, invalid_directory), testing::ExitedWithCode(1), "");
+}
+
+TEST(TDEFieldIO, MixedDipoleAndUniformUnits)
+{
+    Input_para input;
+    input.td_vext = true;
+    input.td_tstart = 0;
+    input.td_tend = 2;
+    input.td_dt = ModuleBase::AU_to_FS;
+    input.td_ttype = {3, 3};
+    input.td_vext_dire = {1, 1};
+    input.td_space_type = {2, 0};
+    input.td_dipole_position = {1.0, 2.0, 3.0};
+    input.td_dipole_width = {0.5};
+    input.td_heavi_t0 = {2.0, 2.0};
+    input.td_heavi_amp = {-0.25, 3.0};
+    const auto manager = elecstate::create_td_field_manager(input);
+    const std::string prefix = testing::TempDir() + "mixed_periodic_td_";
+    std::ostringstream log;
+    ModuleIO::prep_td_field_out(prefix, *manager, false, log);
+    manager->prepare_sample(0);
+    manager->prepare_sample(1);
+    const auto full = manager->field_state();
+    const auto half = manager->subinterval(full, 0, 2);
+    manager->bind_field(half);
+    EXPECT_DOUBLE_EQ(manager->field_vals_ha()[0], -0.25);
+    const double uniform = 3.0 * ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
+    EXPECT_NEAR(manager->efield_ha()[0], uniform, 1e-14);
+    manager->bind_field(full);
+    ModuleIO::write_td_field(*manager, prefix);
+
+    const std::string dipole_path = prefix + "dipole_1.txt";
+    const std::string field_path = prefix + "efield_2.txt";
+    const std::string total_path = prefix + "efield_total.txt";
+    std::ifstream dipole(dipole_path.c_str());
+    std::ifstream field(field_path.c_str());
+    std::ifstream total(total_path.c_str());
+    std::string header;
+    std::getline(dipole, header);
+    EXPECT_NE(header.find("moment(e*Bohr)"), std::string::npos);
+    EXPECT_NE(header.find("source(Bohr)=1 2 3"), std::string::npos);
+    EXPECT_NE(header.find("sigma(Bohr)=0.5"), std::string::npos);
+    std::getline(total, header);
+    double time = 0.0;
+    double value = 0.0;
+    ASSERT_TRUE(dipole >> time >> value);
+    EXPECT_DOUBLE_EQ(value, -0.25);
+    ASSERT_TRUE(field >> time >> value);
+    EXPECT_DOUBLE_EQ(value, 3.0);
+    ASSERT_TRUE(total >> time >> value);
+    EXPECT_DOUBLE_EQ(value, 3.0);
+    EXPECT_NE(log.str().find(dipole_path), std::string::npos);
+    std::remove(dipole_path.c_str());
+    std::remove(field_path.c_str());
+    std::remove(total_path.c_str());
 }
 
 } // namespace

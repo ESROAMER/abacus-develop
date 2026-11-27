@@ -1,6 +1,8 @@
 #ifndef TD_FIELD_H
 #define TD_FIELD_H
 
+#include "source_base/vector3.h"
+
 #include <memory>
 
 namespace elecstate
@@ -42,7 +44,7 @@ struct TDFieldSample
 /**
  * @brief Scalar time profile of one configured electric field.
  *
- * Implementations return the field in Hartree atomic units. A
+ * The waveform carries the units of its amplitude (atomic field or e*Bohr). A
  * profile contains no Cartesian direction; direction handling is owned by
  * TDField and TDFieldManager.
  */
@@ -56,9 +58,16 @@ class TDFieldProfile
      * @brief Evaluate the electric field at one sampling point.
      *
      * @param sample Electronic-step and Simpson-node sampling information.
-     * @return Scalar field value in Hartree atomic units.
+     * @return Signed source amplitude in atomic units.
      */
     virtual double electric_field(const TDFieldSample& sample) const = 0;
+};
+
+/** @brief One Gaussian dipole repeated in all three lattice directions. */
+struct PeriodicDipole
+{
+    ModuleBase::Vector3<double> position; ///< Cartesian coordinates in Bohr.
+    double width;                         ///< Gaussian standard deviation in Bohr.
 };
 
 /**
@@ -78,6 +87,11 @@ class TDField
      * @param subdivisions Simpson subinterval count for one electronic step.
      */
     TDField(int direction, std::unique_ptr<TDFieldProfile> profile, int subdivisions);
+
+    TDField(int direction, std::unique_ptr<TDFieldProfile> profile, int subdivisions, std::unique_ptr<PeriodicDipole> dipole);
+
+    /** @brief Geometry of the periodic source, or nullptr for a uniform field. */
+    const PeriodicDipole* periodic_dipole() const;
 
     /** @brief Move-construct a field while transferring profile ownership. */
     TDField(TDField&& other) = default;
@@ -100,6 +114,7 @@ class TDField
     int direction_;
     std::unique_ptr<TDFieldProfile> profile_;
     int subdivisions_;
+    std::unique_ptr<const PeriodicDipole> dipole_;
 };
 
 } // namespace elecstate
