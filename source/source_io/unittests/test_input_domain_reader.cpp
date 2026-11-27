@@ -55,6 +55,30 @@ class InputDomainReaderTest : public testing::Test
     }
 };
 
+TEST_F(InputDomainReaderTest, TDAmplitudeListsUseComponentOrder)
+{
+    const std::string fields = "td_ttype 3 0 3\ntd_vext_dire 1 2 3\ntd_heavi_t0 2 4\n";
+    for (const std::string amplitudes: {"td_efield_amp 2 -0.5 7\n", "td_heavi_amp 2 7\ntd_gauss_amp -0.5\n", ""})
+    {
+        write_input(amplitudes + fields);
+        ModuleIO::ReadInput reader(0);
+        reader.check_ntype_flag = false;
+        Parameter param;
+        reader.read_parameters(param, filename);
+        const std::vector<double> expected = amplitudes.empty() ? std::vector<double>{1, 0.25, 1}
+                                                                : std::vector<double>{2, -0.5, 7};
+        EXPECT_EQ(param.inp.td_efield_amp, expected);
+        EXPECT_TRUE(param.inp.td_dipole_moment.empty());
+    }
+}
+
+TEST_F(InputDomainReaderTest, RejectsConflictingTDAmplitudeUnits)
+{
+    EXPECT_NE(reject_input("td_gauss_amp 0.25\ntd_efield_amp 1\n").find("Do not mix"), std::string::npos);
+    EXPECT_NE(reject_input("td_efield_amp 1\ntd_gauss_amp 0.25\n").find("Do not mix"), std::string::npos);
+    EXPECT_NE(reject_input("td_dipole_moment 0.25\n").find("requires td_stype=3"), std::string::npos);
+}
+
 TEST_F(InputDomainReaderTest, KeepsExplicitValuesAndContextualDefaults)
 {
     for (const int spin : {1, 2, 4})

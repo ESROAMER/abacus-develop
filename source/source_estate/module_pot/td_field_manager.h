@@ -97,7 +97,7 @@ class TDFieldManager
     /** @brief Return all configured fields in input-occurrence order. */
     const std::vector<TDField>& fields() const;
 
-    /** @brief Return signed amplitudes in atomic units: electric field for uniform sources, moment for dipoles. */
+    /** @brief Return current-step samples in td_ttype order: atomic electric field (modes 0-2) or moment in e*Bohr (mode 3). */
     const std::vector<double>& field_vals_ha() const;
 
     /** @brief Return the direction-summed sampled electric field in Hartree atomic units. */

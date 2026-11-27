@@ -48,7 +48,7 @@ TEST(PotPeriodicDipoleTest, PeriodicSingleMode)
         input.td_heavi_t0 = {10.0, 10.0};
         input.td_dipole_width = {0.5, 0.5};
         input.td_stype = 3;
-        input.td_heavi_amp = {-0.25, 1.25};
+        input.td_dipole_moment = {-0.25, 1.25};
         input.td_dipole_position = {2.3, 1.0, 2.0, 22.3, 1.0, 2.0};
         auto manager = elecstate::create_td_field_manager(input);
         manager->prepare_sample(0);

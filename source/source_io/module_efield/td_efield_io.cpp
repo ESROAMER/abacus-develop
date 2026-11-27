@@ -15,7 +15,7 @@ namespace
 std::string field_out_path(const std::string& output_dir, const std::size_t field_index, const bool dipole)
 {
     std::stringstream path;
-    const char* prefix = dipole ? "dipole_" : "efield_";
+    const char* prefix = dipole ? "dfield_" : "efield_";
     path << output_dir << prefix << field_index + 1 << ".txt";
     return path.str();
 }
@@ -78,7 +78,7 @@ void prep_td_field_out(const std::string& output_dir, const elecstate::TDFieldMa
         {
             const auto* source = fields[i].periodic_dipole();
             const int direction = fields[i].direction() + 1;
-            output << std::setprecision(17) << "# time(fs) moment(e*Bohr); Cartesian direction=" << direction
+            output << std::setprecision(17) << "# time(fs) source_dipole_moment(e*Bohr); Cartesian direction=" << direction
                    << "; source(Bohr)=" << source->position.x << " " << source->position.y << " " << source->position.z
                    << "; sigma(Bohr)=" << source->width << "; periodic_3d zero_mean_field\n";
         }
@@ -145,6 +145,8 @@ void write_td_field(const elecstate::TDFieldManager& manager, const std::string&
         {
             ModuleBase::WARNING_QUIT("ModuleIO::write_td_field", "Cannot append electric-field file " + output_path + "!");
         }
+        // Convert only at the user-visible output boundary: time to fs and the
+        // electric field to V/Angstrom. Dipole moments are written in e*Bohr.
         const double value = dipole ? field_values[field_index]
                                     : field_values[field_index] * ModuleBase::Hartree_to_eV / ModuleBase::BOHR_TO_A;
         output << std::right << std::fixed << std::setprecision(6) << std::setw(10) << time_fs << "  " << std::scientific

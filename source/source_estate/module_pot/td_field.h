@@ -42,11 +42,11 @@ struct TDFieldSample
 };
 
 /**
- * @brief Scalar time profile of one configured electric field.
+ * @brief Describe how one external source varies with time.
  *
- * The waveform carries the units of its amplitude (atomic field or e*Bohr). A
- * profile contains no Cartesian direction; direction handling is owned by
- * TDField and TDFieldManager.
+ * The same waveform can drive a uniform electric field or a periodic dipole.
+ * It gives the field strength or dipole moment at the requested time.
+ * TDField and TDFieldManager handle the Cartesian direction.
  */
 class TDFieldProfile
 {
@@ -55,10 +55,10 @@ class TDFieldProfile
     virtual ~TDFieldProfile() = default;
 
     /**
-     * @brief Evaluate the electric field at one sampling point.
+     * @brief Sample the waveform at the given time.
      *
      * @param sample Electronic-step and Simpson-node sampling information.
-     * @return Signed source amplitude in atomic units.
+     * @return The signed electric field (atomic units) for modes 0-2, or the signed dipole moment (e*Bohr) for mode 3.
      */
     virtual double electric_field(const TDFieldSample& sample) const = 0;
 };

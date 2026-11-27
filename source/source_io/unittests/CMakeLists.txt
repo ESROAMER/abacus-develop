@@ -85,7 +85,6 @@ addtest(
   TARGET MODULE_IO_input_test_para
   LIBS parameter base device io_input
   SOURCES test_read_input_parallel.cpp
-          test_read_inp_dipole.cpp
           # io_input references stru_frame_io::extract_last_frame without linking cell.
           ../../source_cell/stru_frame_io.cpp)
 

@@ -55,13 +55,13 @@ class TDEFieldIOTest : public testing::Test
         input.td_ttype.clear();
         input.td_vext_dire.clear();
         input.td_heavi_t0.clear();
-        input.td_heavi_amp.clear();
+        input.td_efield_amp.clear();
         for (std::size_t field_index = 0; field_index < amplitudes.size(); ++field_index)
         {
             input.td_ttype.push_back(3);
             input.td_vext_dire.push_back(static_cast<int>(field_index % 3) + 1);
             input.td_heavi_t0.push_back(10.0);
-            input.td_heavi_amp.push_back(amplitudes[field_index]);
+            input.td_efield_amp.push_back(amplitudes[field_index]);
         }
         return elecstate::create_td_field_manager(input);
     }
@@ -168,7 +168,7 @@ TEST(TDEFieldIO, TwoPeriodicDipoles)
     input.td_dipole_position = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     input.td_dipole_width = {0.5, 0.75};
     input.td_heavi_t0 = {2.0, 2.0};
-    input.td_heavi_amp = {-0.25, 3.0};
+    input.td_dipole_moment = {-0.25, 3.0};
     const auto manager = elecstate::create_td_field_manager(input);
     const std::string prefix = testing::TempDir() + "mixed_periodic_td_";
     std::ostringstream log;
@@ -184,15 +184,15 @@ TEST(TDEFieldIO, TwoPeriodicDipoles)
     manager->bind_field(full);
     ModuleIO::write_td_field(*manager, prefix);
 
-    const std::string dipole_path = prefix + "dipole_1.txt";
-    const std::string field_path = prefix + "dipole_2.txt";
+    const std::string dipole_path = prefix + "dfield_1.txt";
+    const std::string field_path = prefix + "dfield_2.txt";
     const std::string total_path = prefix + "efield_total.txt";
     std::ifstream dipole(dipole_path.c_str());
     std::ifstream field(field_path.c_str());
     std::ifstream total(total_path.c_str());
     std::string header;
     std::getline(dipole, header);
-    EXPECT_NE(header.find("moment(e*Bohr)"), std::string::npos);
+    EXPECT_NE(header.find("source_dipole_moment(e*Bohr)"), std::string::npos);
     EXPECT_NE(header.find("source(Bohr)=1 2 3"), std::string::npos);
     EXPECT_NE(header.find("sigma(Bohr)=0.5"), std::string::npos);
     std::getline(total, header);

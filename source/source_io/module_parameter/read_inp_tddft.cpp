@@ -21,77 +21,52 @@ struct FieldParameterRule
     std::size_t size;
 };
 
-} // namespace
-
-void check_td_efield_parameters(const Input_para& input)
+void check_dipole_setup(const Input_para& input)
 {
-    check_periodic_dipoles(input);
-    // File input replaces the analytic waveforms, whose unused parameter arrays may be incomplete.
-    if (input.init_vecpot)
+    if (input.basis_type != "lcao" || input.esolver_type != "tddft" || input.init_vecpot)
     {
+        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require analytic LCAO RT-TDDFT fields (td_stype=3).");
+    }
+    if (input.calculation != "md" || input.mdp.md_nstep != 1 || input.mdp.md_restart || input.cal_stress || input.symmetry != "-1")
+    {
+        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require a single MD step, no restart or stress, and symmetry=-1.");
+    }
+}
+
+void check_periodic_dipoles(const Input_para& input)
+{
+    if (input.td_stype != 3)
+    {
+        if (!input.td_dipole_position.empty() || !input.td_dipole_width.empty())
+        {
+            ModuleBase::WARNING_QUIT("ReadInput", "Dipole geometry requires td_stype=3.");
+        }
         return;
     }
-    if (input.td_ttype.size() != input.td_vext_dire.size())
+    check_dipole_setup(input);
+    const std::size_t count = input.td_ttype.size();
+    if (input.td_dipole_position.size() != 3 * count || input.td_dipole_width.size() != count)
     {
-        ModuleBase::WARNING_QUIT("ReadInput",
-                                 "td_ttype and td_vext_dire must contain the same number of fields.");
+        ModuleBase::WARNING_QUIT("ReadInput", "Each dipole needs three td_dipole_position values and one td_dipole_width.");
     }
-    for (const int direction: input.td_vext_dire)
+    for (const double width: input.td_dipole_width)
     {
-        if (direction < 1 || direction > 3)
+        if (!std::isfinite(width) || width <= 0.0)
         {
-            ModuleBase::WARNING_QUIT("ReadInput", "td_vext_dire must contain values from 1 to 3.");
+            ModuleBase::WARNING_QUIT("ReadInput", "td_dipole_width values must be finite and positive.");
         }
     }
-
-    std::array<std::size_t, 5> field_counts = {{0, 0, 0, 0, 0}};
-    for (const int field_type: input.td_ttype)
+    for (const double position: input.td_dipole_position)
     {
-        if (field_type < 0 || field_type > 4)
+        if (!std::isfinite(position))
         {
-            ModuleBase::WARNING_QUIT("ReadInput", "td_ttype must contain values from 0 to 4.");
-        }
-        ++field_counts[field_type];
-    }
-
-    const std::array<FieldParameterRule, 24> rules = {{
-        {"td_gauss_freq", 0, input.td_gauss_freq.size()},
-        {"td_gauss_phase", 0, input.td_gauss_phase.size()},
-        {"td_gauss_sigma", 0, input.td_gauss_sigma.size()},
-        {"td_gauss_t0", 0, input.td_gauss_t0.size()},
-        {"td_gauss_amp", 0, input.td_gauss_amp.size()},
-        {"td_trape_freq", 1, input.td_trape_freq.size()},
-        {"td_trape_phase", 1, input.td_trape_phase.size()},
-        {"td_trape_t1", 1, input.td_trape_t1.size()},
-        {"td_trape_t2", 1, input.td_trape_t2.size()},
-        {"td_trape_t3", 1, input.td_trape_t3.size()},
-        {"td_trape_amp", 1, input.td_trape_amp.size()},
-        {"td_trigo_freq1", 2, input.td_trigo_freq1.size()},
-        {"td_trigo_freq2", 2, input.td_trigo_freq2.size()},
-        {"td_trigo_phase1", 2, input.td_trigo_phase1.size()},
-        {"td_trigo_phase2", 2, input.td_trigo_phase2.size()},
-        {"td_trigo_amp", 2, input.td_trigo_amp.size()},
-        {"td_heavi_t0", 3, input.td_heavi_t0.size()},
-        {"td_heavi_amp", 3, input.td_heavi_amp.size()},
-        {"td_supsine_amp", 4, input.td_supsine_amp.size()},
-        {"td_supsine_freq", 4, input.td_supsine_freq.size()},
-        {"td_supsine_phase", 4, input.td_supsine_phase.size()},
-        {"td_supsine_sigma", 4, input.td_supsine_sigma.size()},
-        {"td_supsine_tstart", 4, input.td_supsine_tstart.size()},
-        {"td_supsine_tend", 4, input.td_supsine_tend.size()},
-    }};
-    for (const FieldParameterRule& rule: rules)
-    {
-        const std::size_t field_count = field_counts[rule.field_type];
-        if (field_count > 0 && rule.size != field_count)
-        {
-            ModuleBase::WARNING_QUIT("ReadInput",
-                                     std::string(rule.name)
-                                         + " must contain exactly one value for each td_ttype "
-                                         + std::to_string(rule.field_type) + " occurrence.");
+            ModuleBase::WARNING_QUIT("ReadInput", "td_dipole_position values must be finite.");
         }
     }
+}
 
+void check_waveform_shapes(const Input_para& input, const std::array<std::size_t, 5>& field_counts)
+{
     for (std::size_t index = 0; index < field_counts[0]; ++index)
     {
         if (input.td_gauss_sigma[index] == 0.0)
@@ -141,6 +116,219 @@ void check_td_efield_parameters(const Input_para& input)
                 "Each supersine pulse must satisfy td_tstart <= td_supsine_tstart < "
                 "td_supsine_tend <= td_tend.");
         }
+    }
+}
+
+std::string td_amplitude_error(const Input_para& input)
+{
+    const bool periodic = input.td_stype == 3;
+    const char* label = periodic ? "td_dipole_moment" : "td_efield_amp";
+    const std::vector<double>& values = periodic ? input.td_dipole_moment : input.td_efield_amp;
+    if (values.empty() || values.size() != input.td_ttype.size())
+    {
+        return std::string(label) + " must contain one value per td_ttype entry.\n";
+    }
+    for (double value: values)
+    {
+        if (!std::isfinite(value))
+        {
+            return std::string(label) + " must contain finite values.\n";
+        }
+    }
+    return "";
+}
+
+bool supplied_td_item(const std::vector<Input_Item*>& items, const char* label)
+{
+    return std::any_of(items.begin(), items.end(), [label](const Input_Item* item) { return item->label == label; });
+}
+
+std::string resolve_legacy_fields(Input_para& input, const std::map<int, std::vector<double>>& legacy)
+{
+    const std::array<double, 5> defaults = {{0.25, 2.74, 2.74, 1.0, 0.27}};
+    for (const auto& entry: legacy)
+    {
+        const std::size_t count = std::count(input.td_ttype.begin(), input.td_ttype.end(), entry.first);
+        if (count != 0 && count != entry.second.size())
+        {
+            return "Legacy amplitude list length must match the occurrences of td_ttype " + std::to_string(entry.first) + ".\n";
+        }
+    }
+    std::array<std::size_t, 5> used = {};
+    for (const int type: input.td_ttype)
+    {
+        if (type < 0 || type >= static_cast<int>(defaults.size()))
+        {
+            return "td_ttype must contain values from 0 to 4.\n";
+        }
+        const auto it = legacy.find(type);
+        const double amplitude = it == legacy.end() ? defaults[type] : it->second[used[type]];
+        ++used[type];
+        input.td_efield_amp.push_back(amplitude);
+    }
+    return "";
+}
+
+} // namespace
+
+void check_td_efield_parameters(const Input_para& input)
+{
+    check_periodic_dipoles(input);
+    // File input replaces the analytic waveforms, whose unused parameter arrays may be incomplete.
+    if (input.init_vecpot)
+    {
+        return;
+    }
+    if (input.td_ttype.size() != input.td_vext_dire.size())
+    {
+        ModuleBase::WARNING_QUIT("ReadInput",
+                                 "td_ttype and td_vext_dire must contain the same number of fields.");
+    }
+    const std::string amplitude_error = td_amplitude_error(input);
+    if (!amplitude_error.empty())
+    {
+        ModuleBase::WARNING_QUIT("ReadInput", amplitude_error);
+    }
+    for (const int direction: input.td_vext_dire)
+    {
+        if (direction < 1 || direction > 3)
+        {
+            ModuleBase::WARNING_QUIT("ReadInput", "td_vext_dire must contain values from 1 to 3.");
+        }
+    }
+
+    std::array<std::size_t, 5> field_counts = {{0, 0, 0, 0, 0}};
+    for (const int field_type: input.td_ttype)
+    {
+        if (field_type < 0 || field_type > 4)
+        {
+            ModuleBase::WARNING_QUIT("ReadInput", "td_ttype must contain values from 0 to 4.");
+        }
+        ++field_counts[field_type];
+    }
+
+    const std::array<FieldParameterRule, 19> rules = {{
+        {"td_gauss_freq", 0, input.td_gauss_freq.size()},
+        {"td_gauss_phase", 0, input.td_gauss_phase.size()},
+        {"td_gauss_sigma", 0, input.td_gauss_sigma.size()},
+        {"td_gauss_t0", 0, input.td_gauss_t0.size()},
+        {"td_trape_freq", 1, input.td_trape_freq.size()},
+        {"td_trape_phase", 1, input.td_trape_phase.size()},
+        {"td_trape_t1", 1, input.td_trape_t1.size()},
+        {"td_trape_t2", 1, input.td_trape_t2.size()},
+        {"td_trape_t3", 1, input.td_trape_t3.size()},
+        {"td_trigo_freq1", 2, input.td_trigo_freq1.size()},
+        {"td_trigo_freq2", 2, input.td_trigo_freq2.size()},
+        {"td_trigo_phase1", 2, input.td_trigo_phase1.size()},
+        {"td_trigo_phase2", 2, input.td_trigo_phase2.size()},
+        {"td_heavi_t0", 3, input.td_heavi_t0.size()},
+        {"td_supsine_freq", 4, input.td_supsine_freq.size()},
+        {"td_supsine_phase", 4, input.td_supsine_phase.size()},
+        {"td_supsine_sigma", 4, input.td_supsine_sigma.size()},
+        {"td_supsine_tstart", 4, input.td_supsine_tstart.size()},
+        {"td_supsine_tend", 4, input.td_supsine_tend.size()},
+    }};
+    for (const FieldParameterRule& rule: rules)
+    {
+        const std::size_t field_count = field_counts[rule.field_type];
+        if (field_count > 0 && rule.size != field_count)
+        {
+            ModuleBase::WARNING_QUIT("ReadInput",
+                                     std::string(rule.name)
+                                         + " must contain exactly one value for each td_ttype "
+                                         + std::to_string(rule.field_type) + " occurrence.");
+        }
+    }
+
+    check_waveform_shapes(input, field_counts);
+}
+
+void ReadInput::add_td_real_item(Input_Item& item, std::vector<double> Input_para::*field,
+                                 const char* default_value, const char* unit, const char* availability)
+{
+    item.category = "Real-Time TDDFT (Common)";
+    item.type = "Vector of Real";
+    item.default_value = default_value;
+    item.unit = unit;
+    item.set_availability(availability);
+    item.read_value = [field](const Input_Item& item, Parameter& para) {
+        parse_expression(item.str_values, para.input.*field);
+    };
+    add_item(item);
+}
+
+std::string ReadInput::normalize_td_amplitudes(Parameter& param)
+{
+    Input_para& input = param.input;
+    const bool has_field = supplied_td_item(readvalue_items, "td_efield_amp");
+    const bool has_moment = supplied_td_item(readvalue_items, "td_dipole_moment");
+    if (input.td_stype == 3)
+    {
+        if (has_field || !legacy_td_amplitudes.empty())
+        {
+            return "Use td_dipole_moment (e*Bohr) for td_stype=3; electric-field amplitudes are invalid.\n";
+        }
+        input.td_efield_amp.clear();
+        if (!has_moment)
+        {
+            return "td_stype=3 requires one explicit td_dipole_moment per td_ttype entry.\n";
+        }
+        return td_amplitude_error(input);
+    }
+    if (has_moment)
+    {
+        return "td_dipole_moment requires td_stype=3.\n";
+    }
+    if (has_field)
+    {
+        if (!legacy_td_amplitudes.empty())
+        {
+            return "Do not mix td_efield_amp with legacy waveform-specific amplitude keywords.\n";
+        }
+        if (input.init_vecpot)
+        {
+            return "td_efield_amp requires analytic fields (init_vecpot=false).\n";
+        }
+        return td_amplitude_error(input);
+    }
+    input.td_efield_amp.clear();
+    if (input.init_vecpot)
+    {
+        return "";
+    }
+    return resolve_legacy_fields(input, legacy_td_amplitudes);
+}
+
+void ReadInput::item_td_amplitudes()
+{
+    {
+        Input_Item item("td_efield_amp");
+        item.annotation = "electric-field scales in component order";
+        item.description = "For analytic fields (init_vecpot=false), supply one signed electric-field scale per td_ttype entry in list order. Omit for waveform defaults. Supersine uses the carrier scale. Legacy per-waveform amplitude keywords cannot be combined with this list.";
+        sync_doublevec(input.td_efield_amp, para.input.td_efield_amp.size(), 0.0);
+        add_td_real_item(item, &Input_para::td_efield_amp, "by waveform: 0.25, 2.74, 2.74, 1.0, 0.27", "V/Angstrom", "esolver_type==tddft and td_stype in [0, 1, 2]");
+    }
+    {
+        Input_Item item("td_dipole_moment");
+        item.annotation = "periodic source moments in component order";
+        item.description = "One signed moment coefficient per td_ttype entry. Required for periodic Gaussian dipoles; the time profile multiplies this moment.";
+        sync_doublevec(input.td_dipole_moment, para.input.td_dipole_moment.size(), 0.0);
+        add_td_real_item(item, &Input_para::td_dipole_moment, "empty", "e*Bohr", "esolver_type==tddft and td_stype==3");
+    }
+    const char* names[] = {"td_gauss_amp", "td_trape_amp", "td_trigo_amp", "td_heavi_amp", "td_supsine_amp"};
+    for (int type = 0; type < 5; ++type)
+    {
+        Input_Item item(names[type]);
+        item.annotation = "legacy waveform-specific electric-field amplitude";
+        item.category = "Real-Time TDDFT (Common)";
+        item.type = "Vector of Real";
+        item.description = "Compatibility input in occurrence order for this waveform. Prefer td_efield_amp.";
+        item.unit = "V/Angstrom";
+        item.set_availability("esolver_type==tddft and td_stype in [0, 1, 2] and td_ttype contains " + std::to_string(type));
+        item.read_value = [this, type](const Input_Item& item, Parameter&) {
+            parse_expression(item.str_values, legacy_td_amplitudes[type]);
+        };
+        this->add_item(item);
     }
 }
 
@@ -552,13 +740,27 @@ For a nonorthogonal LCAO basis:
 * `0`: Length gauge, available for PW and LCAO.
 * `1`: Velocity gauge, available for PW and LCAO.
 * `2`: Hybrid gauge, available only for LCAO. See J. Chem. Theory Comput. 2025, 21, 3335-3341 for more information.
-* `3`: Three-dimensionally periodic Gaussian dipoles (fixed-geometry LCAO). Supply one Cartesian position triplet and one width per td_ttype entry. Each waveform amplitude is a signed dipole moment in e*Bohr along td_vext_dire.)";
+* `3`: Three-dimensionally periodic Gaussian dipoles (fixed-geometry LCAO). Supply one Cartesian position triplet and one width per td_ttype entry. td_dipole_moment supplies the signed moment in e*Bohr for each component along td_vext_dire.)";
         item.default_value = "0";
         item.unit = "";
         read_sync_int(input.td_stype);
         this->add_item(item);
     }
-    this->item_periodic_dipole();
+    {
+        Input_Item item("td_dipole_position");
+        item.annotation = "periodic dipole positions";
+        item.description = R"(Cartesian x y z coordinates in Bohr for each periodic dipole, in occurrence order of td_ttype. Translating a source by a lattice vector gives the same potential.)";
+        sync_doublevec(input.td_dipole_position, para.input.td_dipole_position.size(), 0.0);
+        add_td_real_item(item, &Input_para::td_dipole_position, "empty", "Bohr", "esolver_type==tddft and td_stype==3");
+    }
+    {
+        Input_Item item("td_dipole_width");
+        item.annotation = "periodic dipole widths";
+        item.description = R"(One finite, strictly positive Gaussian standard deviation in Bohr per periodic dipole, in occurrence order. The density plane-wave basis must resolve this length.)";
+        sync_doublevec(input.td_dipole_width, para.input.td_dipole_width.size(), 0.0);
+        add_td_real_item(item, &Input_para::td_dipole_width, "empty", "Bohr", "esolver_type==tddft and td_stype==3");
+    }
+    this->item_td_amplitudes();
     {
         Input_Item item("td_ttype");
         item.annotation = "type of electric field in time domain";
@@ -566,7 +768,7 @@ For a nonorthogonal LCAO basis:
         item.type = "Vector of Integer";
         item.description = R"(Specifies one time-domain type for each external electric field. Its number of values must equal that of `td_vext_dire`. Parameters belonging to each type must provide exactly one value for every occurrence of that type, in occurrence order; fields with a repeated direction are added.
 
-The formulas below use Hartree atomic units. For every ordinary input frequency $f$, $\omega=2\pi f$; $\Delta t=\mathtt{td\_dt}$; and $E_0$ denotes the corresponding amplitude parameter. A step-valued parameter $n_q$ represents the physical time $t_q=n_q\Delta t$.
+The formulas below use Hartree atomic units. For every ordinary input frequency $f$, $\omega=2\pi f$; $\Delta t=\mathtt{td\_dt}$; and $E_0$ is the component scale from td_efield_amp (or td_dipole_moment for mode 3). A step-valued parameter $n_q$ represents the physical time $t_q=n_q\Delta t$.
 * `0`: Gaussian pulse, $E(t)=E_0\cos\left[\omega(t-t_0)+\varphi\right]\mathrm{e}^{-(t-t_0)^2/(2\sigma^2)}$, where $t_0=\mathtt{td\_gauss\_t0}\Delta t$.
 * `1`: Trapezoid pulse, $E(t)=E_0g(t)\cos(\omega t+\varphi)$. With $t_1=\mathtt{td\_trape\_t1}\Delta t$, $t_2=\mathtt{td\_trape\_t2}\Delta t$, and $t_3=\mathtt{td\_trape\_t3}\Delta t$, the envelope is $g(t)=t/t_1$ for $0\leqslant t\lt t_1$, $g(t)=1$ for $t_1\leqslant t\lt t_2$, $g(t)=(t_3-t)/(t_3-t_2)$ for $t_2\leqslant t\lt t_3$, and $g(t)=0$ otherwise.
 * `2`: Trigonometric pulse, $E(t)=E_0\cos(\omega_1t+\varphi_1)\sin^2(\omega_2t+\varphi_2)$.
@@ -630,332 +832,121 @@ In the velocity and hybrid gauges, ABACUS obtains the vector potential actually 
     {
         Input_Item item("td_gauss_freq");
         item.annotation = "frequency (freq) of Gauss type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Ordinary frequency $f$ in the Gaussian-pulse formula, with $\omega=2\pi f$. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
-        item.default_value = "22.13";
-        item.unit = "1/fs";
-        item.set_availability("td_ttype contains 0");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_gauss_freq);
-        };
         sync_doublevec(input.td_gauss_freq, para.input.td_gauss_freq.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_gauss_freq, "22.13", "1/fs", "td_ttype contains 0");
     }
     {
         Input_Item item("td_gauss_phase");
         item.annotation = "phase of Gauss type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Carrier phase $\varphi$ in the Gaussian-pulse formula. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
-        item.default_value = "0.0";
-        item.unit = "rad";
-        item.set_availability("td_ttype contains 0");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_gauss_phase);
-        };
         sync_doublevec(input.td_gauss_phase, para.input.td_gauss_phase.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_gauss_phase, "0.0", "rad", "td_ttype contains 0");
     }
     {
         Input_Item item("td_gauss_sigma");
         item.annotation = "sigma of Gauss type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Nonzero standard deviation $\sigma$ of the Gaussian envelope. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
-        item.default_value = "30.0";
-        item.unit = "fs";
-        item.set_availability("td_ttype contains 0");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_gauss_sigma);
-        };
         sync_doublevec(input.td_gauss_sigma, para.input.td_gauss_sigma.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_gauss_sigma, "30.0", "fs", "td_ttype contains 0");
     }
     {
         Input_Item item("td_gauss_t0");
         item.annotation = "step number of time center (t0) of Gauss type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electronic-step position of the Gaussian center, which defines $t_0=\mathtt{td\_gauss\_t0}\Delta t$. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
-        item.default_value = "100";
-        item.unit = "";
-        item.set_availability("td_ttype contains 0");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_gauss_t0);
-        };
         sync_doublevec(input.td_gauss_t0, para.input.td_gauss_t0.size(), 0.0);
-        this->add_item(item);
-    }
-    {
-        Input_Item item("td_gauss_amp");
-        item.annotation = "amplitude of Gauss type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
-        item.description = R"(Electric-field scale $E_0$ in the Gaussian-pulse formula. Supply exactly one value for each `td_ttype 0` occurrence, in occurrence order.)";
-        item.default_value = "0.25";
-        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
-        item.set_availability("td_ttype contains 0");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_gauss_amp);
-        };
-        sync_doublevec(input.td_gauss_amp, para.input.td_gauss_amp.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_gauss_t0, "100", "", "td_ttype contains 0");
     }
     {
         Input_Item item("td_trape_freq");
         item.annotation = "frequency of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Ordinary carrier frequency $f$ in the trapezoid-pulse formula, with $\omega=2\pi f$. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "1.60";
-        item.unit = "1/fs";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_freq);
-        };
         sync_doublevec(input.td_trape_freq, para.input.td_trape_freq.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trape_freq, "1.60", "1/fs", "td_ttype contains 1");
     }
     {
         Input_Item item("td_trape_phase");
         item.annotation = "phase of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Carrier phase $\varphi$ in the trapezoid-pulse formula. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "0.0";
-        item.unit = "rad";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_phase);
-        };
         sync_doublevec(input.td_trape_phase, para.input.td_trape_phase.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trape_phase, "0.0", "rad", "td_ttype contains 1");
     }
     {
         Input_Item item("td_trape_t1");
         item.annotation = "t1 of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electronic step defining the end of the linear rise, $t_1=\mathtt{td\_trape\_t1}\Delta t$. The value must be a nonnegative integer; integer-valued real inputs such as `2.0` are accepted. Each field must satisfy $\mathtt{td\_trape\_t1}\leqslant\mathtt{td\_trape\_t2}\leqslant\mathtt{td\_trape\_t3}$. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "1875";
-        item.unit = "";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_t1);
-        };
         sync_doublevec(input.td_trape_t1, para.input.td_trape_t1.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trape_t1, "1875", "", "td_ttype contains 1");
     }
     {
         Input_Item item("td_trape_t2");
         item.annotation = "t2 of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electronic step defining the end of the plateau, $t_2=\mathtt{td\_trape\_t2}\Delta t$. The value must be a nonnegative integer; integer-valued real inputs such as `2.0` are accepted. Each field must satisfy $\mathtt{td\_trape\_t1}\leqslant\mathtt{td\_trape\_t2}\leqslant\mathtt{td\_trape\_t3}$. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "5625";
-        item.unit = "";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_t2);
-        };
         sync_doublevec(input.td_trape_t2, para.input.td_trape_t2.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trape_t2, "5625", "", "td_ttype contains 1");
     }
     {
         Input_Item item("td_trape_t3");
         item.annotation = "t3 of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electronic step defining the end of the linear fall, $t_3=\mathtt{td\_trape\_t3}\Delta t$. The value must be a nonnegative integer; integer-valued real inputs such as `2.0` are accepted. Each field must satisfy $\mathtt{td\_trape\_t1}\leqslant\mathtt{td\_trape\_t2}\leqslant\mathtt{td\_trape\_t3}$. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "7500";
-        item.unit = "";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_t3);
-        };
         sync_doublevec(input.td_trape_t3, para.input.td_trape_t3.size(), 0.0);
-        this->add_item(item);
-    }
-    {
-        Input_Item item("td_trape_amp");
-        item.annotation = "amplitude of Trapezoid type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
-        item.description = R"(Electric-field scale $E_0$ in the trapezoid-pulse formula. Supply exactly one value for each `td_ttype 1` occurrence, in occurrence order.)";
-        item.default_value = "2.74";
-        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
-        item.set_availability("td_ttype contains 1");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trape_amp);
-        };
-        sync_doublevec(input.td_trape_amp, para.input.td_trape_amp.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trape_t3, "7500", "", "td_ttype contains 1");
     }
     {
         Input_Item item("td_trigo_freq1");
         item.annotation = "frequency 1 of Trigonometric type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(First ordinary frequency $f_1$ in the trigonometric-pulse formula, with $\omega_1=2\pi f_1$. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
-        item.default_value = "1.164656";
-        item.unit = "1/fs";
-        item.set_availability("td_ttype contains 2");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trigo_freq1);
-        };
         sync_doublevec(input.td_trigo_freq1, para.input.td_trigo_freq1.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trigo_freq1, "1.164656", "1/fs", "td_ttype contains 2");
     }
     {
         Input_Item item("td_trigo_freq2");
         item.annotation = "frequency 2 of Trigonometric type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Second ordinary frequency $f_2$ in the trigonometric-pulse formula, with $\omega_2=2\pi f_2$. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
-        item.default_value = "0.029116";
-        item.unit = "1/fs";
-        item.set_availability("td_ttype contains 2");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trigo_freq2);
-        };
         sync_doublevec(input.td_trigo_freq2, para.input.td_trigo_freq2.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trigo_freq2, "0.029116", "1/fs", "td_ttype contains 2");
     }
     {
         Input_Item item("td_trigo_phase1");
         item.annotation = "phase 1 of Trigonometric type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Carrier phase $\varphi_1$ in the cosine factor of the trigonometric-pulse formula. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
-        item.default_value = "0.0";
-        item.unit = "rad";
-        item.set_availability("td_ttype contains 2");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trigo_phase1);
-        };
         sync_doublevec(input.td_trigo_phase1, para.input.td_trigo_phase1.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trigo_phase1, "0.0", "rad", "td_ttype contains 2");
     }
     {
         Input_Item item("td_trigo_phase2");
         item.annotation = "phase 2 of Trigonometric type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Envelope phase $\varphi_2$ in the sine-squared factor of the trigonometric-pulse formula. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
-        item.default_value = "0.0";
-        item.unit = "rad";
-        item.set_availability("td_ttype contains 2");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trigo_phase2);
-        };
         sync_doublevec(input.td_trigo_phase2, para.input.td_trigo_phase2.size(), 0.0);
-        this->add_item(item);
-    }
-    {
-        Input_Item item("td_trigo_amp");
-        item.annotation = "amplitude of Trigonometric type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
-        item.description = R"(Electric-field scale $E_0$ in the trigonometric-pulse formula. Supply exactly one value for each `td_ttype 2` occurrence, in occurrence order.)";
-        item.default_value = "2.74";
-        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
-        item.set_availability("td_ttype contains 2");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_trigo_amp);
-        };
-        sync_doublevec(input.td_trigo_amp, para.input.td_trigo_amp.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_trigo_phase2, "0.0", "rad", "td_ttype contains 2");
     }
     {
         Input_Item item("td_heavi_t0");
         item.annotation = "t0 of Heaviside type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electronic switch step $n_0$ in the Heaviside-pulse definition. The field is $E_0$ for $n\lt n_0$ and zero for $n\geqslant n_0$. Supply exactly one value for each `td_ttype 3` occurrence, in occurrence order.)";
-        item.default_value = "100";
-        item.unit = "";
-        item.set_availability("td_ttype contains 3");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_heavi_t0);
-        };
         sync_doublevec(input.td_heavi_t0, para.input.td_heavi_t0.size(), 0.0);
-        this->add_item(item);
-    }
-    {
-        Input_Item item("td_heavi_amp");
-        item.annotation = "amplitude of Heaviside type electric field";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
-        item.description = R"(Electric-field scale $E_0$ in the Heaviside-pulse definition. Supply exactly one value for each `td_ttype 3` occurrence, in occurrence order.)";
-        item.default_value = "1.0";
-        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
-        item.set_availability("td_ttype contains 3");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_heavi_amp);
-        };
-        sync_doublevec(input.td_heavi_amp, para.input.td_heavi_amp.size(), 0.0);
-        this->add_item(item);
-    }
-    {
-        Input_Item item("td_supsine_amp");
-        item.annotation = "carrier electric-field scale of the supersine pulse";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
-        item.description = R"(Carrier electric-field scale $E_0$ of each supersine pulse. This is not a normalization of the complete waveform maximum, because the envelope-derivative term also contributes. Supply exactly one value for each `td_ttype 4` occurrence, in occurrence order.)";
-        item.default_value = "0.27";
-        item.unit = "V/Angstrom (uniform) or e*Bohr (periodic dipole)";
-        item.set_availability("td_ttype contains 4");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_supsine_amp);
-        };
-        sync_doublevec(input.td_supsine_amp, para.input.td_supsine_amp.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_heavi_t0, "100", "", "td_ttype contains 3");
     }
     {
         Input_Item item("td_supsine_freq");
         item.annotation = "carrier frequency of the supersine pulse";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Nonzero ordinary carrier frequency $f$ of each supersine pulse, with $\omega=2\pi f$. Supply exactly one value for each `td_ttype 4` occurrence, in occurrence order.)";
-        item.default_value = "0.18737028625";
-        item.unit = "1/fs";
-        item.set_availability("td_ttype contains 4");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_supsine_freq);
-        };
         sync_doublevec(input.td_supsine_freq, para.input.td_supsine_freq.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_supsine_freq, "0.18737028625", "1/fs", "td_ttype contains 4");
     }
     {
         Input_Item item("td_supsine_phase");
         item.annotation = "carrier phase at the center of the supersine pulse";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Electric-field carrier phase $\varphi$ at the center of each supersine envelope. A value of `0` places a cosine carrier maximum at the envelope center. Supply exactly one value for each `td_ttype 4` occurrence, in occurrence order.)";
-        item.default_value = "0.0";
-        item.unit = "rad";
-        item.set_availability("td_ttype contains 4");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_supsine_phase);
-        };
         sync_doublevec(input.td_supsine_phase, para.input.td_supsine_phase.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_supsine_phase, "0.0", "rad", "td_ttype contains 4");
     }
     {
         Input_Item item("td_supsine_sigma");
         item.annotation = "shape parameter of the supersine envelope";
-        item.category = "Real-Time TDDFT (Common)";
-        item.type = "Vector of Real";
         item.description = R"(Dimensionless shape parameter $\sigma$ of each supersine envelope. It must satisfy $0\lt\sigma\lt\pi/2$ so that the electric field approaches zero at the pulse boundaries. Supply exactly one value for each `td_ttype 4` occurrence, in occurrence order.)";
-        item.default_value = "0.75";
-        item.unit = "";
-        item.set_availability("td_ttype contains 4");
-        item.read_value = [](const Input_Item& item, Parameter& para) {
-            parse_expression(item.str_values, para.input.td_supsine_sigma);
-        };
         sync_doublevec(input.td_supsine_sigma, para.input.td_supsine_sigma.size(), 0.0);
-        this->add_item(item);
+        add_td_real_item(item, &Input_para::td_supsine_sigma, "0.75", "", "td_ttype contains 4");
     }
     {
         Input_Item item("td_supsine_tstart");

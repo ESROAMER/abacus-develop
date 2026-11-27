@@ -68,7 +68,7 @@ double angular_frequency(const double frequency)
 
 double source_amplitude(const double amplitude, const bool periodic)
 {
-    // Uniform INPUT amplitudes are V/Angstrom; dipole moments are already in e*Bohr.
+    // Convert electric-field amplitudes from V/Angstrom to atomic units. Dipole moments are already in e*Bohr.
     return periodic ? amplitude : amplitude * ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
 }
 
@@ -473,10 +473,13 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
     fields.reserve(input.td_ttype.size());
     const bool periodic = input.td_stype == 3;
 
+    const auto& amplitudes = periodic ? input.td_dipole_moment : input.td_efield_amp;
+
     // File input supplies A and its derived E, so unused analytic waveform parameters need not be populated.
     const std::size_t field_count = input.init_vecpot ? 0 : input.td_ttype.size();
     for (std::size_t field_index = 0; field_index < field_count; ++field_index)
     {
+        const double amplitude = source_amplitude(amplitudes.at(field_index), periodic);
         const int field_type = input.td_ttype[field_index];
         const std::size_t occurrence = occurrences[field_type]++;
         std::unique_ptr<PeriodicDipole> dipole;
@@ -496,7 +499,6 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         {
             const double omega = angular_frequency(input.td_gauss_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
-            const double amplitude = source_amplitude(input.td_gauss_amp.at(occurrence), periodic);
             profile.reset(new TDGaussianProfile(omega,
                                                 input.td_gauss_phase.at(occurrence),
                                                 input.td_gauss_sigma.at(occurrence) / ModuleBase::AU_to_FS,
@@ -508,7 +510,6 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         {
             const double omega = angular_frequency(input.td_trape_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
-            const double amplitude = source_amplitude(input.td_trape_amp.at(occurrence), periodic);
             profile.reset(new TDTrapezoidProfile(omega,
                                                  input.td_trape_phase.at(occurrence),
                                                  input.td_trape_t1.at(occurrence),
@@ -520,7 +521,6 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         {
             const double omega1 = angular_frequency(input.td_trigo_freq1.at(occurrence));
             subdivisions = integration_subdivisions(omega1, dt, input.td_stype);
-            const double amplitude = source_amplitude(input.td_trigo_amp.at(occurrence), periodic);
             profile.reset(new TDTrigonometricProfile(omega1,
                                                      angular_frequency(input.td_trigo_freq2.at(occurrence)),
                                                      input.td_trigo_phase1.at(occurrence),
@@ -530,14 +530,12 @@ std::shared_ptr<TDFieldManager> create_td_field_manager(const Input_para& input)
         else if (field_type == 3)
         {
             subdivisions = (input.td_stype == 0 || periodic) ? 1 : 2;
-            const double amplitude = source_amplitude(input.td_heavi_amp.at(occurrence), periodic);
             profile.reset(new TDHeavisideProfile(input.td_heavi_t0.at(occurrence), amplitude));
         }
         else if (field_type == 4)
         {
             const double omega = angular_frequency(input.td_supsine_freq.at(occurrence));
             subdivisions = integration_subdivisions(omega, dt, input.td_stype);
-            const double amplitude = source_amplitude(input.td_supsine_amp.at(occurrence), periodic);
             profile.reset(new TDSupersineProfile(omega,
                                                  input.td_supsine_phase.at(occurrence),
                                                  input.td_supsine_sigma.at(occurrence),

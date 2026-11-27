@@ -459,6 +459,7 @@ std::string ReadInput::prepare_input(Parameter& param)
         return errors;
     }
 
+    legacy_td_amplitudes.clear();
     // 1) read the value of the parameters
     for (auto& readvalue_item: this->readvalue_items)
     {
@@ -486,6 +487,7 @@ std::string ReadInput::prepare_input(Parameter& param)
     this->normalize_occ_mat_options(param);
     this->normalize_out_eband_alias(param);
     this->normalize_td_output_frequency(param);
+    errors += normalize_td_amplitudes(param);
 
     // The MD driver writes ABACUS STRU frames only, and the restart logic reads
     // them back, so CIF output (out_stru = 2) is not available for MD. Reject it
@@ -740,6 +742,11 @@ void ReadInput::write_txt_input(const Parameter& param, const std::string& filen
         Input_Item* p_item = &(item.second);
         // Do not serialize an inactive internal marker as a public INPUT value.
         if (!p_item->domain.can_write(param)) { continue; }
+        if ((p_item->label == "td_efield_amp" && param.inp.td_efield_amp.empty())
+            || (p_item->label == "td_dipole_moment" && param.inp.td_dipole_moment.empty()))
+        {
+            continue;
+        }
         if (p_item->get_final_value == nullptr) {
             continue;
 }

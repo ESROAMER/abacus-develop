@@ -5,6 +5,7 @@
 #include "source_io/module_parameter/parameter.h"
 
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -152,7 +153,12 @@ class ReadInput
     void item_deepks();
     // items for real time tddft
     void item_rt_tddft();
-    void item_periodic_dipole();
+    void item_td_amplitudes();
+    void add_td_real_item(Input_Item& item, std::vector<double> Input_para::*field,
+                          const char* default_value, const char* unit, const char* availability);
+    std::string normalize_td_amplitudes(Parameter& param);
+    // Parser-only compatibility data, keyed by td_ttype; never broadcast or written to INPUT.
+    std::map<int, std::vector<double>> legacy_td_amplitudes;
     // items for td-ofdft
     void item_tdofdft();
     // items for linear response tddft
@@ -208,14 +214,12 @@ std::string nofound_str(std::vector<std::string> init_chgs, const std::string& s
 bool filter_nonascii_and_comment(std::ifstream& ifs, std::stringstream& out_ascii_stream);
 
 /**
- * @brief Validate the structure and waveform-defining constraints of RT-TDDFT fields.
+ * @brief Validate per-component amplitudes, periodic source geometry and RT-TDDFT waveform parameters.
  *
  * @param input Input parameters after all values and dynamic defaults are resolved.
  */
 void check_td_efield_parameters(const Input_para& input);
 
-/// Validate the spatial list, dipole geometry and supported propagation setup.
-void check_periodic_dipoles(const Input_para& input);
 
 } // namespace ModuleIO
 

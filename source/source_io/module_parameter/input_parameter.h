@@ -345,6 +345,8 @@ struct Input_para
     double td_exp_thr = 0.0; ///< Zero selects the precision-dependent exponential tolerance.
     int td_exp_krylov_dim = 32; ///< Maximum Lanczos dimension before frozen-operator subdivision.
     int td_stype = 0;                ///< 0 length, 1 velocity, 2 hybrid, 3 periodic Gaussian dipoles
+    std::vector<double> td_efield_amp = {0.25}; ///< Electric-field scales in td_ttype order (V/Angstrom).
+    std::vector<double> td_dipole_moment;       ///< Signed source moments in td_ttype order (e*Bohr).
     std::vector<double> td_dipole_position;  ///< Cartesian triplets (Bohr), in dipole occurrence order.
     std::vector<double> td_dipole_width;     ///< Gaussian standard deviation (Bohr) for each dipole.
     std::vector<int> td_ttype = {0}; ///< type of time domain
@@ -367,7 +369,6 @@ struct Input_para
     std::vector<double> td_gauss_phase = {0.0};
     std::vector<double> td_gauss_sigma = {30.0}; ///< time(fs)
     std::vector<double> td_gauss_t0 = {100.0};
-    std::vector<double> td_gauss_amp = {0.25}; ///< V/Angstrom (uniform) or e*Bohr (periodic dipole)
 
     ///< trapezoid
     std::vector<double> td_trape_freq = {1.60}; ///< time(fs)^-1
@@ -376,21 +377,17 @@ struct Input_para
     std::vector<double> td_trape_t1 = {1875.0};
     std::vector<double> td_trape_t2 = {5625.0};
     std::vector<double> td_trape_t3 = {7500.0};
-    std::vector<double> td_trape_amp = {2.74}; // V/Angstrom (uniform) or e*Bohr (periodic dipole)
 
     // Trigonometric
     std::vector<double> td_trigo_freq1 = {1.164656}; // time(fs)^-1
     std::vector<double> td_trigo_freq2 = {0.029116}; // time(fs)^-1
     std::vector<double> td_trigo_phase1 = {0.0};
     std::vector<double> td_trigo_phase2 = {0.0};
-    std::vector<double> td_trigo_amp = {2.74}; // V/Angstrom (uniform) or e*Bohr (periodic dipole)
 
     // Heaviside
     std::vector<double> td_heavi_t0 = {100.0};
-    std::vector<double> td_heavi_amp = {1.0}; // V/Angstrom (uniform) or e*Bohr (periodic dipole)
 
     // Supersine
-    std::vector<double> td_supsine_amp = {0.27};           ///< V/Angstrom (uniform) or e*Bohr (periodic dipole)
     std::vector<double> td_supsine_freq = {0.18737028625}; ///< time(fs)^-1
     std::vector<double> td_supsine_phase = {0.0};          ///< rad
     std::vector<double> td_supsine_sigma = {0.75};

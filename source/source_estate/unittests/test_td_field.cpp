@@ -54,9 +54,8 @@ TEST(TDFieldManagerTest, MixedFieldsSumAndAccumulate)
     input.td_trigo_freq2 = {0.0};
     input.td_trigo_phase1 = {0.0};
     input.td_trigo_phase2 = {ModuleBase::PI / 2.0};
-    input.td_trigo_amp = {2.0};
     input.td_heavi_t0 = {10.0};
-    input.td_heavi_amp = {3.0};
+    input.td_efield_amp = {2.0, 3.0};
 
     const double amplitude_conversion = ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
     const double total_field = 5.0 * amplitude_conversion;
@@ -91,7 +90,7 @@ TEST(TDFieldManagerTest, MixedFieldsSumAndAccumulate)
     oscillatory_input.td_gauss_phase = {0.0, 0.0};
     oscillatory_input.td_gauss_sigma = {1.0, 1.0};
     oscillatory_input.td_gauss_t0 = {0.0, 0.0};
-    oscillatory_input.td_gauss_amp = {1.0, 1.0};
+    oscillatory_input.td_efield_amp = {1.0, 1.0};
 
     std::shared_ptr<elecstate::TDFieldManager> oscillatory_manager = elecstate::create_td_field_manager(oscillatory_input);
     ASSERT_EQ(oscillatory_manager->fields().size(), 2U);
@@ -114,7 +113,7 @@ TEST(TDFieldManagerTest, SubintervalsPreserveFieldAndOriginalGrid)
     input.td_trigo_freq2 = {0.0};
     input.td_trigo_phase1 = {0.0};
     input.td_trigo_phase2 = {ModuleBase::PI / 2};
-    input.td_trigo_amp = {1.0};
+    input.td_efield_amp = {1.0};
     const double amp = ModuleBase::BOHR_TO_A / ModuleBase::Hartree_to_eV;
 
     for (bool from_file: {false, true})

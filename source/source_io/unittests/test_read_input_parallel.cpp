@@ -8,6 +8,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <limits>
 
 // #ifdef __MPI
 #include "mpi.h"
@@ -330,12 +331,11 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.td_tend, 1000);
     EXPECT_EQ(param.inp.td_lcut1, 0.05);
     EXPECT_EQ(param.inp.td_lcut2, 0.95);
-    EXPECT_THAT(param.inp.td_gauss_amp, testing::ElementsAre(0.25));
+    EXPECT_THAT(param.inp.td_efield_amp, testing::ElementsAre(0.25));
     EXPECT_THAT(param.inp.td_gauss_freq, testing::ElementsAre(22.13));
     EXPECT_THAT(param.inp.td_gauss_phase, testing::ElementsAre(0.0));
     EXPECT_THAT(param.inp.td_gauss_t0, testing::ElementsAre(100.0));
     EXPECT_THAT(param.inp.td_gauss_sigma, testing::ElementsAre(30.0));
-    EXPECT_THAT(param.inp.td_trape_amp, testing::ElementsAre(2.74));
     EXPECT_THAT(param.inp.td_trape_freq, testing::ElementsAre(1.60));
     EXPECT_THAT(param.inp.td_trape_phase, testing::ElementsAre(0.0));
     EXPECT_THAT(param.inp.td_trape_t1, testing::ElementsAre(1875.0));
@@ -345,9 +345,7 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_THAT(param.inp.td_trigo_freq2, testing::ElementsAre(0.029116));
     EXPECT_THAT(param.inp.td_trigo_phase1, testing::ElementsAre(0.0));
     EXPECT_THAT(param.inp.td_trigo_phase2, testing::ElementsAre(0.0));
-    EXPECT_THAT(param.inp.td_trigo_amp, testing::ElementsAre(2.74));
     EXPECT_THAT(param.inp.td_heavi_t0, testing::ElementsAre(100.0));
-    EXPECT_THAT(param.inp.td_heavi_amp, testing::ElementsAre(1.0));
     EXPECT_THAT(param.inp.td_supsine_tstart, testing::ElementsAre(1));
     EXPECT_THAT(param.inp.td_supsine_tend, testing::ElementsAre(1000));
 
@@ -585,19 +583,72 @@ TEST_F(InputParaTest, TypedTDFieldLists)
 
     EXPECT_THAT(param.inp.td_ttype, testing::ElementsAre(4, 0, 1, 2, 3, 0, 4, 1, 2, 3));
     EXPECT_THAT(param.inp.td_vext_dire, testing::ElementsAre(1, 2, 3, 1, 2, 3, 1, 2, 3, 1));
+    EXPECT_THAT(param.inp.td_efield_amp, testing::ElementsAre(0.05, 0.04, 0.025, 0.015, 0.01, -0.03, -0.04, -0.02, -0.018, -0.012));
     EXPECT_THAT(param.inp.td_gauss_freq, testing::ElementsAre(0.7, -1.1));
-    EXPECT_THAT(param.inp.td_gauss_amp, testing::ElementsAre(0.04, -0.03));
     EXPECT_THAT(param.inp.td_trape_t1, testing::ElementsAre(1.0, 2.0));
-    EXPECT_THAT(param.inp.td_trape_amp, testing::ElementsAre(0.025, -0.02));
     EXPECT_THAT(param.inp.td_trigo_freq1, testing::ElementsAre(0.9, -1.4));
-    EXPECT_THAT(param.inp.td_trigo_amp, testing::ElementsAre(0.015, -0.018));
     EXPECT_THAT(param.inp.td_heavi_t0, testing::ElementsAre(3.0, 5.0));
-    EXPECT_THAT(param.inp.td_heavi_amp, testing::ElementsAre(0.01, -0.012));
     EXPECT_THAT(param.inp.td_supsine_freq, testing::ElementsAre(0.7, -1.0));
-    EXPECT_THAT(param.inp.td_supsine_amp, testing::ElementsAre(0.05, -0.04));
     EXPECT_THAT(param.inp.td_supsine_tstart, testing::ElementsAre(0, 2));
     EXPECT_THAT(param.inp.td_supsine_tend, testing::ElementsAre(5, 6));
 }
+
+namespace
+{
+
+Input_para dipole_input()
+{
+    Input_para input;
+    input.esolver_type = "tddft";
+    input.basis_type = "lcao";
+    input.calculation = "md";
+    input.mdp.md_nstep = 1;
+    input.symmetry = "-1";
+    input.td_stype = 3;
+    input.td_dipole_moment = {-0.25};
+    input.td_dipole_position = {10.0, 11.0, 12.0};
+    input.td_dipole_width = {0.5};
+    return input;
+}
+
+TEST(PeriodicDipoleInput, ValidAndLegacy)
+{
+    const Input_para dipole = dipole_input();
+    EXPECT_NO_FATAL_FAILURE(ModuleIO::check_td_efield_parameters(dipole));
+    const Input_para legacy;
+    EXPECT_NO_FATAL_FAILURE(ModuleIO::check_td_efield_parameters(legacy));
+}
+
+TEST(PeriodicDipoleInput, RejectUnsupportedAndMalformedInputs)
+{
+    const std::vector<std::function<void(Input_para&)>> changes = {
+        [](Input_para& input) { input.td_ttype = {0, 0}; },
+        [](Input_para& input) { input.td_dipole_moment.clear(); },
+        [](Input_para& input) { input.td_stype = 0; },
+        [](Input_para& input) { input.td_dipole_position.pop_back(); },
+        [](Input_para& input) { input.td_dipole_width.clear(); },
+        [](Input_para& input) { input.td_dipole_width[0] = 0.0; },
+        [](Input_para& input) { input.td_dipole_width[0] = -1.0; },
+        [](Input_para& input) { input.td_dipole_position[0] = std::numeric_limits<double>::infinity(); },
+        [](Input_para& input) { input.td_stype = 1; },
+        [](Input_para& input) { input.td_stype = 2; },
+        [](Input_para& input) { input.init_vecpot = true; },
+        [](Input_para& input) { input.basis_type = "pw"; },
+        [](Input_para& input) { input.mdp.md_nstep = 2; },
+        [](Input_para& input) { input.mdp.md_restart = true; },
+        [](Input_para& input) { input.cal_stress = true; },
+        [](Input_para& input) { input.symmetry = "0"; },
+        [](Input_para& input) { input.symmetry = "1"; }
+    };
+    for (std::size_t i = 0; i < changes.size(); ++i)
+    {
+        Input_para input = dipole_input();
+        changes[i](input);
+        EXPECT_EXIT(ModuleIO::check_td_efield_parameters(input), testing::ExitedWithCode(1), "") << "case " << i;
+    }
+}
+
+} // namespace
 
 TEST_F(InputParaTest, TDFieldStructureErrors)
 {
@@ -607,7 +658,7 @@ TEST_F(InputParaTest, TDFieldStructureErrors)
         std::function<void(Input_para&)> mutate;
     };
 
-    const std::vector<InvalidCase> cases = {{"missing", [](Input_para& input) { input.td_gauss_amp.clear(); }},
+    const std::vector<InvalidCase> cases = {{"missing", [](Input_para& input) { input.td_efield_amp.clear(); }},
                                             {"extra", [](Input_para& input) { input.td_gauss_freq.push_back(1.0); }},
                                             {"field count", [](Input_para& input) { input.td_ttype.push_back(0); }}};
 

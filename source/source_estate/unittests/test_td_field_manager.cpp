@@ -19,8 +19,11 @@ TEST(TDFieldManager, PeriodicMomentsUseAllFiveWaveforms)
     input.td_heavi_t0 = {3.0};
     input.td_supsine_tstart = {0};
     input.td_supsine_tend = {4};
+    input.td_efield_amp = {0.25, 2.74, 0.3, 1.0, 0.27};
     const auto uniform = elecstate::create_td_field_manager(input);
     input.td_stype = 3;
+    input.td_dipole_moment = input.td_efield_amp;
+    input.td_efield_amp.clear();
     input.td_dipole_position = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
     input.td_dipole_width = {0.5, 0.6, 0.7, 0.8, 0.9};
     const auto periodic = elecstate::create_td_field_manager(input);
