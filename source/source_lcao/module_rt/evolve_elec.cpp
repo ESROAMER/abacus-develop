@@ -7,6 +7,30 @@
 
 namespace module_rt
 {
+void project_endpoint_energy(hamilt::Hamilt<std::complex<double>>& hamiltonian,
+                             const Parallel_Orbitals& pv,
+                             const psi::Psi<std::complex<double>>& psi,
+                             ModuleBase::matrix& ekb,
+                             std::ofstream& log,
+                             const std::vector<EijOutputInfo>& output)
+{
+#ifdef __MPI
+    std::vector<std::complex<double>> storage;
+    const int nlocal = pv.para_2d().nrglb();
+    for (int ik = 0; ik < ekb.nr; ++ik)
+    {
+        hamiltonian.updateHk(ik);
+        hamilt::MatrixBlock<std::complex<double>> h;
+        hamilt::MatrixBlock<std::complex<double>> s;
+        hamiltonian.matrix(h, s);
+        hamiltonian.matrix_for_energy(h, storage);
+        psi.fix_k(ik);
+        compute_ekb(pv.para_2d(), pv.wfc_layout(), pv.mo_repr_layout(), ekb.nc, nlocal,
+                    h.p, psi.get_pointer(), &ekb(ik, 0), log, output[ik]);
+    }
+#endif
+}
+
 template <typename Device>
 Evolve_elec<Device>::Evolve_elec() {};
 template <typename Device>

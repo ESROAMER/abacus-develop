@@ -6,6 +6,7 @@
 #include "source_cell/module_neighbor/sltk_grid_driver.h"
 #include "source_lcao/module_operator_lcao/operator_lcao.h"
 #include "source_lcao/module_rt/td_info.h"
+#include "source_lcao/module_rt/td_folding.h"
 #include "source_hamilt/module_hcontainer/hcontainer_funcs.h"
 
 template <typename TK, typename TR>
@@ -283,8 +284,31 @@ void hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<TK, TR>>::contributeHR()
 //ETD
 // contributeHk()
 template <typename TK, typename TR>
-void hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<TK, TR>>::contributeHk(int ik) {
-    return;
+void hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<TK, TR>>::contributeHk(int ik)
+{
+    this->ik = ik;
+}
+
+template <typename TK, typename TR>
+bool hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<TK, TR>>::matrix_for_energy(
+    MatrixBlock<std::complex<double>>& hk, std::vector<std::complex<double>>& storage) const
+{
+    if (Et.norm2() == 0.0)
+    {
+        return false;
+    }
+    // Both the energy projection and its local H block use the column-major solver layout.
+    // HR_fixed contains E.(r-R) in Ry. Keep the endpoint k+A phase when subtracting it.
+    storage.assign(hk.row * hk.col, 0.0);
+    const int ld = static_cast<int>(hk.row);
+    module_rt::folding_HR_td(*HR_fixed, storage.data(), this->kvec_d[this->ik],
+                             cart_At, this->td_info_->get_phase_hybrid(), ld, 1);
+    for (std::size_t i = 0; i < storage.size(); ++i)
+    {
+        storage[i] = hk.p[i] - storage[i];
+    }
+    hk.p = storage.data();
+    return true;
 }
 template class hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<double, double>>;
 template class hamilt::TD_pot_hybrid<hamilt::OperatorLCAO<std::complex<double>, double>>;

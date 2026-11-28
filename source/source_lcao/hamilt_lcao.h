@@ -172,6 +172,9 @@ class HamiltLCAO : public Hamilt<TK>
     // not used in PW base
     void matrix(MatrixBlock<TK>& hk_in, MatrixBlock<TK>& sk_in) override;
 
+    bool matrix_for_energy(MatrixBlock<std::complex<double>>& hk,
+                           std::vector<std::complex<double>>& storage) const override;
+
   private:
 
     const BasisFlattenedIndexing& basis_;

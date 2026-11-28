@@ -62,7 +62,9 @@ class TD_pot_hybrid<OperatorLCAO<TK, TR>> : public OperatorLCAO<TK, TR>
     virtual void contributeHR() override;
     //ETD
     virtual void contributeHk(int ik) override;
-    //ETD
+
+    bool matrix_for_energy(MatrixBlock<std::complex<double>>& hk,
+                           std::vector<std::complex<double>>& storage) const;
 
     virtual void set_HR_fixed(void*) override;
 

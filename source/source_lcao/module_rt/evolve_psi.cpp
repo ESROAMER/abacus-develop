@@ -56,10 +56,6 @@ void evolve_psi(const int nband,
     ModuleBase::GlobalFunc::ZEROS(Htmp, matrix_layout.size());
     BlasConnector::copy(matrix_layout.size(), h_mat.p, 1, Htmp, 1);
 
-    std::complex<double>* Hold = new std::complex<double>[matrix_layout.size()];
-    ModuleBase::GlobalFunc::ZEROS(Hold, matrix_layout.size());
-    BlasConnector::copy(matrix_layout.size(), h_mat.p, 1, Hold, 1);
-
     std::complex<double>* U_operator = new std::complex<double>[matrix_layout.size()];
     ModuleBase::GlobalFunc::ZEROS(U_operator, matrix_layout.size());
 
@@ -151,12 +147,14 @@ void evolve_psi(const int nband,
     /// @brief compute ekb
     /// @input Htmp, psi_k
     /// @output ekb
+    std::vector<std::complex<double>> energy_storage;
+    p_hamilt->matrix_for_energy(h_mat, energy_storage);
     compute_ekb(matrix_layout,
                 wfc_layout,
                 mo_repr_layout,
                 nband,
                 nlocal,
-                Hold,
+                h_mat.p,
                 psi_k,
                 ekb,
                 ofs_running,
@@ -164,7 +162,6 @@ void evolve_psi(const int nband,
 
     delete[] Stmp;
     delete[] Htmp;
-    delete[] Hold;
     delete[] U_operator;
 
 #endif // __MPI
@@ -343,7 +340,21 @@ void evolve_psi_tensor(const int nband,
     // (5) Compute ekb
     ct::Tensor Hold(ct::DataType::DT_COMPLEX_DOUBLE, ct_device_type, ct::TensorShape({len_HS}));
 
-    // Resync H matrix
+    // Fold/subtract on the owning ranks before gathering a dense LAPACK block.
+    std::vector<std::complex<double>> energy_storage;
+    if (p_hamilt->matrix_for_energy(h_mat, energy_storage))
+    {
+        if (use_lapack && num_procs > 1)
+        {
+            module_rt::gatherMatrix(myid, root_proc, h_mat, h_mat_g);
+            h_src = myid == root_proc ? h_mat_g.p.get() : nullptr;
+        }
+        else
+        {
+            h_src = h_mat.p;
+        }
+    }
+
     if (h_src != nullptr)
     {
         if (!use_lapack || myid == root_proc)

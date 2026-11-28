@@ -49,6 +49,11 @@ class Hamilt : public HamiltBase
 
     virtual void matrix(MatrixBlock<double> &hk_in, MatrixBlock<double> &sk_in) { return; }
 
+    /// Replace the endpoint block by an energy-only view if the basis has a connection.
+    /// The caller owns storage. All ranks return the same flag, including ranks with empty blocks.
+    virtual bool matrix_for_energy(MatrixBlock<std::complex<double>> &hk,
+                                   std::vector<std::complex<double>> &storage) const { return false; }
+
     virtual std::vector<T> matrix() { return std::vector<T>(); }
 
     std::string classname = "none";

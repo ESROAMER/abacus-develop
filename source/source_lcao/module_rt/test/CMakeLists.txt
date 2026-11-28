@@ -16,7 +16,7 @@ if(NOT ENABLE_CUBLASMP)
   addtest(
     TARGET MODULE_LCAO_tddft_evolve_psi_test
     LIBS parameter base device tddft_test_lib
-    SOURCES test_evolve_psi.cpp
+    SOURCES ../unittests/test_evolve_psi.cpp
             ../evolve_psi.cpp
             ../middle_hamilt.cpp
             ../norm_psi.cpp

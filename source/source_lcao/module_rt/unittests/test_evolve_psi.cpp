@@ -1,6 +1,6 @@
 #include "source_lcao/module_rt/evolve_psi.h"
 #include "source_base/module_external/scalapack_connector.h"
-#include "tddft_test.h"
+#include "../test/tddft_test.h"
 
 #include <algorithm>
 #include <array>
@@ -11,8 +11,7 @@ namespace
 {
 using Complex = std::complex<double>;
 
-// A two-orbital Hamiltonian with changing overlap and zero energy. This keeps
-// the normalization oracle independent of the propagator's phase convention.
+// Hprop = 0 so the orbital direction stays fixed. Henergy = 2.5 S at the endpoint.
 class EndpointHamiltonian : public hamilt::Hamilt<Complex>
 {
   public:
@@ -25,6 +24,17 @@ class EndpointHamiltonian : public hamilt::Hamilt<Complex>
         sk.p = s.data();
         hk.row = sk.row = 2;
         hk.col = sk.col = 2;
+    }
+
+    bool matrix_for_energy(hamilt::MatrixBlock<Complex>& hk, std::vector<Complex>& storage) const override
+    {
+        storage.assign(s.begin(), s.end());
+        for (auto& value : storage)
+        {
+            value *= 2.5;
+        }
+        hk.p = storage.data();
+        return true;
     }
 };
 
@@ -55,6 +65,7 @@ class EvolvePsiTest : public testing::Test
                            + std::conj(psi[1]) * (s[1] * psi[0] + s[3] * psi[1]);
         EXPECT_NEAR(norm.real(), 1.0, 1e-12);
         EXPECT_NEAR(norm.imag(), 0.0, 1e-12);
+        EXPECT_NEAR(std::abs(psi[1] - Complex(0.0, 0.5) * psi[0]), 0.0, 1e-12);
     }
 
     void run_tensor_lapack()
@@ -87,7 +98,7 @@ class EvolvePsiTest : public testing::Test
                                                               resources,
                                                               output_info);
         expect_endpoint_norm(psi.data<Complex>());
-        EXPECT_NEAR(energy.data<double>()[0], 0.0, 1e-12);
+        EXPECT_NEAR(energy.data<double>()[0], 2.5, 1e-12);
     }
 };
 
@@ -114,7 +125,7 @@ TEST_F(EvolvePsiTest, CpuUsesEndpointOverlap)
                           0,
                           output_info);
     expect_endpoint_norm(psi.data());
-    EXPECT_NEAR(energy, 0.0, 1e-12);
+    EXPECT_NEAR(energy, 2.5, 1e-12);
 }
 
 TEST_F(EvolvePsiTest, LapackUsesEndpointOverlap)

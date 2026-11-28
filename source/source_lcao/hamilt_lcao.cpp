@@ -1,5 +1,6 @@
 #include "source_lcao/hamilt_lcao.h"
 #include "source_lcao/hamilt_lcao_factory.h"
+#include "source_lcao/module_operator_lcao/td_pot_hybrid.h"
 #include "source_base/memory_recorder.h"
 #include "source_base/timer.h"
 #include "source_pw/module_pwdft/dftu_base.h"
@@ -222,6 +223,21 @@ void HamiltLCAO<TK, TR>::matrix(MatrixBlock<TK>& hk_in, MatrixBlock<TK>& sk_in)
     OperatorLCAO<TK, TR>* const op = this->getOperatorLCAO();
     assert(op != nullptr);
     op->matrixHk(hk_in, sk_in);
+}
+
+template <typename TK, typename TR>
+bool HamiltLCAO<TK, TR>::matrix_for_energy(MatrixBlock<std::complex<double>>& hk,
+                                           std::vector<std::complex<double>>& storage) const
+{
+    for (const auto* op = this->ops; op != nullptr; op = op->next_op)
+    {
+        const auto* field = dynamic_cast<const TD_pot_hybrid<OperatorLCAO<TK, TR>>*>(op);
+        if (field != nullptr)
+        {
+            return field->matrix_for_energy(hk, storage);
+        }
+    }
+    return false;
 }
 
 template <typename TK, typename TR>

@@ -368,6 +368,8 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::hamilt2rho_single(
     const double ethr)
 {
     std::vector<module_rt::EijOutputInfo> eij_output(this->kv.get_nks());
+    auto& log = GlobalV::ofs_running;
+    const bool from_file = this->inp_->init_wfc == "file";
     for (int ik = 0; ik < this->kv.get_nks(); ++ik)
     {
         module_rt::EijOutputInfo &info = eij_output[ik];
@@ -392,7 +394,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::hamilt2rho_single(
             sR_template, &ucell, *(this->basis_index_), this->pv.para_2d(), this->two_center_bundle_.overlap_orb.get());
     }
 
-    if (this->inp_->init_wfc == "file")
+    if (from_file)
     {
         if (istep >= restart_step_ + 1)
         {
@@ -400,7 +402,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::hamilt2rho_single(
                 eij_output, this->inp_->nbands, PARAM.globalv.nlocal, this->kv.get_nks(),
                 static_cast<hamilt::Hamilt<std::complex<double>> *>(this->p_hamilt), this->pv.para_2d(),
                 this->pv.wfc_layout(), this->pv.mo_repr_layout(), this->psi, this->psi_laststep, this->Hk_laststep,
-                this->Sk_laststep, this->pelec->ekb, GlobalV::ofs_running, this->inp_->propagator, use_tensor,
+                this->Sk_laststep, this->pelec->ekb, log, this->inp_->propagator, use_tensor,
                 use_lapack, this->td_mg_.get(), &ucell, this->kv.kvec_d, use_td_moving_gauge);
         }
         this->weight_dm_rho(ucell);
@@ -411,7 +413,7 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::hamilt2rho_single(
             eij_output, this->inp_->nbands, PARAM.globalv.nlocal, this->kv.get_nks(),
             static_cast<hamilt::Hamilt<std::complex<double>> *>(this->p_hamilt), this->pv.para_2d(),
             this->pv.wfc_layout(), this->pv.mo_repr_layout(), this->psi, this->psi_laststep, this->Hk_laststep,
-            this->Sk_laststep, this->pelec->ekb, GlobalV::ofs_running, this->inp_->propagator, use_tensor, use_lapack,
+            this->Sk_laststep, this->pelec->ekb, log, this->inp_->propagator, use_tensor, use_lapack,
             this->td_mg_.get(), &ucell, this->kv.kvec_d, use_td_moving_gauge);
         this->weight_dm_rho(ucell);
     }
@@ -443,6 +445,16 @@ void ESolver_KS_LCAO_TDDFT<TR, Device>::hamilt2rho_single(
 
         // Symmetrize the charge density only for the ground state
         module_charge::symmetrize_rho(this->inp_->nspin, this->chr, this->pw_rho, ucell.symm);
+    }
+
+    const int initial_step = from_file ? restart_step_ : 0;
+    if (this->inp_->td_stype == 2 && istep == initial_step && this->psi != nullptr
+        && (from_file || td_p->field().efield_ha().norm2() != 0.0))
+    {
+        auto& hamiltonian = static_cast<hamilt::Hamilt<std::complex<double>>&>(*this->p_hamilt);
+        module_rt::project_endpoint_energy(hamiltonian, this->pv, *this->psi, this->pelec->ekb,
+                                           log, eij_output);
+        elecstate::calEBand(this->pelec->ekb, this->pelec->wg, this->pelec->f_en);
     }
 #ifdef __EXX
     if (this->exx_info_.info_ri.real_number)

@@ -6,6 +6,7 @@
 #include "source_base/module_container/ATen/core/tensor.h" // ct::Tensor
 #include "source_base/module_device/device.h"              // base_device
 #include "source_base/module_device/memory_op.h"           // memory operations
+#include "source_basis/module_ao/parallel_orbitals.h"
 #include "source_hamilt/hamilt.h"
 #include "source_lcao/module_rt/band_energy.h"
 #include "source_lcao/module_rt/gather_mat.h" // MPI gathering and distributing functions
@@ -138,6 +139,14 @@ inline void print_tensor_data<std::complex<double>>(const ct::Tensor& tensor, co
 
 namespace module_rt
 {
+/// Project an initial or reloaded state at its endpoint, without a propagation step.
+void project_endpoint_energy(hamilt::Hamilt<std::complex<double>>& hamiltonian,
+                             const Parallel_Orbitals& pv,
+                             const psi::Psi<std::complex<double>>& psi,
+                             ModuleBase::matrix& ekb,
+                             std::ofstream& log,
+                             const std::vector<EijOutputInfo>& output);
+
 template <typename Device = base_device::DEVICE_CPU>
 class Evolve_elec
 {
