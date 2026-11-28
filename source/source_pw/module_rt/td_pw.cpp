@@ -44,9 +44,10 @@ void check_td_input(const Input_para& input, const UnitCell& cell, int xc_type, 
     {
         ModuleBase::WARNING_QUIT("ESolver_KS_PW_TDDFT", "PW RT-TDDFT does not support exact exchange (EXX); use a non-hybrid functional.");
     }
-    if ((input.nspin != 1 && input.nspin != 2 && input.nspin != 4) || input.bndpar != 1 || (input.td_stype != 0 && input.td_stype != 1))
+    const bool supported_field = input.td_stype == 0 || input.td_stype == 1 || input.td_stype == 3;
+    if ((input.nspin != 1 && input.nspin != 2 && input.nspin != 4) || input.bndpar != 1 || !supported_field)
     {
-        ModuleBase::WARNING_QUIT("ESolver_KS_PW_TDDFT", "PW RT-TDDFT requires nspin=1, 2 or 4, bndpar=1 and td_stype=0 or 1.");
+        ModuleBase::WARNING_QUIT("ESolver_KS_PW_TDDFT", "PW RT-TDDFT requires nspin=1, 2 or 4, bndpar=1 and td_stype=0, 1 or 3.");
     }
     if (input.nspin == 4 && !input.noncolin)
     {

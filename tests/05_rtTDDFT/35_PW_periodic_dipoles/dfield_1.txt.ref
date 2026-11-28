@@ -1,0 +1,5 @@
+# time(fs) source_dipole_moment(e*Bohr); Cartesian direction=1; source(Bohr)=1 2 3; sigma(Bohr)=0.80000000000000004; periodic_3d zero_mean_field
+  0.000000   0.000000000000e+00
+  0.010000   3.509160562733e-04
+  0.020000   4.273858197958e-04
+  0.030000   4.807952704633e-04

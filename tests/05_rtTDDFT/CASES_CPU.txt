@@ -32,3 +32,4 @@
 32_PW_ETRS_lanczos_TDDFT
 33_PW_ETRS_taylor_TDDFT
 34_PW_ETRS_retry_TDDFT
+35_PW_periodic_dipoles

@@ -53,7 +53,7 @@ run_tddft_props() {
   # Check electric fields in rt-TDDFT
   #--------------------------------------------
   if ! test -z "$out_efield" && [ "$out_efield" == 1 ]; then
-    efield_refs=(efield_*.txt.ref)
+    efield_refs=([de]field_*.txt.ref)
     if [ ! -e "${efield_refs[0]}" ]; then
       echo "CompareEfieldReference_pass 1" >>$props_result_file
     else

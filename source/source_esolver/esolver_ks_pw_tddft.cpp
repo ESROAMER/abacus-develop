@@ -179,7 +179,7 @@ bool ESolver_KS_PW_TDDFT<T, Device>::advance_interval(
         const elecstate::TDFieldState trial = this->td_field_manager_->subinterval(full, index, parts);
         this->td_field_manager_->bind_field(trial);
 
-        // Length-gauge fields are fixed potential components and must be rebuilt
+        // Scalar fields are fixed potential components and must be rebuilt
         // at the trial endpoint, just as before_scf does for an original step.
         this->pelec->pot->init_pot(&this->chr);
         this->prepare_init_hamilt(cell);
@@ -353,7 +353,7 @@ void ESolver_KS_PW_TDDFT<T, Device>::prep_td_step(const int istep)
         return;
     }
 
-    if (this->td_field_manager_->gauge() == 0 || istep == 0)
+    if (!this->td_field_manager_->uses_vector_potential() || istep == 0)
     {
         this->td_field_manager_->prepare_sample(istep);
     }

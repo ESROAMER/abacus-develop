@@ -74,13 +74,9 @@ void add_dipole_force(const PeriodicDipole& source, int axis, double moment, con
 
 } // namespace
 
-PotPeriodicDipole::PotPeriodicDipole(const ModulePW::PW_Basis& basis, const UnitCell& cell,
-                                     const std::shared_ptr<TDFieldManager>& fields)
-    : fields_(fields)
+PeriodicDipoleGrid::PeriodicDipoleGrid(const ModulePW::PW_Basis& basis, const UnitCell& cell, const TDFieldManager& fields)
 {
-    fixed_mode = true;
-    rho_basis_ = &basis;
-    const auto& sources = fields_->fields();
+    const auto& sources = fields.fields();
     dipole_space_.resize(sources.size());
     for (std::size_t i = 0; i < sources.size(); ++i)
     {
@@ -96,19 +92,30 @@ PotPeriodicDipole::PotPeriodicDipole(const ModulePW::PW_Basis& basis, const Unit
     }
 }
 
-void PotPeriodicDipole::cal_fixed_v(double* potential)
+void PeriodicDipoleGrid::add_to(double* potential, const std::vector<double>& moments) const
 {
-    if (!fields_->active())
-    {
-        return;
-    }
-    const auto& moments = fields_->field_vals_ha();
     for (std::size_t i = 0; i < moments.size(); ++i)
     {
-        for (int ir = 0; ir < rho_basis_->nrxx; ++ir)
+        for (std::size_t ir = 0; ir < dipole_space_[i].size(); ++ir)
         {
             potential[ir] += moments[i] * dipole_space_[i][ir];
         }
+    }
+}
+
+PotPeriodicDipole::PotPeriodicDipole(const std::shared_ptr<const PeriodicDipoleGrid>& grid,
+                                     const std::shared_ptr<TDFieldManager>& fields)
+    : fields_(fields), grid_(grid)
+{
+    fixed_mode = true;
+}
+
+void PotPeriodicDipole::cal_fixed_v(double* potential)
+{
+    if (fields_->active())
+    {
+        const auto& moments = fields_->field_vals_ha();
+        grid_->add_to(potential, moments);
     }
 }
 

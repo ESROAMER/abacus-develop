@@ -52,7 +52,8 @@ TEST(PotPeriodicDipoleTest, PeriodicSingleMode)
         input.td_dipole_position = {2.3, 1.0, 2.0, 22.3, 1.0, 2.0};
         auto manager = elecstate::create_td_field_manager(input);
         manager->prepare_sample(0);
-        elecstate::PotPeriodicDipole potential(grid, cell, manager);
+        const auto unit_moment_grid = std::make_shared<elecstate::PeriodicDipoleGrid>(grid, cell, *manager);
+        elecstate::PotPeriodicDipole potential(unit_moment_grid, manager);
         std::vector<double> v(grid.nrxx, 0.0);
         potential.cal_fixed_v(v.data());
         for (int ix = 0; ix < grid.nx; ++ix)
@@ -71,8 +72,9 @@ TEST(PotPeriodicDipoleTest, PeriodicSingleMode)
         EXPECT_NEAR(force(0, 2), 0.0, 1e-12);
 
         manager->prepare_sample(1);
+        elecstate::PotPeriodicDipole next_step(unit_moment_grid, manager);
         std::vector<double> inactive(grid.nrxx, 0.0);
-        potential.cal_fixed_v(inactive.data());
+        next_step.cal_fixed_v(inactive.data());
         for (const double value: inactive)
         {
             EXPECT_DOUBLE_EQ(value, 0.0);

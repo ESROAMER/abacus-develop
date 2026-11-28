@@ -613,7 +613,10 @@ Input_para dipole_input()
 
 TEST(PeriodicDipoleInput, ValidAndLegacy)
 {
-    const Input_para dipole = dipole_input();
+    Input_para dipole = dipole_input();
+    dipole.basis_type = "pw";
+    EXPECT_NO_FATAL_FAILURE(ModuleIO::check_td_efield_parameters(dipole));
+    dipole.basis_type = "lcao";
     EXPECT_NO_FATAL_FAILURE(ModuleIO::check_td_efield_parameters(dipole));
     const Input_para legacy;
     EXPECT_NO_FATAL_FAILURE(ModuleIO::check_td_efield_parameters(legacy));
@@ -633,7 +636,7 @@ TEST(PeriodicDipoleInput, RejectUnsupportedAndMalformedInputs)
         [](Input_para& input) { input.td_stype = 1; },
         [](Input_para& input) { input.td_stype = 2; },
         [](Input_para& input) { input.init_vecpot = true; },
-        [](Input_para& input) { input.basis_type = "pw"; },
+        [](Input_para& input) { input.basis_type = "unsupported"; },
         [](Input_para& input) { input.mdp.md_nstep = 2; },
         [](Input_para& input) { input.mdp.md_restart = true; },
         [](Input_para& input) { input.cal_stress = true; },

@@ -20,6 +20,7 @@ class PotSccs;
 struct SolventGridField;
 struct SccsResume;
 class TDFieldManager;
+class PeriodicDipoleGrid;
 
 /**
  * Potential is the main class of potentials module, it contains:
@@ -115,6 +116,10 @@ class Potential : public PotBase
      */
     void set_td_field_manager(const std::shared_ptr<TDFieldManager>& field_manager)
     {
+        if (td_field_manager_ != field_manager)
+        {
+            dipole_grid_.reset();
+        }
         this->td_field_manager_ = field_manager;
     }
 
@@ -295,6 +300,8 @@ class Potential : public PotBase
     VSep* vsep_cell = nullptr;
     bool use_gpu_ = false;
     std::shared_ptr<TDFieldManager> td_field_manager_;
+    // Kept across component re-registration on this Potential's fixed density basis.
+    std::shared_ptr<const PeriodicDipoleGrid> dipole_grid_;
 };
 
 } // namespace elecstate

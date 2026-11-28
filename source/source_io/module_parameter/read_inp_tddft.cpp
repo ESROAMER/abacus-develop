@@ -23,9 +23,10 @@ struct FieldParameterRule
 
 void check_dipole_setup(const Input_para& input)
 {
-    if (input.basis_type != "lcao" || input.esolver_type != "tddft" || input.init_vecpot)
+    const bool supported_basis = input.basis_type == "pw" || input.basis_type == "lcao";
+    if (!supported_basis || input.esolver_type != "tddft" || input.init_vecpot)
     {
-        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require analytic LCAO RT-TDDFT fields (td_stype=3).");
+        ModuleBase::WARNING_QUIT("ReadInput", "Periodic dipoles require analytic PW or LCAO RT-TDDFT fields (td_stype=3).");
     }
     if (input.calculation != "md" || input.mdp.md_nstep != 1 || input.mdp.md_restart || input.cal_stress || input.symmetry != "-1")
     {
@@ -740,7 +741,7 @@ For a nonorthogonal LCAO basis:
 * `0`: Length gauge, available for PW and LCAO.
 * `1`: Velocity gauge, available for PW and LCAO.
 * `2`: Hybrid gauge, available only for LCAO. See J. Chem. Theory Comput. 2025, 21, 3335-3341 for more information.
-* `3`: Three-dimensionally periodic Gaussian dipoles (fixed-geometry LCAO). Supply one Cartesian position triplet and one width per td_ttype entry. td_dipole_moment supplies the signed moment in e*Bohr for each component along td_vext_dire.)";
+* `3`: Three-dimensionally periodic Gaussian dipoles (fixed geometry, PW or LCAO). Supply one Cartesian position triplet and one width per td_ttype entry. td_dipole_moment supplies the signed moment in e*Bohr for each component along td_vext_dire.)";
         item.default_value = "0";
         item.unit = "";
         read_sync_int(input.td_stype);

@@ -17,6 +17,8 @@
 #include "source_cell/module_symmetry/symmetry.h"
 #include "source_estate/module_pot/efield.h"
 #include "source_estate/module_pot/gatefield.h"
+#include "source_estate/module_pot/pot_periodic_dipole.h"
+#include "source_estate/module_pot/td_field_manager.h"
 #include "source_hamilt/module_ewald/h_ewald_pw.h"
 #include "source_hamilt/module_surchem/surchem.h"
 #include "source_hamilt/module_vdw/vdw.h"
@@ -200,7 +202,16 @@ void Forces<FPTYPE, Device>::cal_force(const int nspin,
         }
     }
 
-    if (PARAM.inp.gate_flag || PARAM.inp.efield_flag)
+    const auto& input = PARAM.inp;
+    const auto* fields = elec.pot->td_field_manager();
+    if (input.td_vext && fields && fields->gauge() == 3)
+    {
+        // An external dipole can exert a net force on the ions.
+        ModuleBase::matrix dipole_force(nat, 3);
+        elecstate::PotPeriodicDipole::compute_force(ucell, *rho_basis, *fields, dipole_force);
+        force += dipole_force;
+    }
+    else if (input.gate_flag || input.efield_flag)
     {
         GlobalV::ofs_running << "Atomic forces are not shifted if gate_flag or efield_flag == true!" << std::endl;
     }

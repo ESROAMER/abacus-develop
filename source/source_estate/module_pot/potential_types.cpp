@@ -95,7 +95,11 @@ PotBase* Potential::get_pot_type(const std::string& pot_type, const Input_para& 
             {
                 ModuleBase::WARNING_QUIT("Potential::get_pot_type", "Periodic dipole sources require a field manager.");
             }
-            return new PotPeriodicDipole(*this->rho_basis_, *this->ucell_, this->td_field_manager_);
+            if (!dipole_grid_ || ucell_->cell_parameter_updated)
+            {
+                dipole_grid_ = std::make_shared<PeriodicDipoleGrid>(*rho_basis_, *ucell_, *td_field_manager_);
+            }
+            return new PotPeriodicDipole(dipole_grid_, td_field_manager_);
         }
         return new H_TDDFT_pw(this->rho_basis_, this->ucell_, this->td_field_manager_);
     }
